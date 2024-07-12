@@ -1,7 +1,14 @@
-mod slice;
+mod chord;
+mod multivoice;
+mod note;
+mod part;
+mod phrase;
+mod section;
 mod staff;
-mod system;
 
-pub use slice::{MusicalSlice, NotationalItem, NotationalSlice, Slice};
-pub use staff::Staff;
-pub use system::{System, SystemIndicator};
+pub use chord::{Chord, ChordContent};
+pub use multivoice::{MultiVoice, MultiVoiceContent};
+pub use part::{Part, PartContent};
+pub use phrase::{Phrase, PhraseContent};
+pub use section::{Section, SectionContent};
+pub use staff::{Staff, StaffContent};

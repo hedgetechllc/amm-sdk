@@ -6,7 +6,10 @@ use amm_sdk::{NoteModification, PhraseModification};
 
 fn main() {
   let composition = Storage::MusicXML.load("./tests/Grande Valse Brillante.musicxml");
-  println!("{}", composition.unwrap());
+  match composition {
+    Ok(composition) => println!("{}", composition),
+    Err(error) => println!("{}", error),
+  }
 
   /*
   // Create a new composition complete with metadata, a piano system, and a left- and right-hand staff

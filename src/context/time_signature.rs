@@ -6,7 +6,7 @@ pub struct TimeSignature {
 
 impl TimeSignature {
   pub fn new(numerator: u8, denominator: u8) -> Self {
-    TimeSignature { numerator, denominator }
+    Self { numerator, denominator }
   }
 
   pub fn update(&mut self, numerator: u8, denominator: u8) {
@@ -16,7 +16,7 @@ impl TimeSignature {
 
 impl Default for TimeSignature {
   fn default() -> Self {
-    TimeSignature {
+    Self {
       numerator: 4,
       denominator: 4,
     }

@@ -1,8 +1,8 @@
 use crate::Composition;
+
 use amm::AmmStorage;
 use midi::MidiConverter;
 use musicxml::MusicXmlConverter;
-use std::fmt;
 
 mod amm;
 mod midi;
@@ -23,31 +23,31 @@ pub enum Storage {
 
 impl Storage {
   pub fn load(&self, path: &str) -> Result<Composition, String> {
-    match *self {
-      Storage::AMM => AmmStorage::load(path),
-      Storage::MusicXML => MusicXmlConverter::load(path),
-      Storage::MIDI => MidiConverter::load(path),
+    match self {
+      Self::AMM => AmmStorage::load(path),
+      Self::MusicXML => MusicXmlConverter::load(path),
+      Self::MIDI => MidiConverter::load(path),
     }
   }
 
   pub fn save(&self, path: &str, composition: &Composition) -> Result<usize, String> {
-    match *self {
-      Storage::AMM => AmmStorage::save(path, composition),
-      Storage::MusicXML => MusicXmlConverter::save(path, composition),
-      Storage::MIDI => MidiConverter::save(path, composition),
+    match self {
+      Self::AMM => AmmStorage::save(path, composition),
+      Self::MusicXML => MusicXmlConverter::save(path, composition),
+      Self::MIDI => MidiConverter::save(path, composition),
     }
   }
 }
 
-impl fmt::Display for Storage {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl std::fmt::Display for Storage {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     write!(
       f,
       "{}",
-      match *self {
-        Storage::AMM => "Abstract Music Manipulation (AMM)",
-        Storage::MusicXML => "MusicXML",
-        Storage::MIDI => "MIDI",
+      match self {
+        Self::AMM => "Abstract Music Manipulation (AMM)",
+        Self::MusicXML => "MusicXML",
+        Self::MIDI => "Musical Instrument Digital Interface (MIDI)",
       }
     )
   }

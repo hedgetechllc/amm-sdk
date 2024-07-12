@@ -9,8 +9,8 @@ documentation = "https://docs.rs/amm_sdk/latest/"
 readme = "README.md"
 homepage = "https://github.com/hedgetechllc/amm-sdk"
 repository = "https://github.com/hedgetechllc/amm-sdk"
-keywords = ["music", "format", "TODO"]
-categories = ["api-bindings", "TODO"]
+keywords = ["music", "musicxml", "format", "parser", "parsing"]
+categories = ["api-bindings", "parsing", "data-structures", "encoding", "multimedia::audio"]
 publish = false
 
 [dependencies]
@@ -22,7 +22,7 @@ web-sys = { version = "0.3", default-features = false, features = ["console"] }
 crate-type = ["rlib", "cdylib"]
 
 [profile.release]
-codegen-units = 4096
+codegen-units = 1
 debug = false
 debug-assertions = false
 incremental = false

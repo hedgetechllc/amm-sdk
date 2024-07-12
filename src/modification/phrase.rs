@@ -1,12 +1,50 @@
-use crate::context::DynamicMarking;
+use crate::context::{generate_id, DynamicMarking};
 use std::{cell::RefCell, rc::Rc};
 
 #[derive(Clone, Copy, Default, Eq, PartialEq)]
 pub enum PedalType {
   #[default]
-  Damper,
+  Sustain,
   Sostenuto,
   Soft,
+}
+
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub enum PhraseModificationType {
+  Crescendo { final_dynamic: DynamicMarking },
+  Decrescendo { final_dynamic: DynamicMarking },
+  Glissando,
+  Hairpin { maximum_dynamic: DynamicMarking },
+  Legato,
+  OctaveShift { num_octaves: i8 },
+  Pedal { r#type: PedalType },
+  Portamento,
+  Tied,
+  Tremolo { relative_speed: u8 },
+  Tuplet { into_beats: u8 },
+}
+
+#[derive(Clone, Eq, PartialEq)]
+pub struct PhraseModification {
+  id: usize,
+  modification: PhraseModificationType,
+}
+
+impl PhraseModification {
+  pub fn new(modification: PhraseModificationType) -> Rc<RefCell<Self>> {
+    Rc::new(RefCell::new(Self {
+      id: generate_id(),
+      modification,
+    }))
+  }
+
+  pub fn get_id(&self) -> usize {
+    self.id
+  }
+
+  pub fn get_modification(&self) -> &PhraseModificationType {
+    &self.modification
+  }
 }
 
 impl std::fmt::Display for PedalType {
@@ -14,57 +52,56 @@ impl std::fmt::Display for PedalType {
     write!(
       f,
       "{}",
-      match *self {
-        PedalType::Damper => "Damper Pedal",
-        PedalType::Sostenuto => "Sostenuto Pedal",
-        PedalType::Soft => "Soft Pedal",
+      match self {
+        Self::Sustain => "Sustain",
+        Self::Sostenuto => "Sostenuto",
+        Self::Soft => "Soft",
       }
     )
   }
-}
-
-#[derive(Clone, Copy, Eq, PartialEq)]
-pub enum PhraseModificationType {
-  Crescendo {
-    starting_dynamic: DynamicMarking,
-    ending_dynamic: DynamicMarking,
-  },
-  Descrescendo {
-    starting_dynamic: DynamicMarking,
-    ending_dynamic: DynamicMarking,
-  },
-  OctaveShift {
-    num_octaves: i8,
-  },
-  Pedal {
-    pedal_type: PedalType,
-  },
-  Slur,
-  Tuplet {
-    into_num_notes: u8,
-  },
 }
 
 impl std::fmt::Display for PhraseModificationType {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-    write!(
-      f,
-      "{}",
-      match *self {
-        PhraseModificationType::Crescendo { .. } => String::from("Crescendo"),
-        PhraseModificationType::Descrescendo { .. } => String::from("Decrescendo"),
-        PhraseModificationType::OctaveShift { num_octaves } => format!("{} Octave Shift", num_octaves),
-        PhraseModificationType::Pedal { pedal_type } => pedal_type.to_string(),
-        PhraseModificationType::Slur => String::from("Slur"),
-        PhraseModificationType::Tuplet { into_num_notes } => format!("X-to-{} Tuplet", into_num_notes),
-      }
-    )
+    match self {
+      Self::Crescendo { final_dynamic } => write!(
+        f,
+        "Crescendo{}{}",
+        if final_dynamic == &DynamicMarking::None {
+          ""
+        } else {
+          " to "
+        },
+        final_dynamic
+      ),
+      Self::Decrescendo { final_dynamic } => write!(
+        f,
+        "Decrescendo{}{}",
+        if final_dynamic == &DynamicMarking::None {
+          ""
+        } else {
+          " to "
+        },
+        final_dynamic
+      ),
+      Self::Glissando => write!(f, "Glissando"),
+      Self::Hairpin { maximum_dynamic } => write!(
+        f,
+        "Hairpin{}{}",
+        if maximum_dynamic == &DynamicMarking::None {
+          ""
+        } else {
+          " to "
+        },
+        maximum_dynamic
+      ),
+      Self::Legato => write!(f, "Legato"),
+      Self::OctaveShift { num_octaves } => write!(f, "Shift by {} octaves", num_octaves),
+      Self::Pedal { r#type } => write!(f, "{} Pedal", r#type),
+      Self::Portamento => write!(f, "Portamento"),
+      Self::Tied => write!(f, "Tied"),
+      Self::Tremolo { relative_speed } => write!(f, "Tremolo at {}x speed", relative_speed),
+      Self::Tuplet { into_beats } => write!(f, "Tuplet into {} beats", into_beats),
+    }
   }
-}
-
-#[derive(Clone, PartialEq, Eq)]
-pub struct PhraseModification {
-  pub num_slices: usize,
-  pub slice_indices: Vec<Rc<RefCell<usize>>>,
-  pub modification: PhraseModificationType,
 }

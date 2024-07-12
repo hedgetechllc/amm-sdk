@@ -43,155 +43,112 @@ pub enum Key {
 }
 
 impl Key {
+  const FIFTHS_A_MAJOR: i8 = 3;
+  const FIFTHS_A_FLAT_MAJOR: i8 = -4;
+  const FIFTHS_B_MAJOR: i8 = 5;
+  const FIFTHS_B_FLAT_MAJOR: i8 = -2;
+  const FIFTHS_C_MAJOR: i8 = 0;
+  const FIFTHS_C_SHARP_MAJOR: i8 = 7;
+  const FIFTHS_C_FLAT_MAJOR: i8 = -7;
+  const FIFTHS_D_MAJOR: i8 = 2;
+  const FIFTHS_D_FLAT_MAJOR: i8 = -5;
+  const FIFTHS_E_MAJOR: i8 = 4;
+  const FIFTHS_E_FLAT_MAJOR: i8 = -3;
+  const FIFTHS_F_MAJOR: i8 = -1;
+  const FIFTHS_F_SHARP_MAJOR: i8 = 6;
+  const FIFTHS_G_MAJOR: i8 = 1;
+  const FIFTHS_G_FLAT_MAJOR: i8 = -6;
+
+  const FIFTHS_F_SHARP_MINOR: i8 = 3;
+  const FIFTHS_F_MINOR: i8 = -4;
+  const FIFTHS_G_SHARP_MINOR: i8 = 5;
+  const FIFTHS_G_MINOR: i8 = -2;
+  const FIFTHS_A_MINOR: i8 = 0;
+  const FIFTHS_A_SHARP_MINOR: i8 = 7;
+  const FIFTHS_A_FLAT_MINOR: i8 = -7;
+  const FIFTHS_B_MINOR: i8 = 2;
+  const FIFTHS_B_FLAT_MINOR: i8 = -5;
+  const FIFTHS_C_SHARP_MINOR: i8 = 4;
+  const FIFTHS_C_MINOR: i8 = -3;
+  const FIFTHS_D_MINOR: i8 = -1;
+  const FIFTHS_D_SHARP_MINOR: i8 = 6;
+  const FIFTHS_E_MINOR: i8 = 1;
+  const FIFTHS_E_FLAT_MINOR: i8 = -6;
+
   pub fn from_fifths(fifths: i8, mode: Option<KeyMode>) -> Self {
-    let mode = mode.unwrap_or(KeyMode::Major);
-    match fifths {
-      3 => {
-        if mode == KeyMode::Major {
-          Key::AMajor
-        } else {
-          Key::FSharpMinor
-        }
-      }
-      -4 => {
-        if mode == KeyMode::Major {
-          Key::AFlatMajor
-        } else {
-          Key::FMinor
-        }
-      }
-      5 => {
-        if mode == KeyMode::Major {
-          Key::BMajor
-        } else {
-          Key::GSharpMinor
-        }
-      }
-      -2 => {
-        if mode == KeyMode::Major {
-          Key::BFlatMajor
-        } else {
-          Key::GMinor
-        }
-      }
-      7 => {
-        if mode == KeyMode::Major {
-          Key::CSharpMajor
-        } else {
-          Key::ASharpMinor
-        }
-      }
-      -7 => {
-        if mode == KeyMode::Major {
-          Key::CFlatMajor
-        } else {
-          Key::AFlatMinor
-        }
-      }
-      2 => {
-        if mode == KeyMode::Major {
-          Key::DMajor
-        } else {
-          Key::BMinor
-        }
-      }
-      -5 => {
-        if mode == KeyMode::Major {
-          Key::DFlatMajor
-        } else {
-          Key::BFlatMinor
-        }
-      }
-      4 => {
-        if mode == KeyMode::Major {
-          Key::EMajor
-        } else {
-          Key::CSharpMinor
-        }
-      }
-      -3 => {
-        if mode == KeyMode::Major {
-          Key::EFlatMajor
-        } else {
-          Key::CMinor
-        }
-      }
-      -1 => {
-        if mode == KeyMode::Major {
-          Key::FMajor
-        } else {
-          Key::DMinor
-        }
-      }
-      6 => {
-        if mode == KeyMode::Major {
-          Key::FSharpMajor
-        } else {
-          Key::DSharpMinor
-        }
-      }
-      1 => {
-        if mode == KeyMode::Major {
-          Key::GMajor
-        } else {
-          Key::EMinor
-        }
-      }
-      -6 => {
-        if mode == KeyMode::Major {
-          Key::GFlatMajor
-        } else {
-          Key::EFlatMinor
-        }
-      }
-      _ => {
-        if mode == KeyMode::Major {
-          Key::CMajor
-        } else {
-          Key::AMinor
-        }
-      }
+    match (fifths, mode.unwrap_or(KeyMode::Major)) {
+      (Self::FIFTHS_A_MAJOR, KeyMode::Major) => Self::AMajor,
+      (Self::FIFTHS_A_FLAT_MAJOR, KeyMode::Major) => Self::AFlatMajor,
+      (Self::FIFTHS_B_MAJOR, KeyMode::Major) => Self::BMajor,
+      (Self::FIFTHS_B_FLAT_MAJOR, KeyMode::Major) => Self::BFlatMajor,
+      (Self::FIFTHS_C_MAJOR, KeyMode::Major) => Self::CMajor,
+      (Self::FIFTHS_C_SHARP_MAJOR, KeyMode::Major) => Self::CSharpMajor,
+      (Self::FIFTHS_C_FLAT_MAJOR, KeyMode::Major) => Self::CFlatMajor,
+      (Self::FIFTHS_D_MAJOR, KeyMode::Major) => Self::DMajor,
+      (Self::FIFTHS_D_FLAT_MAJOR, KeyMode::Major) => Self::DFlatMajor,
+      (Self::FIFTHS_E_MAJOR, KeyMode::Major) => Self::EMajor,
+      (Self::FIFTHS_E_FLAT_MAJOR, KeyMode::Major) => Self::EFlatMajor,
+      (Self::FIFTHS_F_MAJOR, KeyMode::Major) => Self::FMajor,
+      (Self::FIFTHS_F_SHARP_MAJOR, KeyMode::Major) => Self::FSharpMajor,
+      (Self::FIFTHS_G_MAJOR, KeyMode::Major) => Self::GMajor,
+      (Self::FIFTHS_G_FLAT_MAJOR, KeyMode::Major) => Self::GFlatMajor,
+      (Self::FIFTHS_F_SHARP_MINOR, KeyMode::Minor) => Self::FSharpMinor,
+      (Self::FIFTHS_F_MINOR, KeyMode::Minor) => Self::FMinor,
+      (Self::FIFTHS_G_SHARP_MINOR, KeyMode::Minor) => Self::GSharpMinor,
+      (Self::FIFTHS_G_MINOR, KeyMode::Minor) => Self::GMinor,
+      (Self::FIFTHS_A_MINOR, KeyMode::Minor) => Self::AMinor,
+      (Self::FIFTHS_A_SHARP_MINOR, KeyMode::Minor) => Self::ASharpMinor,
+      (Self::FIFTHS_A_FLAT_MINOR, KeyMode::Minor) => Self::AFlatMinor,
+      (Self::FIFTHS_B_MINOR, KeyMode::Minor) => Self::BMinor,
+      (Self::FIFTHS_B_FLAT_MINOR, KeyMode::Minor) => Self::BFlatMinor,
+      (Self::FIFTHS_C_SHARP_MINOR, KeyMode::Minor) => Self::CSharpMinor,
+      (Self::FIFTHS_C_MINOR, KeyMode::Minor) => Self::CMinor,
+      (Self::FIFTHS_D_MINOR, KeyMode::Minor) => Self::DMinor,
+      (Self::FIFTHS_D_SHARP_MINOR, KeyMode::Minor) => Self::DSharpMinor,
+      (Self::FIFTHS_E_MINOR, KeyMode::Minor) => Self::EMinor,
+      (Self::FIFTHS_E_FLAT_MINOR, KeyMode::Minor) => Self::EFlatMinor,
+      _ => Self::CMajor,
     }
   }
 
   pub fn fifths(&self) -> i8 {
-    match *self {
-      Key::AMajor => 3,
-      Key::AMinor => 0,
-      Key::ASharpMinor => 7,
-      Key::AFlatMajor => -4,
-      Key::AFlatMinor => -7,
-      Key::BMajor => 5,
-      Key::BMinor => 2,
-      Key::BFlatMajor => -2,
-      Key::BFlatMinor => -5,
-      Key::CMajor => 0,
-      Key::CMinor => -3,
-      Key::CSharpMajor => 7,
-      Key::CSharpMinor => 4,
-      Key::CFlatMajor => -7,
-      Key::DMajor => 2,
-      Key::DMinor => -1,
-      Key::DSharpMinor => 6,
-      Key::DFlatMajor => -5,
-      Key::EMajor => 4,
-      Key::EMinor => 1,
-      Key::EFlatMajor => -3,
-      Key::EFlatMinor => -6,
-      Key::FMajor => -1,
-      Key::FMinor => -4,
-      Key::FSharpMajor => 6,
-      Key::FSharpMinor => 3,
-      Key::GMajor => 1,
-      Key::GMinor => -2,
-      Key::GSharpMinor => 5,
-      Key::GFlatMajor => -6,
+    match self {
+      Self::AMajor => Self::FIFTHS_A_MAJOR,
+      Self::AMinor => Self::FIFTHS_A_MINOR,
+      Self::ASharpMinor => Self::FIFTHS_A_SHARP_MINOR,
+      Self::AFlatMajor => Self::FIFTHS_A_FLAT_MAJOR,
+      Self::AFlatMinor => Self::FIFTHS_A_FLAT_MINOR,
+      Self::BMajor => Self::FIFTHS_B_MAJOR,
+      Self::BMinor => Self::FIFTHS_B_MINOR,
+      Self::BFlatMajor => Self::FIFTHS_B_FLAT_MAJOR,
+      Self::BFlatMinor => Self::FIFTHS_B_FLAT_MINOR,
+      Self::CMajor => Self::FIFTHS_C_MAJOR,
+      Self::CMinor => Self::FIFTHS_C_MINOR,
+      Self::CSharpMajor => Self::FIFTHS_C_SHARP_MAJOR,
+      Self::CSharpMinor => Self::FIFTHS_C_SHARP_MINOR,
+      Self::CFlatMajor => Self::FIFTHS_C_FLAT_MAJOR,
+      Self::DMajor => Self::FIFTHS_D_MAJOR,
+      Self::DMinor => Self::FIFTHS_D_MINOR,
+      Self::DSharpMinor => Self::FIFTHS_D_SHARP_MINOR,
+      Self::DFlatMajor => Self::FIFTHS_D_FLAT_MAJOR,
+      Self::EMajor => Self::FIFTHS_E_MAJOR,
+      Self::EMinor => Self::FIFTHS_E_MINOR,
+      Self::EFlatMajor => Self::FIFTHS_E_FLAT_MAJOR,
+      Self::EFlatMinor => Self::FIFTHS_E_FLAT_MINOR,
+      Self::FMajor => Self::FIFTHS_F_MAJOR,
+      Self::FMinor => Self::FIFTHS_F_MINOR,
+      Self::FSharpMajor => Self::FIFTHS_F_SHARP_MAJOR,
+      Self::FSharpMinor => Self::FIFTHS_F_SHARP_MINOR,
+      Self::GMajor => Self::FIFTHS_G_MAJOR,
+      Self::GMinor => Self::FIFTHS_G_MINOR,
+      Self::GSharpMinor => Self::FIFTHS_G_SHARP_MINOR,
+      Self::GFlatMajor => Self::FIFTHS_G_FLAT_MAJOR,
     }
   }
 
   pub fn accidentals(&self) -> [Accidental; 8] {
-    match *self {
-      Key::AMajor => [
+    match self {
+      Self::AMajor => [
         Accidental::None,
         Accidental::None,
         Accidental::None,
@@ -201,7 +158,7 @@ impl Key {
         Accidental::Sharp,
         Accidental::Sharp,
       ],
-      Key::AMinor => [
+      Self::AMinor => [
         Accidental::None,
         Accidental::None,
         Accidental::None,
@@ -211,7 +168,7 @@ impl Key {
         Accidental::None,
         Accidental::None,
       ],
-      Key::ASharpMinor => [
+      Self::ASharpMinor => [
         Accidental::None,
         Accidental::Sharp,
         Accidental::Sharp,
@@ -221,7 +178,7 @@ impl Key {
         Accidental::Sharp,
         Accidental::Sharp,
       ],
-      Key::AFlatMajor => [
+      Self::AFlatMajor => [
         Accidental::None,
         Accidental::Flat,
         Accidental::Flat,
@@ -231,7 +188,7 @@ impl Key {
         Accidental::None,
         Accidental::None,
       ],
-      Key::AFlatMinor => [
+      Self::AFlatMinor => [
         Accidental::None,
         Accidental::Flat,
         Accidental::Flat,
@@ -241,7 +198,7 @@ impl Key {
         Accidental::Flat,
         Accidental::Flat,
       ],
-      Key::BMajor => [
+      Self::BMajor => [
         Accidental::None,
         Accidental::Sharp,
         Accidental::None,
@@ -251,7 +208,7 @@ impl Key {
         Accidental::Sharp,
         Accidental::Sharp,
       ],
-      Key::BMinor => [
+      Self::BMinor => [
         Accidental::None,
         Accidental::None,
         Accidental::None,
@@ -261,7 +218,7 @@ impl Key {
         Accidental::Sharp,
         Accidental::None,
       ],
-      Key::BFlatMajor => [
+      Self::BFlatMajor => [
         Accidental::None,
         Accidental::None,
         Accidental::Flat,
@@ -271,7 +228,7 @@ impl Key {
         Accidental::None,
         Accidental::None,
       ],
-      Key::BFlatMinor => [
+      Self::BFlatMinor => [
         Accidental::None,
         Accidental::Flat,
         Accidental::Flat,
@@ -281,7 +238,7 @@ impl Key {
         Accidental::None,
         Accidental::Flat,
       ],
-      Key::CMajor => [
+      Self::CMajor => [
         Accidental::None,
         Accidental::None,
         Accidental::None,
@@ -291,7 +248,7 @@ impl Key {
         Accidental::None,
         Accidental::None,
       ],
-      Key::CMinor => [
+      Self::CMinor => [
         Accidental::None,
         Accidental::Flat,
         Accidental::Flat,
@@ -301,7 +258,7 @@ impl Key {
         Accidental::None,
         Accidental::None,
       ],
-      Key::CSharpMajor => [
+      Self::CSharpMajor => [
         Accidental::None,
         Accidental::Sharp,
         Accidental::Sharp,
@@ -311,7 +268,7 @@ impl Key {
         Accidental::Sharp,
         Accidental::Sharp,
       ],
-      Key::CSharpMinor => [
+      Self::CSharpMinor => [
         Accidental::None,
         Accidental::None,
         Accidental::None,
@@ -321,7 +278,7 @@ impl Key {
         Accidental::Sharp,
         Accidental::Sharp,
       ],
-      Key::CFlatMajor => [
+      Self::CFlatMajor => [
         Accidental::None,
         Accidental::Flat,
         Accidental::Flat,
@@ -331,7 +288,7 @@ impl Key {
         Accidental::Flat,
         Accidental::Flat,
       ],
-      Key::DMajor => [
+      Self::DMajor => [
         Accidental::None,
         Accidental::None,
         Accidental::None,
@@ -341,7 +298,7 @@ impl Key {
         Accidental::Sharp,
         Accidental::None,
       ],
-      Key::DMinor => [
+      Self::DMinor => [
         Accidental::None,
         Accidental::None,
         Accidental::Flat,
@@ -351,7 +308,7 @@ impl Key {
         Accidental::None,
         Accidental::None,
       ],
-      Key::DSharpMinor => [
+      Self::DSharpMinor => [
         Accidental::None,
         Accidental::Sharp,
         Accidental::None,
@@ -361,7 +318,7 @@ impl Key {
         Accidental::Sharp,
         Accidental::Sharp,
       ],
-      Key::DFlatMajor => [
+      Self::DFlatMajor => [
         Accidental::None,
         Accidental::Flat,
         Accidental::Flat,
@@ -371,7 +328,7 @@ impl Key {
         Accidental::None,
         Accidental::Flat,
       ],
-      Key::EMajor => [
+      Self::EMajor => [
         Accidental::None,
         Accidental::None,
         Accidental::None,
@@ -381,7 +338,7 @@ impl Key {
         Accidental::Sharp,
         Accidental::Sharp,
       ],
-      Key::EMinor => [
+      Self::EMinor => [
         Accidental::None,
         Accidental::None,
         Accidental::None,
@@ -391,7 +348,7 @@ impl Key {
         Accidental::Sharp,
         Accidental::None,
       ],
-      Key::EFlatMajor => [
+      Self::EFlatMajor => [
         Accidental::None,
         Accidental::Flat,
         Accidental::Flat,
@@ -401,7 +358,7 @@ impl Key {
         Accidental::None,
         Accidental::None,
       ],
-      Key::EFlatMinor => [
+      Self::EFlatMinor => [
         Accidental::None,
         Accidental::Flat,
         Accidental::Flat,
@@ -411,7 +368,7 @@ impl Key {
         Accidental::None,
         Accidental::Flat,
       ],
-      Key::FMajor => [
+      Self::FMajor => [
         Accidental::None,
         Accidental::None,
         Accidental::Flat,
@@ -421,7 +378,7 @@ impl Key {
         Accidental::None,
         Accidental::None,
       ],
-      Key::FMinor => [
+      Self::FMinor => [
         Accidental::None,
         Accidental::Flat,
         Accidental::Flat,
@@ -431,7 +388,7 @@ impl Key {
         Accidental::None,
         Accidental::None,
       ],
-      Key::FSharpMajor => [
+      Self::FSharpMajor => [
         Accidental::None,
         Accidental::Sharp,
         Accidental::None,
@@ -441,7 +398,7 @@ impl Key {
         Accidental::Sharp,
         Accidental::Sharp,
       ],
-      Key::FSharpMinor => [
+      Self::FSharpMinor => [
         Accidental::None,
         Accidental::None,
         Accidental::None,
@@ -451,7 +408,7 @@ impl Key {
         Accidental::Sharp,
         Accidental::Sharp,
       ],
-      Key::GMajor => [
+      Self::GMajor => [
         Accidental::None,
         Accidental::None,
         Accidental::None,
@@ -461,7 +418,7 @@ impl Key {
         Accidental::Sharp,
         Accidental::None,
       ],
-      Key::GMinor => [
+      Self::GMinor => [
         Accidental::None,
         Accidental::None,
         Accidental::Flat,
@@ -471,7 +428,7 @@ impl Key {
         Accidental::None,
         Accidental::None,
       ],
-      Key::GSharpMinor => [
+      Self::GSharpMinor => [
         Accidental::None,
         Accidental::Sharp,
         Accidental::None,
@@ -481,7 +438,7 @@ impl Key {
         Accidental::Sharp,
         Accidental::Sharp,
       ],
-      Key::GFlatMajor => [
+      Self::GFlatMajor => [
         Accidental::None,
         Accidental::Flat,
         Accidental::Flat,
@@ -500,7 +457,7 @@ impl std::fmt::Display for Key {
     write!(
       f,
       "{}",
-      match *self {
+      match self {
         Key::AMajor => "A",
         Key::AMinor => "Am",
         Key::ASharpMinor => "A♯m",

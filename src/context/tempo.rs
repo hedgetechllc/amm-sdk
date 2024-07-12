@@ -8,7 +8,7 @@ pub struct Tempo {
 
 impl Tempo {
   pub fn new(base_note: Duration, beats_per_minute: u16) -> Self {
-    Tempo {
+    Self {
       base_note,
       beats_per_minute,
     }
@@ -17,7 +17,7 @@ impl Tempo {
 
 impl Default for Tempo {
   fn default() -> Self {
-    Tempo {
+    Self {
       base_note: Duration::Quarter(0),
       beats_per_minute: 120,
     }

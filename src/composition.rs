@@ -1,5 +1,5 @@
-use crate::context::{Clef, Key, Tempo, TimeSignature};
-use crate::structure::{Staff, System, SystemIndicator};
+use crate::context::{Key, Tempo, TimeSignature};
+use crate::structure::Part;
 use std::collections::HashMap;
 
 pub struct Composition {
@@ -10,7 +10,7 @@ pub struct Composition {
   lyricists: Vec<String>,
   arrangers: Vec<String>,
   metadata: HashMap<String, String>,
-  systems: Vec<System>,
+  parts: Vec<Part>,
   tempo: Tempo,
   starting_key: Key,
   starting_time_signature: TimeSignature,
@@ -18,7 +18,7 @@ pub struct Composition {
 
 impl Composition {
   pub fn new(title: &str, tempo: Option<Tempo>, key: Option<Key>, time_signature: Option<TimeSignature>) -> Self {
-    Composition {
+    Self {
       title: String::from(title),
       copyright: None,
       publisher: None,
@@ -26,7 +26,7 @@ impl Composition {
       lyricists: Vec::new(),
       arrangers: Vec::new(),
       metadata: HashMap::new(),
-      systems: Vec::new(),
+      parts: Vec::new(),
       tempo: tempo.unwrap_or_default(),
       starting_key: key.unwrap_or_default(),
       starting_time_signature: time_signature.unwrap_or_default(),
@@ -83,35 +83,9 @@ impl Composition {
     self
   }
 
-  pub fn add_system(&mut self, name: &str, system_grouping_indicator: Option<SystemIndicator>) -> &mut System {
-    self
-      .remove_system(name)
-      .systems
-      .push(System::new(name, system_grouping_indicator.unwrap_or_default()));
-    self.systems.last_mut().unwrap()
-  }
-
-  pub fn set_system_grouping_indicator(
-    &mut self,
-    system_name: &str,
-    system_grouping_indicator: SystemIndicator,
-  ) -> &mut Self {
-    if let Some(system) = self.systems.iter_mut().find(|system| system.get_name() == system_name) {
-      system.set_indicator(system_grouping_indicator);
-    }
-    self
-  }
-
-  pub fn add_staff_to_system(&mut self, system_name: &str, staff_name: &str, clef: Option<Clef>) -> Option<&mut Staff> {
-    match self.systems.iter_mut().find(|system| system.get_name() == system_name) {
-      Some(system) => Some(system.add_staff(
-        staff_name,
-        clef.unwrap_or_default(),
-        self.starting_key.clone(),
-        self.starting_time_signature.clone(),
-      )),
-      None => None,
-    }
+  pub fn add_part(&mut self, name: &str) -> &mut Part {
+    self.remove_part(name).parts.push(Part::new(name));
+    self.parts.last_mut().unwrap()
   }
 
   pub fn get_title(&self) -> &str {
@@ -154,15 +128,22 @@ impl Composition {
     &self.metadata
   }
 
-  pub fn get_system(&mut self, name: &str) -> Option<&mut System> {
-    self.systems.iter_mut().find(|system| system.get_name() == name)
+  pub fn get_part_names(&self) -> Vec<String> {
+    self.parts.iter().map(|part| String::from(part.get_name())).collect()
   }
 
-  pub fn get_staff_from_system(&mut self, system_name: &str, staff_name: &str) -> Option<&mut Staff> {
-    match self.systems.iter_mut().find(|system| system.get_name() == system_name) {
-      Some(system) => system.get_staff(staff_name),
-      None => None,
-    }
+  pub fn get_part(&mut self, name: &str) -> Option<&mut Part> {
+    self.parts.iter_mut().find(|part| part.get_name() == name)
+  }
+
+  pub fn remove_copyright(&mut self) -> &mut Self {
+    self.copyright = None;
+    self
+  }
+
+  pub fn remove_publisher(&mut self) -> &mut Self {
+    self.publisher = None;
+    self
   }
 
   pub fn remove_composer(&mut self, name: &str) -> &mut Self {
@@ -185,15 +166,15 @@ impl Composition {
     self
   }
 
-  pub fn remove_system(&mut self, name: &str) -> &mut Self {
-    self.systems.retain(|system| system.get_name() != name);
+  pub fn remove_part(&mut self, name: &str) -> &mut Self {
+    self.parts.retain(|part| part.get_name() != name);
     self
   }
 }
 
 impl std::fmt::Display for Composition {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-    write!(f, "Composition:\n  Title: {}\n  First Composer: {}\n  First Lyricist: {}\n  First Arranger: {}\n  Publisher: {}\n  Copyright: {}\n  Tempo: {}\n  Key: {}\n  Time Signature: {}\n  Num Systems: {}\n  Num Staffs: {}",
+    write!(f, "Composition:\n  Title: {}\n  First Composer: {}\n  First Lyricist: {}\n  First Arranger: {}\n  Publisher: {}\n  Copyright: {}\n  Tempo: {}\n  Key: {}\n  Time Signature: {}\n  Num Parts: {}",
       self.title,
       self.composers.first().unwrap_or(&String::from("Unknown")),
       self.lyricists.first().unwrap_or(&String::from("Unknown")),
@@ -203,8 +184,7 @@ impl std::fmt::Display for Composition {
       self.tempo,
       self.starting_key,
       self.starting_time_signature,
-      self.systems.len(),
-      self.systems.iter().map(|system| system.get_staff_names().len()).sum::<usize>(),
+      self.parts.len(),
     )
   }
 }

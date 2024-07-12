@@ -1,7 +1,11 @@
+mod chord;
+mod direction;
 mod note;
 mod phrase;
-mod slice;
+mod section;
 
-pub use note::NoteModification;
-pub use phrase::{PhraseModification, PhraseModificationType};
-pub use slice::SliceModification;
+pub use chord::{ChordModification, ChordModificationType};
+pub use direction::{Direction, DirectionType};
+pub use note::{NoteModification, NoteModificationType};
+pub use phrase::{PedalType, PhraseModification, PhraseModificationType};
+pub use section::{SectionModification, SectionModificationType};
