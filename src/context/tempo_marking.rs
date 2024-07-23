@@ -134,28 +134,3 @@ impl std::fmt::Display for TempoMarking {
     )
   }
 }
-
-#[derive(Copy, Clone, Eq, PartialEq)]
-pub enum TempoModification {
-  Accelerando,
-  Rallentando,
-  Ritardando,
-  Ritenuto,
-  Stringendo,
-}
-
-impl std::fmt::Display for TempoModification {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-    write!(
-      f,
-      "{}",
-      match self {
-        Self::Accelerando => "Accelerando",
-        Self::Rallentando => "Rallentando",
-        Self::Ritardando => "Ritardando",
-        Self::Ritenuto => "Ritenuto",
-        Self::Stringendo => "Stringendo",
-      }
-    )
-  }
-}

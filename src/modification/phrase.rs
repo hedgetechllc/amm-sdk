@@ -11,6 +11,7 @@ pub enum PedalType {
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub enum PhraseModificationType {
+  Accelerando,
   Crescendo { final_dynamic: DynamicMarking },
   Decrescendo { final_dynamic: DynamicMarking },
   Glissando,
@@ -19,6 +20,10 @@ pub enum PhraseModificationType {
   OctaveShift { num_octaves: i8 },
   Pedal { r#type: PedalType },
   Portamento,
+  Rallentando,
+  Ritardando,
+  Ritenuto,
+  Stringendo,
   Tied,
   Tremolo { relative_speed: u8 },
   Tuplet { into_beats: u8 },
@@ -64,6 +69,7 @@ impl std::fmt::Display for PedalType {
 impl std::fmt::Display for PhraseModificationType {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     match self {
+      Self::Accelerando => write!(f, "Accelerando"),
       Self::Crescendo { final_dynamic } => write!(
         f,
         "Crescendo{}{}",
@@ -99,6 +105,10 @@ impl std::fmt::Display for PhraseModificationType {
       Self::OctaveShift { num_octaves } => write!(f, "Shift by {} octaves", num_octaves),
       Self::Pedal { r#type } => write!(f, "{} Pedal", r#type),
       Self::Portamento => write!(f, "Portamento"),
+      Self::Rallentando => write!(f, "Rallentando"),
+      Self::Ritardando => write!(f, "Ritardando"),
+      Self::Ritenuto => write!(f, "Ritenuto"),
+      Self::Stringendo => write!(f, "Stringendo"),
       Self::Tied => write!(f, "Tied"),
       Self::Tremolo { relative_speed } => write!(f, "Tremolo at {}x speed", relative_speed),
       Self::Tuplet { into_beats } => write!(f, "Tuplet into {} beats", into_beats),

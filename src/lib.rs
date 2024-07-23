@@ -9,9 +9,7 @@ use wasm_bindgen::prelude::*;
 use web_sys::console;
 
 pub use composition::Composition;
-pub use context::{
-  Clef, ClefType, DynamicMarking, Key, KeyMode, Tempo, TempoMarking, TempoModification, TimeSignature,
-};
+pub use context::{Clef, ClefType, DynamicMarking, Key, KeyMode, Tempo, TempoMarking, TimeSignature};
 pub use modification::{
   ChordModification, ChordModificationType, Direction, DirectionType, NoteModification, NoteModificationType,
   PedalType, PhraseModification, PhraseModificationType, SectionModification, SectionModificationType,

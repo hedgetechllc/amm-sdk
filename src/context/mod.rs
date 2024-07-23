@@ -11,5 +11,5 @@ pub use dynamic::DynamicMarking;
 pub use id::generate_id;
 pub use key::{Key, KeyMode};
 pub use tempo::Tempo;
-pub use tempo_marking::{TempoMarking, TempoModification};
+pub use tempo_marking::TempoMarking;
 pub use time_signature::TimeSignature;
