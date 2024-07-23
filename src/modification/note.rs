@@ -1,6 +1,45 @@
 use crate::context::{generate_id, DynamicMarking};
 use std::{cell::RefCell, rc::Rc};
 
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum HandbellTechnique {
+  Belltree,
+  Damp,
+  Echo,
+  Gyro,
+  HandMartellato,
+  MalletLift,
+  MalletTable,
+  Martellato,
+  MartellatoLift,
+  MutedMartellato,
+  PluckLift,
+  Swing,
+}
+
+impl std::fmt::Display for HandbellTechnique {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    write!(
+      f,
+      "{}",
+      match self {
+        Self::Belltree => "Belltree",
+        Self::Damp => "Damp",
+        Self::Echo => "Echo",
+        Self::Gyro => "Gyro",
+        Self::HandMartellato => "Hand Martellato",
+        Self::MalletLift => "Mallet Lift",
+        Self::MalletTable => "Mallet Table",
+        Self::Martellato => "Martellato",
+        Self::MartellatoLift => "Martellato Lift",
+        Self::MutedMartellato => "Muted Martellato",
+        Self::PluckLift => "Pluck Lift",
+        Self::Swing => "Swing",
+      }
+    )
+  }
+}
+
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub enum NoteModificationType {
   Accent,
@@ -18,6 +57,7 @@ pub enum NoteModificationType {
   Golpe,
   Grace { acciaccatura: bool, note_value: u8 },
   HalfMuted,
+  Handbell { technique: HandbellTechnique },
   HarmonMute { open: bool, half: bool },
   Haydn,
   Heel,
@@ -39,7 +79,9 @@ pub enum NoteModificationType {
   Staccatissimo,
   Stopped,
   Stress,
+  Tap,
   Tenuto,
+  ThumbPosition,
   Toe,
   Tremolo { relative_speed: u8 },
   Trill { upper: bool },
@@ -103,6 +145,7 @@ impl std::fmt::Display for NoteModificationType {
         note_value
       ),
       Self::HalfMuted => write!(f, "Half Muted"),
+      Self::Handbell { technique } => write!(f, "Handbell: {}", technique),
       Self::HarmonMute { open, half } => write!(
         f,
         "Harmon Mute: {}{}",
@@ -139,7 +182,9 @@ impl std::fmt::Display for NoteModificationType {
       Self::Staccatissimo => write!(f, "Staccatissimo"),
       Self::Stopped => write!(f, "Stopped"),
       Self::Stress => write!(f, "Stress"),
+      Self::Tap => write!(f, "Tap"),
       Self::Tenuto => write!(f, "Tenuto"),
+      Self::ThumbPosition => write!(f, "Thumb Position"),
       Self::Toe => write!(f, "Toe"),
       Self::Tremolo { relative_speed } => write!(f, "Tremolo at {}x speed", relative_speed),
       Self::Trill { upper } => write!(f, "{} Trill", if *upper { "Upper" } else { "Lower" }),

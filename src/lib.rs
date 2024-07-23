@@ -11,8 +11,9 @@ use web_sys::console;
 pub use composition::Composition;
 pub use context::{Clef, ClefType, DynamicMarking, Key, KeyMode, Tempo, TempoMarking, TimeSignature};
 pub use modification::{
-  ChordModification, ChordModificationType, Direction, DirectionType, NoteModification, NoteModificationType,
-  PedalType, PhraseModification, PhraseModificationType, SectionModification, SectionModificationType,
+  ChordModification, ChordModificationType, Direction, DirectionType, HandbellTechnique, NoteModification,
+  NoteModificationType, PedalType, PhraseModification, PhraseModificationType, SectionModification,
+  SectionModificationType,
 };
 pub use note::{Accidental, Duration, Note, Pitch};
 pub use storage::Storage;

@@ -1,14 +1,16 @@
-use crate::context::{generate_id, Clef, DynamicMarking, Key, TimeSignature};
+use crate::context::{generate_id, Clef, DynamicMarking, Key, Tempo, TimeSignature};
 use std::{cell::RefCell, rc::Rc};
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum DirectionType {
+  AccordionRegistration { high: bool, middle: u8, low: bool },
   BreathMark,
   Caesura,
   Clef { clef: Clef },
   Dynamic { dynamic: DynamicMarking },
   Key { key: Key },
   StringMute { on: bool },
+  TempoChange { tempo: Tempo },
   TimeSignature { time_signature: TimeSignature },
 }
 
@@ -38,12 +40,24 @@ impl Direction {
 impl std::fmt::Display for DirectionType {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     match self {
+      Self::AccordionRegistration { high, middle, low } => write!(
+        f,
+        "Accordion registration: {}{}{}",
+        if *high { "HIGH, " } else { "" },
+        if *middle > 0 {
+          format!("MIDDLE={}", *middle)
+        } else {
+          String::new()
+        },
+        if *low { ", LOW" } else { "" }
+      ),
       Self::BreathMark => write!(f, "Breath mark"),
       Self::Caesura => write!(f, "Caesura"),
       Self::Clef { clef } => write!(f, "Clef: {}", clef),
       Self::Dynamic { dynamic } => write!(f, "Dynamic: {}", dynamic),
       Self::Key { key } => write!(f, "Key: {}", key),
       Self::StringMute { on } => write!(f, "String mute: {}", if *on { "on" } else { "off" }),
+      Self::TempoChange { tempo } => write!(f, "Tempo: {}", tempo),
       Self::TimeSignature { time_signature } => write!(f, "Time signature: {}", time_signature),
     }
   }

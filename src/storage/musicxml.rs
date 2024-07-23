@@ -1,7 +1,8 @@
 use super::Convert;
 use crate::{
-  Accidental, Clef, Composition, DirectionType, Duration, DynamicMarking, Key, KeyMode, NoteModificationType,
-  PedalType, PhraseModificationType, Pitch, Tempo, TimeSignature,
+  Accidental, ChordModificationType, Clef, ClefType, Composition, DirectionType, Duration, DynamicMarking,
+  HandbellTechnique, Key, KeyMode, Note, NoteModificationType, PedalType, PhraseModificationType, Pitch,
+  SectionModificationType, Tempo, TempoMarking, TimeSignature,
 };
 use musicxml;
 use std::collections::HashMap;
@@ -9,19 +10,19 @@ use std::collections::HashMap;
 pub struct MusicXmlConverter;
 
 #[derive(Clone)]
-struct PhraseMod {
+struct PhraseModDetails {
   pub modification: PhraseModificationType,
   pub is_start: bool,
   pub number: Option<u8>,
 }
 
-impl std::fmt::Display for PhraseMod {
+impl std::fmt::Display for PhraseModDetails {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     write!(
       f,
-      "{} (Start: {}, ID: {})",
+      "{} {} (ID: {})",
       self.modification,
-      self.is_start,
+      if self.is_start { "Start" } else { "End" },
       self.number.unwrap_or(0)
     )
   }
@@ -29,18 +30,19 @@ impl std::fmt::Display for PhraseMod {
 
 #[derive(Clone)]
 enum TimeSliceContents {
-  BreathMark,
-  Caesura,
-  ChordMod(NoteModificationType),
-  Clef(Clef),
-  Dynamic(DynamicMarking),
-  Key(Key),
-  PhraseMod(PhraseMod),
+  Direction(DirectionType),
+  ChordModification(ChordModificationType),
+  PhraseModification(PhraseModDetails),
+  JumpTo(String),
   SectionStart(String),
-  StringMute {
-    on: bool,
+  Ending {
+    start: bool,
+    numbers: Vec<u8>,
   },
-  TimeSignature(TimeSignature),
+  Repeat {
+    start: bool,
+    times: u32,
+  },
   Note {
     pitch: Pitch,
     duration: Duration,
@@ -51,7 +53,7 @@ enum TimeSliceContents {
     arpeggiated: bool,
     non_arpeggiated: bool,
     note_modifications: Vec<NoteModificationType>,
-    phrase_modifications: Vec<PhraseMod>,
+    phrase_modifications: Vec<PhraseModDetails>,
   },
 }
 
@@ -61,16 +63,21 @@ impl std::fmt::Display for TimeSliceContents {
       f,
       "{}",
       match *self {
-        TimeSliceContents::BreathMark => format!("Breath Mark"),
-        TimeSliceContents::Caesura => format!("Caesura"),
-        TimeSliceContents::ChordMod(ref chord_mod) => format!("Chord Mod: {}", chord_mod),
-        TimeSliceContents::Clef(ref clef) => format!("Clef: {}", clef),
-        TimeSliceContents::Dynamic(ref dynamic) => format!("Dynamic: {}", dynamic),
-        TimeSliceContents::Key(ref key) => format!("Key: {}", key),
-        TimeSliceContents::PhraseMod(ref phrase_mod) => format!("Phrase Mod: {}", phrase_mod),
+        TimeSliceContents::Direction(ref direction) => format!("{}", direction),
+        TimeSliceContents::ChordModification(ref chord_mod) => format!("Chord Modification: {}", chord_mod),
+        TimeSliceContents::PhraseModification(ref phrase_mod) => format!("Phrase Modification: {}", phrase_mod),
+        TimeSliceContents::JumpTo(ref jump_to) => format!("Jump To: {}", jump_to),
         TimeSliceContents::SectionStart(ref section_start) => format!("Section Start: {}", section_start),
-        TimeSliceContents::StringMute { on } => format!("String Mute: {}", on),
-        TimeSliceContents::TimeSignature(ref time_signature) => format!("Time Signature: {}", time_signature),
+        TimeSliceContents::Ending { start, ref numbers } => format!(
+          "Ending: Start={} Iterations=[{}]",
+          start,
+          numbers
+            .iter()
+            .map(|number| number.to_string())
+            .collect::<Vec<String>>()
+            .join(", ")
+        ),
+        TimeSliceContents::Repeat { start, times } => format!("{} Repeat {} Times", if start { "Start" } else { "End" }, times),
         TimeSliceContents::Note {
           ref pitch,
           ref duration,
@@ -156,7 +163,7 @@ impl MusicXmlConverter {
     let (mut num_dots, mut remaining_divisions) = (0, total_divisions - base_divisions);
     while remaining_divisions > 0 {
       num_dots += 1;
-      remaining_divisions -= base_divisions / (2 * num_dots);
+      remaining_divisions -= base_divisions / (2_usize.pow(num_dots));
     }
     num_dots as u8
   }
@@ -182,7 +189,7 @@ impl MusicXmlConverter {
         }
       }
     }
-    Key::from_fifths(0, Some(KeyMode::Major))
+    Key::default()
   }
 
   fn find_starting_time_signature(parts: &Vec<musicxml::elements::Part>) -> TimeSignature {
@@ -202,28 +209,49 @@ impl MusicXmlConverter {
         }
       }
     }
-    TimeSignature::CommonTime
+    TimeSignature::default()
   }
 
-  fn find_max_num_quarter_notes_per_measure(parts: &Vec<musicxml::elements::Part>) -> usize {
-    let mut max_quarter_notes: u32 = 1;
-    for part in parts {
-      if let musicxml::elements::PartElement::Measure(measure) = &part.content[0] {
-        for measure_element in &measure.content {
-          if let musicxml::elements::MeasureElement::Attributes(attributes) = measure_element {
-            for time_element in &attributes.content.time {
-              for beat_element in &time_element.content.beats {
-                let num_quarter_notes = (((*beat_element.beats.content).parse::<f32>().unwrap() * 4.0f32
-                  / (*beat_element.beat_type.content).parse::<f32>().unwrap())
-                  + 0.5f32) as u32;
-                max_quarter_notes = max_quarter_notes.max(num_quarter_notes);
-              }
-            }
-          }
-        }
+  fn parse_tempo_from_metronome(metronome: &musicxml::elements::Metronome) -> Option<Tempo> {
+    if let musicxml::elements::MetronomeContents::BeatBased(beat_data) = &metronome.content {
+      let num_dots: u8 = beat_data.beat_unit_dot.len() as u8;
+      let base_note = match beat_data.beat_unit.content {
+        musicxml::datatypes::NoteTypeValue::Maxima => Duration::Maxima(num_dots),
+        musicxml::datatypes::NoteTypeValue::Long => Duration::Long(num_dots),
+        musicxml::datatypes::NoteTypeValue::Breve => Duration::Breve(num_dots),
+        musicxml::datatypes::NoteTypeValue::Whole => Duration::Whole(num_dots),
+        musicxml::datatypes::NoteTypeValue::Half => Duration::Half(num_dots),
+        musicxml::datatypes::NoteTypeValue::Quarter => Duration::Quarter(num_dots),
+        musicxml::datatypes::NoteTypeValue::Eighth => Duration::Eighth(num_dots),
+        musicxml::datatypes::NoteTypeValue::Sixteenth => Duration::Sixteenth(num_dots),
+        musicxml::datatypes::NoteTypeValue::ThirtySecond => Duration::ThirtySecond(num_dots),
+        musicxml::datatypes::NoteTypeValue::SixtyFourth => Duration::SixtyFourth(num_dots),
+        musicxml::datatypes::NoteTypeValue::OneHundredTwentyEighth => Duration::OneHundredTwentyEighth(num_dots),
+        musicxml::datatypes::NoteTypeValue::TwoHundredFiftySixth => Duration::TwoHundredFiftySixth(num_dots),
+        musicxml::datatypes::NoteTypeValue::FiveHundredTwelfth => Duration::FiveHundredTwelfth(num_dots),
+        musicxml::datatypes::NoteTypeValue::OneThousandTwentyFourth => Duration::OneThousandTwentyFourth(num_dots),
+      };
+      if let musicxml::elements::BeatEquation::BPM(per_minute) = &beat_data.equals {
+        return Some(Tempo {
+          base_note,
+          beats_per_minute: per_minute.content.parse().unwrap(),
+        });
+      };
+    }
+    None
+  }
+
+  fn parse_tempo_from_sound(sound: &musicxml::elements::Sound) -> Option<Tempo> {
+    if let Some(tempo) = &sound.attributes.tempo {
+      let bpm = **tempo as u16;
+      if bpm > 0 {
+        return Some(Tempo {
+          base_note: Duration::Quarter(0),
+          beats_per_minute: bpm,
+        });
       }
     }
-    max_quarter_notes as usize
+    None
   }
 
   fn find_tempo(parts: &Vec<musicxml::elements::Part>) -> Tempo {
@@ -234,60 +262,23 @@ impl MusicXmlConverter {
             for direction_type in &direction.content.direction_type {
               // Attempt to find a metronome marking
               if let musicxml::elements::DirectionTypeContents::Metronome(metronome) = &direction_type.content {
-                if let musicxml::elements::MetronomeContents::BeatBased(beat_data) = &metronome.content {
-                  let num_dots: u8 = beat_data.beat_unit_dot.len() as u8;
-                  let base_note = match beat_data.beat_unit.content {
-                    musicxml::datatypes::NoteTypeValue::Maxima => Duration::Maxima(num_dots),
-                    musicxml::datatypes::NoteTypeValue::Long => Duration::Long(num_dots),
-                    musicxml::datatypes::NoteTypeValue::Breve => Duration::Breve(num_dots),
-                    musicxml::datatypes::NoteTypeValue::Whole => Duration::Whole(num_dots),
-                    musicxml::datatypes::NoteTypeValue::Half => Duration::Half(num_dots),
-                    musicxml::datatypes::NoteTypeValue::Quarter => Duration::Quarter(num_dots),
-                    musicxml::datatypes::NoteTypeValue::Eighth => Duration::Eighth(num_dots),
-                    musicxml::datatypes::NoteTypeValue::Sixteenth => Duration::Sixteenth(num_dots),
-                    musicxml::datatypes::NoteTypeValue::ThirtySecond => Duration::ThirtySecond(num_dots),
-                    musicxml::datatypes::NoteTypeValue::SixtyFourth => Duration::SixtyFourth(num_dots),
-                    musicxml::datatypes::NoteTypeValue::OneHundredTwentyEighth => {
-                      Duration::OneHundredTwentyEighth(num_dots)
-                    }
-                    musicxml::datatypes::NoteTypeValue::TwoHundredFiftySixth => {
-                      Duration::TwoHundredFiftySixth(num_dots)
-                    }
-                    musicxml::datatypes::NoteTypeValue::FiveHundredTwelfth => Duration::FiveHundredTwelfth(num_dots),
-                    musicxml::datatypes::NoteTypeValue::OneThousandTwentyFourth => {
-                      Duration::OneThousandTwentyFourth(num_dots)
-                    }
-                  };
-                  if let musicxml::elements::BeatEquation::BPM(per_minute) = &beat_data.equals {
-                    return Tempo {
-                      base_note,
-                      beats_per_minute: per_minute.content.parse().unwrap(),
-                    };
-                  };
-                };
-              };
+                if let Some(result) = Self::parse_tempo_from_metronome(metronome) {
+                  return result;
+                }
+              }
             }
 
             // If no metronome marking was found, attempt to find a sound direction
             if let Some(sound) = &direction.content.sound {
-              if let Some(tempo) = &sound.attributes.tempo {
-                let bpm = **tempo as u16;
-                if bpm > 0 {
-                  return Tempo {
-                    base_note: Duration::Quarter(0),
-                    beats_per_minute: bpm,
-                  };
-                }
+              if let Some(result) = Self::parse_tempo_from_sound(sound) {
+                return result;
               }
             }
           }
         }
       }
     }
-    Tempo {
-      base_note: Duration::Quarter(0),
-      beats_per_minute: 120,
-    }
+    Tempo::default()
   }
 
   fn find_metadata(composition: &mut Composition, metadata_contents: &musicxml::elements::ScorePartwiseContents) {
@@ -345,21 +336,6 @@ impl MusicXmlConverter {
     parts_map
   }
 
-  fn find_divisions_per_quarter_note(parts: &Vec<musicxml::elements::Part>) -> usize {
-    for part in parts {
-      if let musicxml::elements::PartElement::Measure(measure) = &part.content[0] {
-        for measure_element in &measure.content {
-          if let musicxml::elements::MeasureElement::Attributes(attributes) = measure_element {
-            if let Some(divisions_elements) = &attributes.content.divisions {
-              return *divisions_elements.content as usize;
-            }
-          }
-        }
-      }
-    }
-    4
-  }
-
   fn find_staves(part_elements: &Vec<musicxml::elements::PartElement>) -> Vec<String> {
     for element in part_elements {
       if let musicxml::elements::PartElement::Measure(measure) = element {
@@ -375,8 +351,44 @@ impl MusicXmlConverter {
     vec![String::from("1")]
   }
 
-  fn find_num_measures(parts_list: &Vec<musicxml::elements::Part>) -> usize {
-    parts_list.iter().map(|part| part.content.iter().count()).max().unwrap()
+  fn find_num_measures(part_elements: &Vec<musicxml::elements::PartElement>) -> usize {
+    part_elements.len()
+  }
+
+  fn find_divisions_per_quarter_note(part_elements: &Vec<musicxml::elements::PartElement>) -> usize {
+    for element in part_elements {
+      if let musicxml::elements::PartElement::Measure(measure) = element {
+        for measure_element in &measure.content {
+          if let musicxml::elements::MeasureElement::Attributes(attributes) = measure_element {
+            if let Some(divisions_elements) = &attributes.content.divisions {
+              return *divisions_elements.content as usize;
+            }
+          }
+        }
+      }
+    }
+    4
+  }
+
+  fn find_max_num_quarter_notes_per_measure(part_elements: &Vec<musicxml::elements::PartElement>) -> usize {
+    let mut max_quarter_notes: u32 = 1;
+    for element in part_elements {
+      if let musicxml::elements::PartElement::Measure(measure) = element {
+        for measure_element in &measure.content {
+          if let musicxml::elements::MeasureElement::Attributes(attributes) = measure_element {
+            for time_element in &attributes.content.time {
+              for beat_element in &time_element.content.beats {
+                let num_quarter_notes = (((*beat_element.beats.content).parse::<f32>().unwrap() * 4.0f32
+                  / (*beat_element.beat_type.content).parse::<f32>().unwrap())
+                  + 0.5f32) as u32;
+                max_quarter_notes = max_quarter_notes.max(num_quarter_notes);
+              }
+            }
+          }
+        }
+      }
+    }
+    max_quarter_notes as usize
   }
 
   fn parse_attributes_element(
@@ -390,11 +402,35 @@ impl MusicXmlConverter {
       } else {
         String::from("1")
       };
-      let item = TimeSliceContents::Clef(match item.content.sign.content {
-        musicxml::datatypes::ClefSign::G => Clef::Treble,
-        musicxml::datatypes::ClefSign::F => Clef::Bass,
-        musicxml::datatypes::ClefSign::C => Clef::Alto,
-        _ => Clef::Treble,
+      let item = TimeSliceContents::Direction(DirectionType::Clef {
+        clef: match item.content.sign.content {
+          musicxml::datatypes::ClefSign::G => match &item.content.line {
+            Some(line) => match *line.content {
+              1 => Clef::FrenchViolin,
+              _ => Clef::Treble,
+            },
+            None => Clef::Treble,
+          },
+          musicxml::datatypes::ClefSign::F => match &item.content.line {
+            Some(line) => match *line.content {
+              3 => Clef::Baritone(ClefType::FClef),
+              5 => Clef::Subbass,
+              _ => Clef::Bass,
+            },
+            None => Clef::Bass,
+          },
+          musicxml::datatypes::ClefSign::C => match &item.content.line {
+            Some(line) => match *line.content {
+              1 => Clef::Soprano,
+              2 => Clef::MezzoSoprano,
+              4 => Clef::Tenor,
+              5 => Clef::Baritone(ClefType::CClef),
+              _ => Clef::Alto,
+            },
+            None => Clef::Alto,
+          },
+          _ => Clef::Treble,
+        },
       });
       time_slices.get_mut(&staff_name).unwrap()[cursor].push(item);
     });
@@ -412,7 +448,9 @@ impl MusicXmlConverter {
           },
           None => KeyMode::Major,
         };
-        let item = TimeSliceContents::Key(Key::from_fifths(*key.fifths.content, Some(mode)));
+        let item = TimeSliceContents::Direction(DirectionType::Key {
+          key: Key::from_fifths(*key.fifths.content, Some(mode)),
+        });
         time_slices.get_mut(&staff_name).unwrap()[cursor].push(item);
       }
     });
@@ -422,11 +460,19 @@ impl MusicXmlConverter {
       } else {
         String::from("1")
       };
-      let beat_element = &item.content.beats[0];
-      let item = TimeSliceContents::TimeSignature(TimeSignature::Explicit(
-        (*beat_element.beats.content).parse().unwrap(),
-        (*beat_element.beat_type.content).parse().unwrap(),
-      ));
+      let item = if item.content.senza_misura.is_some() {
+        TimeSliceContents::Direction(DirectionType::TimeSignature {
+          time_signature: TimeSignature::None,
+        })
+      } else {
+        let beat_element = &item.content.beats[0];
+        TimeSliceContents::Direction(DirectionType::TimeSignature {
+          time_signature: TimeSignature::Explicit(
+            (*beat_element.beats.content).parse().unwrap(),
+            (*beat_element.beat_type.content).parse().unwrap(),
+          ),
+        })
+      };
       time_slices.get_mut(&staff_name).unwrap()[cursor].push(item);
     });
     0
@@ -469,7 +515,7 @@ impl MusicXmlConverter {
         }
         musicxml::elements::DirectionTypeContents::Wedge(wedge) => {
           if wedge.attributes.r#type != musicxml::datatypes::WedgeType::Continue {
-            let item = TimeSliceContents::PhraseMod(PhraseMod {
+            let item = TimeSliceContents::PhraseModification(PhraseModDetails {
               modification: match wedge.attributes.r#type {
                 musicxml::datatypes::WedgeType::Diminuendo => PhraseModificationType::Decrescendo {
                   final_dynamic: DynamicMarking::None,
@@ -504,18 +550,17 @@ impl MusicXmlConverter {
             _ => Some(DynamicMarking::None),
           };
           if let Some(dynamic_type) = dynamic_type {
-            if dynamic_type == DynamicMarking::None {
-              let item = TimeSliceContents::ChordMod(NoteModificationType::Accent);
-              time_slice.get_mut(&staff_name).unwrap()[cursor].push(item);
+            let item = if dynamic_type == DynamicMarking::None {
+              TimeSliceContents::ChordModification(ChordModificationType::Accent)
             } else {
-              let item = TimeSliceContents::Dynamic(dynamic_type);
-              time_slice.get_mut(&staff_name).unwrap()[cursor].push(item);
-            }
+              TimeSliceContents::Direction(DirectionType::Dynamic { dynamic: dynamic_type })
+            };
+            time_slice.get_mut(&staff_name).unwrap()[cursor].push(item);
           }
         }
         musicxml::elements::DirectionTypeContents::Pedal(pedal) => match &pedal.attributes.r#type {
           musicxml::datatypes::PedalType::Start => {
-            let item = TimeSliceContents::PhraseMod(PhraseMod {
+            let item = TimeSliceContents::PhraseModification(PhraseModDetails {
               modification: PhraseModificationType::Pedal {
                 r#type: PedalType::Sustain,
               },
@@ -525,7 +570,7 @@ impl MusicXmlConverter {
             time_slice.get_mut(&staff_name).unwrap()[cursor].push(item);
           }
           musicxml::datatypes::PedalType::Stop => {
-            let item = TimeSliceContents::PhraseMod(PhraseMod {
+            let item = TimeSliceContents::PhraseModification(PhraseModDetails {
               modification: PhraseModificationType::Pedal {
                 r#type: PedalType::Sustain,
               },
@@ -535,7 +580,7 @@ impl MusicXmlConverter {
             time_slice.get_mut(&staff_name).unwrap()[cursor].push(item);
           }
           musicxml::datatypes::PedalType::Sostenuto => {
-            let item = TimeSliceContents::PhraseMod(PhraseMod {
+            let item = TimeSliceContents::PhraseModification(PhraseModDetails {
               modification: PhraseModificationType::Pedal {
                 r#type: PedalType::Sostenuto,
               },
@@ -545,14 +590,14 @@ impl MusicXmlConverter {
             time_slice.get_mut(&staff_name).unwrap()[cursor].push(item);
           }
           musicxml::datatypes::PedalType::Change => {
-            let item1 = TimeSliceContents::PhraseMod(PhraseMod {
+            let item1 = TimeSliceContents::PhraseModification(PhraseModDetails {
               modification: PhraseModificationType::Pedal {
                 r#type: PedalType::Sustain,
               },
               is_start: false,
               number: pedal.attributes.number.as_ref().map(|number| **number),
             });
-            let item2 = TimeSliceContents::PhraseMod(PhraseMod {
+            let item2 = TimeSliceContents::PhraseModification(PhraseModDetails {
               modification: PhraseModificationType::Pedal {
                 r#type: PedalType::Sustain,
               },
@@ -566,7 +611,7 @@ impl MusicXmlConverter {
         },
         musicxml::elements::DirectionTypeContents::OctaveShift(octave_shift) => {
           if octave_shift.attributes.r#type != musicxml::datatypes::UpDownStopContinue::Continue {
-            let item = TimeSliceContents::PhraseMod(PhraseMod {
+            let item = TimeSliceContents::PhraseModification(PhraseModDetails {
               modification: PhraseModificationType::OctaveShift {
                 num_octaves: match &octave_shift.attributes.size {
                   Some(musicxml::datatypes::PositiveInteger(15)) => 2,
@@ -584,10 +629,29 @@ impl MusicXmlConverter {
             time_slice.get_mut(&staff_name).unwrap()[cursor].push(item);
           }
         }
+        musicxml::elements::DirectionTypeContents::Metronome(metronome) => {
+          if let Some(tempo) = Self::parse_tempo_from_metronome(metronome) {
+            let item = TimeSliceContents::Direction(DirectionType::TempoChange { tempo });
+            time_slice.get_mut(&staff_name).unwrap()[cursor].push(item);
+          }
+        }
+        musicxml::elements::DirectionTypeContents::AccordionRegistration(registration) => {
+          let item = TimeSliceContents::Direction(DirectionType::AccordionRegistration {
+            high: registration.content.accordion_high.is_some(),
+            middle: registration
+              .content
+              .accordion_middle
+              .as_ref()
+              .map(|middle| *middle.content)
+              .unwrap_or(0),
+            low: registration.content.accordion_low.is_some(),
+          });
+          time_slice.get_mut(&staff_name).unwrap()[cursor].push(item);
+        }
         musicxml::elements::DirectionTypeContents::StringMute(string_mute) => {
-          let item = TimeSliceContents::StringMute {
+          let item = TimeSliceContents::Direction(DirectionType::StringMute {
             on: string_mute.attributes.r#type == musicxml::datatypes::OnOff::On,
-          };
+          });
           time_slice.get_mut(&staff_name).unwrap()[cursor].push(item);
         }
         _ => (),
@@ -600,7 +664,54 @@ impl MusicXmlConverter {
     time_slice: &mut HashMap<String, Vec<Vec<TimeSliceContents>>>,
     cursor: usize,
   ) -> isize {
-    0 // TODO
+    if let Some(ending) = &element.content.ending {
+      let item = TimeSliceContents::Ending {
+        start: ending.attributes.r#type == musicxml::datatypes::StartStopDiscontinue::Start,
+        numbers: ending
+          .attributes
+          .number
+          .split(&[',', ' '][..])
+          .map(|item| item.parse().unwrap())
+          .collect(),
+      };
+      for slice in time_slice.values_mut() {
+        slice[cursor].push(item.clone());
+      }
+    }
+    if let Some(repeat) = &element.content.repeat {
+      let item = TimeSliceContents::Repeat {
+        start: repeat.attributes.direction == musicxml::datatypes::BackwardForward::Forward,
+        times: repeat.attributes.times.as_ref().map(|item| **item).unwrap_or(1),
+      };
+      for slice in time_slice.values_mut() {
+        slice[cursor].push(item.clone());
+      }
+    }
+    if let Some(_) = &element.content.coda {
+      let item = TimeSliceContents::SectionStart(String::from("Coda"));
+      for slice in time_slice.values_mut() {
+        slice[cursor].push(item.clone());
+      }
+    }
+    if let Some(_) = &element.content.segno {
+      let item = TimeSliceContents::SectionStart(String::from("Segno"));
+      for slice in time_slice.values_mut() {
+        slice[cursor].push(item.clone());
+      }
+    }
+    if let Some(_) = &element.attributes.coda {
+      let item = TimeSliceContents::JumpTo(String::from("Coda"));
+      for slice in time_slice.values_mut() {
+        slice[cursor].push(item.clone());
+      }
+    }
+    if let Some(_) = &element.attributes.segno {
+      let item = TimeSliceContents::JumpTo(String::from("Segno"));
+      for slice in time_slice.values_mut() {
+        slice[cursor].push(item.clone());
+      }
+    }
+    0
   }
 
   fn parse_note_element(
@@ -768,7 +879,7 @@ impl MusicXmlConverter {
     });
     let (mut arpeggiate, mut non_arpeggiate) = (false, false);
     let mut note_modifications: Vec<NoteModificationType> = Vec::new();
-    let mut phrase_modifications: Vec<PhraseMod> = Vec::new();
+    let mut phrase_modifications: Vec<PhraseModDetails> = Vec::new();
     note.content.notations.iter().for_each(|notation| {
       notation
         .content
@@ -776,28 +887,33 @@ impl MusicXmlConverter {
         .iter()
         .for_each(|notation_type| match notation_type {
           musicxml::elements::NotationContentTypes::Tied(tie) => {
-            if tie.attributes.r#type == musicxml::datatypes::StartStopContinue::Start {
-              tied = true;
+            tied = (tie.attributes.r#type == musicxml::datatypes::StartStopContinue::Start)
+              || (tie.attributes.r#type == musicxml::datatypes::StartStopContinue::Continue);
+          }
+          musicxml::elements::NotationContentTypes::Slur(slur) => {
+            if slur.attributes.r#type != musicxml::datatypes::StartStopContinue::Continue {
+              phrase_modifications.push(PhraseModDetails {
+                modification: PhraseModificationType::Legato,
+                is_start: slur.attributes.r#type == musicxml::datatypes::StartStopContinue::Start,
+                number: match &slur.attributes.number {
+                  Some(number) => Some(**number),
+                  None => None,
+                },
+              })
             }
           }
-          musicxml::elements::NotationContentTypes::Slur(slur) => phrase_modifications.push(PhraseMod {
-            modification: PhraseModificationType::Legato,
-            is_start: slur.attributes.r#type == musicxml::datatypes::StartStopContinue::Start,
-            number: match &slur.attributes.number {
-              Some(number) => Some(**number),
-              None => None,
-            },
-          }),
           musicxml::elements::NotationContentTypes::Tuplet(_tuplet) => {} // Ignore in favor of <time-modification>
-          musicxml::elements::NotationContentTypes::Glissando(glissando) => phrase_modifications.push(PhraseMod {
-            modification: PhraseModificationType::Glissando,
-            is_start: glissando.attributes.r#type == musicxml::datatypes::StartStop::Start,
-            number: match &glissando.attributes.number {
-              Some(number) => Some(**number),
-              None => None,
-            },
-          }),
-          musicxml::elements::NotationContentTypes::Slide(slide) => phrase_modifications.push(PhraseMod {
+          musicxml::elements::NotationContentTypes::Glissando(glissando) => {
+            phrase_modifications.push(PhraseModDetails {
+              modification: PhraseModificationType::Glissando,
+              is_start: glissando.attributes.r#type == musicxml::datatypes::StartStop::Start,
+              number: match &glissando.attributes.number {
+                Some(number) => Some(**number),
+                None => None,
+              },
+            })
+          }
+          musicxml::elements::NotationContentTypes::Slide(slide) => phrase_modifications.push(PhraseModDetails {
             modification: PhraseModificationType::Portamento,
             is_start: slide.attributes.r#type == musicxml::datatypes::StartStop::Start,
             number: match &slide.attributes.number {
@@ -865,7 +981,7 @@ impl MusicXmlConverter {
                     if let Some(tremolo_type) = &tremolo.attributes.r#type {
                       match tremolo_type {
                         musicxml::datatypes::TremoloType::Start => {
-                          phrase_modifications.push(PhraseMod {
+                          phrase_modifications.push(PhraseModDetails {
                             modification: PhraseModificationType::Tremolo { relative_speed },
                             is_start: true,
                             number: None,
@@ -873,7 +989,7 @@ impl MusicXmlConverter {
                           None
                         }
                         musicxml::datatypes::TremoloType::Stop => {
-                          phrase_modifications.push(PhraseMod {
+                          phrase_modifications.push(PhraseModDetails {
                             modification: PhraseModificationType::Tremolo { relative_speed },
                             is_start: false,
                             number: None,
@@ -900,7 +1016,9 @@ impl MusicXmlConverter {
               musicxml::elements::TechnicalContents::DownBow(_down_bow) => Some(NoteModificationType::DownBow),
               musicxml::elements::TechnicalContents::Harmonic(_harmonic) => None,
               musicxml::elements::TechnicalContents::OpenString(_open_string) => Some(NoteModificationType::Open),
-              musicxml::elements::TechnicalContents::ThumbPosition(_thumb_position) => None,
+              musicxml::elements::TechnicalContents::ThumbPosition(_thumb_position) => {
+                Some(NoteModificationType::ThumbPosition)
+              }
               musicxml::elements::TechnicalContents::Fingering(_fingering) => None,
               musicxml::elements::TechnicalContents::Pluck(_pluck) => None,
               musicxml::elements::TechnicalContents::DoubleTongue(_double_tongue) => {
@@ -918,7 +1036,7 @@ impl MusicXmlConverter {
               musicxml::elements::TechnicalContents::HammerOn(_hammer_on) => None,
               musicxml::elements::TechnicalContents::PullOff(_pull_off) => None,
               musicxml::elements::TechnicalContents::Bend(_bend) => None,
-              musicxml::elements::TechnicalContents::Tap(_tap) => None,
+              musicxml::elements::TechnicalContents::Tap(_tap) => Some(NoteModificationType::Tap),
               musicxml::elements::TechnicalContents::Heel(_heel) => Some(NoteModificationType::Heel),
               musicxml::elements::TechnicalContents::Toe(_toe) => Some(NoteModificationType::Toe),
               musicxml::elements::TechnicalContents::Fingernails(_fingernails) => {
@@ -936,7 +1054,22 @@ impl MusicXmlConverter {
                 },
               }),
               musicxml::elements::TechnicalContents::Arrow(_arrow) => None,
-              musicxml::elements::TechnicalContents::Handbell(_handbell) => None,
+              musicxml::elements::TechnicalContents::Handbell(handbell) => Some(NoteModificationType::Handbell {
+                technique: match &handbell.content {
+                  musicxml::datatypes::HandbellValue::Belltree => HandbellTechnique::Belltree,
+                  musicxml::datatypes::HandbellValue::Damp => HandbellTechnique::Damp,
+                  musicxml::datatypes::HandbellValue::Echo => HandbellTechnique::Echo,
+                  musicxml::datatypes::HandbellValue::Gyro => HandbellTechnique::Gyro,
+                  musicxml::datatypes::HandbellValue::HandMartellato => HandbellTechnique::HandMartellato,
+                  musicxml::datatypes::HandbellValue::MalletLift => HandbellTechnique::MalletLift,
+                  musicxml::datatypes::HandbellValue::MalletTable => HandbellTechnique::MalletTable,
+                  musicxml::datatypes::HandbellValue::Martellato => HandbellTechnique::Martellato,
+                  musicxml::datatypes::HandbellValue::MartellatoLift => HandbellTechnique::MartellatoLift,
+                  musicxml::datatypes::HandbellValue::MutedMartellato => HandbellTechnique::MutedMartellato,
+                  musicxml::datatypes::HandbellValue::PluckLift => HandbellTechnique::PluckLift,
+                  musicxml::datatypes::HandbellValue::Swing => HandbellTechnique::Swing,
+                },
+              }),
               musicxml::elements::TechnicalContents::BrassBend(_brass_bend) => Some(NoteModificationType::BrassBend),
               musicxml::elements::TechnicalContents::Flip(_flip) => Some(NoteModificationType::Flip),
               musicxml::elements::TechnicalContents::Smear(_smear) => Some(NoteModificationType::Smear),
@@ -985,11 +1118,13 @@ impl MusicXmlConverter {
                   musicxml::elements::ArticulationsType::Doit(_doit) => Some(NoteModificationType::Doit),
                   musicxml::elements::ArticulationsType::Falloff(_falloff) => Some(NoteModificationType::Falloff),
                   musicxml::elements::ArticulationsType::BreathMark(_breath_mark) => {
-                    time_slices.get_mut(&staff_name).unwrap()[cursor].push(TimeSliceContents::BreathMark);
+                    time_slices.get_mut(&staff_name).unwrap()[cursor]
+                      .push(TimeSliceContents::Direction(DirectionType::BreathMark));
                     None
                   }
                   musicxml::elements::ArticulationsType::Caesura(_caesura) => {
-                    time_slices.get_mut(&staff_name).unwrap()[cursor].push(TimeSliceContents::Caesura);
+                    time_slices.get_mut(&staff_name).unwrap()[cursor]
+                      .push(TimeSliceContents::Direction(DirectionType::Caesura));
                     None
                   }
                   musicxml::elements::ArticulationsType::Stress(_stress) => Some(NoteModificationType::Stress),
@@ -1132,17 +1267,16 @@ impl Convert for MusicXmlConverter {
     composition.set_starting_key(MusicXmlConverter::find_starting_key(&score.content.part));
     composition.set_starting_time_signature(MusicXmlConverter::find_starting_time_signature(&score.content.part));
     composition.set_tempo(MusicXmlConverter::find_tempo(&score.content.part));
-    let divisions_per_quarter_note = MusicXmlConverter::find_divisions_per_quarter_note(&score.content.part);
 
     // Create a data structure to hold all temporally parsed musical data
     let mut part_data: HashMap<String, HashMap<String, Vec<Vec<TimeSliceContents>>>> = HashMap::new();
-    let max_divisions = divisions_per_quarter_note
-      * MusicXmlConverter::find_max_num_quarter_notes_per_measure(&score.content.part)
-      * MusicXmlConverter::find_num_measures(&score.content.part);
     for part in &score.content.part {
       let part_name = parts_map
         .get(&*part.attributes.id)
         .expect("Unknown Part ID encountered");
+      let max_divisions = MusicXmlConverter::find_divisions_per_quarter_note(&part.content)
+        * MusicXmlConverter::find_max_num_quarter_notes_per_measure(&part.content)
+        * MusicXmlConverter::find_num_measures(&part.content);
       part_data.insert(part_name.clone(), HashMap::new());
       let part_staves = part_data.get_mut(part_name).unwrap();
       MusicXmlConverter::find_staves(&part.content).iter().for_each(|staff| {
@@ -1153,6 +1287,7 @@ impl Convert for MusicXmlConverter {
     // Parse the actual musical contents of the score into discrete time slices
     for part in &score.content.part {
       let (mut cursor, mut previous_cursor): (usize, usize) = (0, 0);
+      let divisions_per_quarter_note = MusicXmlConverter::find_divisions_per_quarter_note(&part.content);
       let time_slices = part_data.get_mut(parts_map.get(&*part.attributes.id).unwrap()).unwrap();
       for element in &part.content {
         if let musicxml::elements::PartElement::Measure(measure) = element {
