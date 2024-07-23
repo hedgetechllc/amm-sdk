@@ -158,6 +158,31 @@ impl std::fmt::Display for TimeSliceContents {
   }
 }
 
+struct TemporalPartData {
+  pub data: HashMap<String, HashMap<String, Vec<Vec<TimeSliceContents>>>>,
+}
+
+impl std::fmt::Display for TemporalPartData {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    for (part_name, staves) in &self.data {
+      write!(f, "\nPart: {}", part_name)?;
+      for (staff_name, time_slices) in staves {
+        writeln!(f, "\n  Staff: {}", staff_name)?;
+        for (time, time_slice) in time_slices.iter().enumerate() {
+          if !time_slice.is_empty() {
+            write!(f, "    Time: {}\n      Items: [ ", time)?;
+            for item in time_slice {
+              write!(f, "\"{}\" ", item)?;
+            }
+            write!(f, "]\n")?;
+          }
+        }
+      }
+    }
+    Ok(())
+  }
+}
+
 impl MusicXmlConverter {
   fn calculate_num_dots(base_divisions: usize, total_divisions: usize) -> u8 {
     let (mut num_dots, mut remaining_divisions) = (0, total_divisions - base_divisions);
@@ -1269,7 +1294,7 @@ impl Convert for MusicXmlConverter {
     composition.set_tempo(MusicXmlConverter::find_tempo(&score.content.part));
 
     // Create a data structure to hold all temporally parsed musical data
-    let mut part_data: HashMap<String, HashMap<String, Vec<Vec<TimeSliceContents>>>> = HashMap::new();
+    let mut part_data = TemporalPartData { data: HashMap::new() };
     for part in &score.content.part {
       let part_name = parts_map
         .get(&*part.attributes.id)
@@ -1277,8 +1302,8 @@ impl Convert for MusicXmlConverter {
       let max_divisions = MusicXmlConverter::find_divisions_per_quarter_note(&part.content)
         * MusicXmlConverter::find_max_num_quarter_notes_per_measure(&part.content)
         * MusicXmlConverter::find_num_measures(&part.content);
-      part_data.insert(part_name.clone(), HashMap::new());
-      let part_staves = part_data.get_mut(part_name).unwrap();
+      part_data.data.insert(part_name.clone(), HashMap::new());
+      let part_staves = part_data.data.get_mut(part_name).unwrap();
       MusicXmlConverter::find_staves(&part.content).iter().for_each(|staff| {
         part_staves.insert(staff.clone(), vec![Vec::new(); max_divisions]);
       });
@@ -1288,7 +1313,7 @@ impl Convert for MusicXmlConverter {
     for part in &score.content.part {
       let (mut cursor, mut previous_cursor): (usize, usize) = (0, 0);
       let divisions_per_quarter_note = MusicXmlConverter::find_divisions_per_quarter_note(&part.content);
-      let time_slices = part_data.get_mut(parts_map.get(&*part.attributes.id).unwrap()).unwrap();
+      let time_slices = part_data.data.get_mut(parts_map.get(&*part.attributes.id).unwrap()).unwrap();
       for element in &part.content {
         if let musicxml::elements::PartElement::Measure(measure) = element {
           for measure_element in &measure.content {
@@ -1327,21 +1352,7 @@ impl Convert for MusicXmlConverter {
     }
 
     // Use the temporally ordered time slices to construct a final composition structure
-    for (part_name, staves) in &part_data {
-      print!("\nPart: {}", part_name);
-      for (staff_name, time_slices) in staves {
-        println!("\n  Staff: {}", staff_name);
-        for (time, time_slice) in time_slices.iter().enumerate() {
-          if !time_slice.is_empty() {
-            print!("    Time: {}\n      Items: [ ", time);
-            for item in time_slice {
-              print!("\"{}\" ", item);
-            }
-            print!("]\n");
-          }
-        }
-      }
-    }
+    print!("{}", part_data);
     /*for part in &score.content.part {
     let part_name = parts_map
       .get(&*part.attributes.id)
