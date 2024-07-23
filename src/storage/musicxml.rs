@@ -192,7 +192,7 @@ impl MusicXmlConverter {
           if let musicxml::elements::MeasureElement::Attributes(attributes) = measure_element {
             for time_element in &attributes.content.time {
               for beat_element in &time_element.content.beats {
-                return TimeSignature::new(
+                return TimeSignature::Explicit(
                   (*beat_element.beats.content).parse().unwrap(),
                   (*beat_element.beat_type.content).parse().unwrap(),
                 );
@@ -202,7 +202,7 @@ impl MusicXmlConverter {
         }
       }
     }
-    TimeSignature::new(4, 4)
+    TimeSignature::CommonTime
   }
 
   fn find_max_num_quarter_notes_per_measure(parts: &Vec<musicxml::elements::Part>) -> usize {
@@ -423,7 +423,7 @@ impl MusicXmlConverter {
         String::from("1")
       };
       let beat_element = &item.content.beats[0];
-      let item = TimeSliceContents::TimeSignature(TimeSignature::new(
+      let item = TimeSliceContents::TimeSignature(TimeSignature::Explicit(
         (*beat_element.beats.content).parse().unwrap(),
         (*beat_element.beat_type.content).parse().unwrap(),
       ));

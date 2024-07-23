@@ -7,8 +7,6 @@ Abstract Music Manipulation (AMM) SDK
   -Can also select ranges of timeslices
 -Make get_audio_buffer(): Create PCM audio buffer for note + mods for use in direct playback
 
--Make TimeSignature an enum, add common_time, cut_time
-
 -Get duration of entire staff (and every other structure type)
 //pub fn duration(&self) -> f64 { self.content.iter().map(|slice| slice.duration()).sum() }
 
