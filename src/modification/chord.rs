@@ -61,7 +61,7 @@ impl std::fmt::Display for ChordModificationType {
       Self::DetachedLegato => write!(f, "Detached Legato"),
       Self::DownBow => write!(f, "Down Bow"),
       Self::Dynamic { dynamic } => write!(f, "Dynamic: {}", dynamic),
-      Self::Fermata { relative_duration } => write!(f, "Fermata"),
+      Self::Fermata { relative_duration: _ } => write!(f, "Fermata"),
       Self::Fingernails => write!(f, "Fingernails"),
       Self::HalfMuted => write!(f, "Half Muted"),
       Self::HarmonMute { open, half } => write!(

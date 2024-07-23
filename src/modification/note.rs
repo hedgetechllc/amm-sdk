@@ -83,7 +83,7 @@ impl std::fmt::Display for NoteModificationType {
       Self::DownBow => write!(f, "Down Bow"),
       Self::Dynamic { dynamic } => write!(f, "Dynamic: {}", dynamic),
       Self::Falloff => write!(f, "Falloff"),
-      Self::Fermata { relative_duration } => write!(f, "Fermata"),
+      Self::Fermata { relative_duration: _ } => write!(f, "Fermata"),
       Self::Fingernails => write!(f, "Fingernails"),
       Self::Flip => write!(f, "Flip"),
       Self::Glissando { from_current, going_up } => write!(

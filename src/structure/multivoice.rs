@@ -65,6 +65,10 @@ impl MultiVoice {
     });
     self
   }
+
+  pub fn iter(&self) -> Iter<'_, MultiVoiceContent> {
+    self.content.iter()
+  }
 }
 
 impl std::fmt::Display for MultiVoice {
@@ -79,5 +83,13 @@ impl std::fmt::Display for MultiVoice {
       .collect::<Vec<_>>()
       .join(", ");
     write!(f, "MultiVoice: [{}]", voices)
+  }
+}
+
+impl<'a> IntoIterator for &'a MultiVoice {
+  type Item = <Iter<'a, MultiVoiceContent> as Iterator>::Item;
+  type IntoIter = Iter<'a, MultiVoiceContent>;
+  fn into_iter(self) -> Self::IntoIter {
+    self.content.as_slice().into_iter()
   }
 }

@@ -132,6 +132,10 @@ impl Phrase {
       .retain(|modification| modification.borrow().get_id() != id);
     self
   }
+
+  pub fn iter(&self) -> Iter<'_, PhraseContent> {
+    self.content.iter()
+  }
 }
 
 impl std::fmt::Display for Phrase {
@@ -147,5 +151,13 @@ impl std::fmt::Display for Phrase {
       .collect::<Vec<_>>()
       .join(", ");
     write!(f, "Phrase: [{}]", items)
+  }
+}
+
+impl<'a> IntoIterator for &'a Phrase {
+  type Item = <Iter<'a, PhraseContent> as Iterator>::Item;
+  type IntoIter = Iter<'a, PhraseContent>;
+  fn into_iter(self) -> Self::IntoIter {
+    self.content.as_slice().into_iter()
   }
 }

@@ -9,9 +9,6 @@ Abstract Music Manipulation (AMM) SDK
 
 -Make TimeSignature an enum, add common_time, cut_time
 
-
--Implement IntoIter for all structure data types
-
 -Get duration of entire staff (and every other structure type)
 //pub fn duration(&self) -> f64 { self.content.iter().map(|slice| slice.duration()).sum() }
 

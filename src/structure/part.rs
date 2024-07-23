@@ -93,6 +93,10 @@ impl Part {
   pub fn remove_default_section(&mut self) -> &mut Self {
     self.remove_section_by_name("default")
   }
+
+  pub fn iter(&self) -> Iter<'_, PartContent> {
+    self.content.iter()
+  }
 }
 
 impl std::fmt::Display for Part {
@@ -106,5 +110,13 @@ impl std::fmt::Display for Part {
       .collect::<Vec<_>>()
       .join(", ");
     write!(f, "Part {}: [{}]", self.name, sections)
+  }
+}
+
+impl<'a> IntoIterator for &'a Part {
+  type Item = <Iter<'a, PartContent> as Iterator>::Item;
+  type IntoIter = Iter<'a, PartContent>;
+  fn into_iter(self) -> Self::IntoIter {
+    self.content.as_slice().into_iter()
   }
 }

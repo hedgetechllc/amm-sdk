@@ -163,6 +163,10 @@ impl Section {
       .retain(|modification| modification.borrow().get_id() != id);
     self
   }
+
+  pub fn iter(&self) -> Iter<'_, SectionContent> {
+    self.content.iter()
+  }
 }
 
 impl std::fmt::Display for Section {
@@ -177,5 +181,13 @@ impl std::fmt::Display for Section {
       .collect::<Vec<_>>()
       .join(", ");
     write!(f, "Section: [{}]", items)
+  }
+}
+
+impl<'a> IntoIterator for &'a Section {
+  type Item = <Iter<'a, SectionContent> as Iterator>::Item;
+  type IntoIter = Iter<'a, SectionContent>;
+  fn into_iter(self) -> Self::IntoIter {
+    self.content.as_slice().into_iter()
   }
 }

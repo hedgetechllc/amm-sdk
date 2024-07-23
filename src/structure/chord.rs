@@ -69,6 +69,10 @@ impl Chord {
       .retain(|modification| modification.borrow().get_id() != id);
     self
   }
+
+  pub fn iter(&self) -> Iter<'_, ChordContent> {
+    self.content.iter()
+  }
 }
 
 impl std::fmt::Display for Chord {
@@ -82,5 +86,13 @@ impl std::fmt::Display for Chord {
       .collect::<Vec<_>>()
       .join(", ");
     write!(f, "Chord: [{}]", notes)
+  }
+}
+
+impl<'a> IntoIterator for &'a Chord {
+  type Item = <Iter<'a, ChordContent> as Iterator>::Item;
+  type IntoIter = Iter<'a, ChordContent>;
+  fn into_iter(self) -> Self::IntoIter {
+    self.content.as_slice().into_iter()
   }
 }
