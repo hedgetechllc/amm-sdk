@@ -53,6 +53,12 @@ impl ChordModification {
   }
 }
 
+impl std::fmt::Display for ChordModification {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    write!(f, "{}", self.modification)
+  }
+}
+
 impl std::fmt::Display for ChordModificationType {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     match self {

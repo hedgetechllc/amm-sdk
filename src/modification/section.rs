@@ -38,6 +38,12 @@ impl SectionModification {
   }
 }
 
+impl std::fmt::Display for SectionModification {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    write!(f, "{}", self.modification)
+  }
+}
+
 impl std::fmt::Display for SectionModificationType {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     match self {

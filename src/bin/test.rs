@@ -5,9 +5,14 @@ use amm_sdk::{Clef, Key, Tempo, TimeSignature};
 use amm_sdk::{NoteModification, PhraseModification};
 
 fn main() {
-  let composition = Storage::MusicXML.load("./tests/Grande Valse Brillante.musicxml");
+  let mut composition = Storage::MusicXML.load("./tests/Grande Valse Brillante.musicxml");
   match composition {
-    Ok(composition) => println!("{}", composition),
+    Ok(ref mut composition) => {
+      println!("{}", composition);
+      for part_name in &composition.get_part_names() {
+        println!("{}", composition.get_part(part_name).unwrap())
+      }
+    }
     Err(error) => println!("{}", error),
   }
 

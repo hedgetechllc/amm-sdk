@@ -66,6 +66,12 @@ impl std::fmt::Display for PedalType {
   }
 }
 
+impl std::fmt::Display for PhraseModification {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    write!(f, "{}", self.modification)
+  }
+}
+
 impl std::fmt::Display for PhraseModificationType {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     match self {

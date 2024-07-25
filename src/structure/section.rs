@@ -171,6 +171,12 @@ impl Section {
 
 impl std::fmt::Display for Section {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    let mods = self
+      .modifications
+      .iter()
+      .map(|modification| modification.borrow_mut().to_string())
+      .collect::<Vec<String>>()
+      .join(", ");
     let items = self
       .content
       .iter()
@@ -180,7 +186,16 @@ impl std::fmt::Display for Section {
       })
       .collect::<Vec<_>>()
       .join(", ");
-    write!(f, "Section: [{}]", items)
+    write!(
+      f,
+      "Section{}: [{}]",
+      if mods.is_empty() {
+        String::new()
+      } else {
+        format!(" ({})", mods)
+      },
+      items
+    )
   }
 }
 

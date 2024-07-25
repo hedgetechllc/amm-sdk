@@ -140,6 +140,12 @@ impl Phrase {
 
 impl std::fmt::Display for Phrase {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    let mods = self
+      .modifications
+      .iter()
+      .map(|modification| modification.borrow_mut().to_string())
+      .collect::<Vec<String>>()
+      .join(", ");
     let items = self
       .content
       .iter()
@@ -150,7 +156,16 @@ impl std::fmt::Display for Phrase {
       })
       .collect::<Vec<_>>()
       .join(", ");
-    write!(f, "Phrase: [{}]", items)
+    write!(
+      f,
+      "Phrase{}: [{}]",
+      if mods.is_empty() {
+        String::new()
+      } else {
+        format!(" ({})", mods)
+      },
+      items
+    )
   }
 }
 

@@ -114,6 +114,12 @@ impl NoteModification {
   }
 }
 
+impl std::fmt::Display for NoteModification {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    write!(f, "{}", self.modification)
+  }
+}
+
 impl std::fmt::Display for NoteModificationType {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     match self {

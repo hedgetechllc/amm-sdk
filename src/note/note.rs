@@ -59,14 +59,25 @@ impl PartialEq for Note {
 
 impl std::fmt::Display for Note {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    let mods = self
+      .modifications
+      .iter()
+      .map(|modification| modification.borrow_mut().to_string())
+      .collect::<Vec<String>>()
+      .join(", ");
     write!(
       f,
-      "{}{}{}{} {}",
+      "{}{}{}{} {}{}",
       self.pitch,
       self.accidental,
       if self.is_rest() { "" } else { " " },
       self.duration,
-      if self.is_rest() { "Rest" } else { "Note" }
+      if self.is_rest() { "Rest" } else { "Note" },
+      if mods.is_empty() {
+        String::new()
+      } else {
+        format!(" ({})", mods)
+      },
     )
   }
 }
