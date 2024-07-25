@@ -1,11 +1,11 @@
 use super::Convert;
 use crate::{
-  Accidental, ChordModificationType, Clef, ClefType, Composition, DirectionType, Duration, DynamicMarking,
-  HandbellTechnique, Key, KeyMode, Note, NoteModificationType, PedalType, PhraseModificationType, Pitch,
+  Accidental, Chord, ChordModificationType, Clef, ClefType, Composition, DirectionType, Duration, DynamicMarking,
+  HandbellTechnique, Key, KeyMode, MultiVoice, NoteModificationType, PedalType, Phrase, PhraseModificationType, Pitch,
   SectionModificationType, Tempo, TempoMarking, TimeSignature,
 };
 use musicxml;
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 pub struct MusicXmlConverter;
 
@@ -29,32 +29,102 @@ impl std::fmt::Display for PhraseModDetails {
 }
 
 #[derive(Clone)]
+struct NoteDetails {
+  pub pitch: Pitch,
+  pub duration: Duration,
+  pub accidental: Accidental,
+  pub tied: bool,
+  pub voice: Option<String>,
+  pub tuplet: Option<(u32, u32)>,
+  pub arpeggiated: bool,
+  pub non_arpeggiated: bool,
+  pub note_modifications: Vec<NoteModificationType>,
+  pub phrase_modifications: Vec<PhraseModDetails>,
+}
+
+impl std::fmt::Display for NoteDetails {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    let note_mods = self
+      .note_modifications
+      .iter()
+      .map(|note_mod| format!("{}", note_mod))
+      .collect::<Vec<String>>()
+      .join(", ");
+    let phrase_mods = self
+      .phrase_modifications
+      .iter()
+      .map(|phrase_mod| format!("{}", phrase_mod))
+      .collect::<Vec<String>>()
+      .join(", ");
+    write!(
+      f,
+      "{}",
+      format!(
+        "{}: {}{}{}{} ({}{}{}{}{}{}{} )",
+        format!("{}", if self.pitch.is_rest() { "Rest" } else { "Note" }),
+        self.pitch,
+        self.accidental,
+        if self.pitch.is_rest() { "" } else { " " },
+        self.duration,
+        if self.tied { " Tied" } else { "" },
+        format!(
+          "{}{}",
+          if self.voice.is_some() { " Voice=" } else { "" },
+          if self.voice.is_some() {
+            self.voice.clone().unwrap()
+          } else {
+            String::from("")
+          }
+        ),
+        format!(
+          "{}{}{}{}{}",
+          if self.tuplet.is_some() { " Tuplet=(" } else { "" },
+          if self.tuplet.is_some() {
+            self.tuplet.clone().unwrap().0.to_string()
+          } else {
+            String::from("")
+          },
+          if self.tuplet.is_some() { ", " } else { "" },
+          if self.tuplet.is_some() {
+            self.tuplet.clone().unwrap().1.to_string()
+          } else {
+            String::from("")
+          },
+          if self.tuplet.is_some() { ")" } else { "" }
+        ),
+        if self.arpeggiated { " Arpeggiated" } else { "" },
+        if self.non_arpeggiated { " NonArpeggiated" } else { "" },
+        format!(
+          "{}{}{}",
+          if note_mods.is_empty() { "" } else { " Mods=[" },
+          if note_mods.is_empty() { "" } else { note_mods.as_str() },
+          if note_mods.is_empty() { "" } else { "]" },
+        ),
+        format!(
+          "{}{}{}",
+          if phrase_mods.is_empty() { "" } else { " PhraseMods=[" },
+          if phrase_mods.is_empty() {
+            ""
+          } else {
+            phrase_mods.as_str()
+          },
+          if phrase_mods.is_empty() { "" } else { "]" },
+        ),
+      )
+    )
+  }
+}
+
+#[derive(Clone)]
 enum TimeSliceContents {
   Direction(DirectionType),
   ChordModification(ChordModificationType),
   PhraseModification(PhraseModDetails),
   JumpTo(String),
   SectionStart(String),
-  Ending {
-    start: bool,
-    numbers: Vec<u8>,
-  },
-  Repeat {
-    start: bool,
-    times: u32,
-  },
-  Note {
-    pitch: Pitch,
-    duration: Duration,
-    accidental: Accidental,
-    tied: bool,
-    voice: Option<String>,
-    tuplet: Option<(u32, u32)>,
-    arpeggiated: bool,
-    non_arpeggiated: bool,
-    note_modifications: Vec<NoteModificationType>,
-    phrase_modifications: Vec<PhraseModDetails>,
-  },
+  Ending { start: bool, numbers: Vec<u8> },
+  Repeat { start: bool, times: u32 },
+  Note(NoteDetails),
 }
 
 impl std::fmt::Display for TimeSliceContents {
@@ -77,82 +147,9 @@ impl std::fmt::Display for TimeSliceContents {
             .collect::<Vec<String>>()
             .join(", ")
         ),
-        TimeSliceContents::Repeat { start, times } => format!("{} Repeat {} Times", if start { "Start" } else { "End" }, times),
-        TimeSliceContents::Note {
-          ref pitch,
-          ref duration,
-          ref accidental,
-          tied,
-          ref voice,
-          ref tuplet,
-          arpeggiated,
-          non_arpeggiated,
-          ref note_modifications,
-          ref phrase_modifications,
-        } => {
-          let note_mods = note_modifications
-            .iter()
-            .map(|note_mod| format!("{}", note_mod))
-            .collect::<Vec<String>>()
-            .join(", ");
-          let phrase_mods = phrase_modifications
-            .iter()
-            .map(|phrase_mod| format!("{}", phrase_mod))
-            .collect::<Vec<String>>()
-            .join(", ");
-          format!(
-            "{}: {}{}{}{} ({}{}{}{}{}{}{} )",
-            format!("{}", if pitch.is_rest() { "Rest" } else { "Note" }),
-            pitch,
-            accidental,
-            if pitch.is_rest() { "" } else { " " },
-            duration,
-            if tied { " Tied" } else { "" },
-            format!(
-              "{}{}",
-              if voice.is_some() { " Voice=" } else { "" },
-              if voice.is_some() {
-                voice.clone().unwrap()
-              } else {
-                String::from("")
-              }
-            ),
-            format!(
-              "{}{}{}{}{}",
-              if tuplet.is_some() { " Tuplet=(" } else { "" },
-              if tuplet.is_some() {
-                tuplet.clone().unwrap().0.to_string()
-              } else {
-                String::from("")
-              },
-              if tuplet.is_some() { ", " } else { "" },
-              if tuplet.is_some() {
-                tuplet.clone().unwrap().1.to_string()
-              } else {
-                String::from("")
-              },
-              if tuplet.is_some() { ")" } else { "" }
-            ),
-            if arpeggiated { " Arpeggiated" } else { "" },
-            if non_arpeggiated { " NonArpeggiated" } else { "" },
-            format!(
-              "{}{}{}",
-              if note_mods.is_empty() { "" } else { " Mods=[" },
-              if note_mods.is_empty() { "" } else { note_mods.as_str() },
-              if note_mods.is_empty() { "" } else { "]" },
-            ),
-            format!(
-              "{}{}{}",
-              if phrase_mods.is_empty() { "" } else { " PhraseMods=[" },
-              if phrase_mods.is_empty() {
-                ""
-              } else {
-                phrase_mods.as_str()
-              },
-              if phrase_mods.is_empty() { "" } else { "]" },
-            ),
-          )
-        }
+        TimeSliceContents::Repeat { start, times } =>
+          format!("{} Repeat {} Times", if start { "Start" } else { "End" }, times),
+        TimeSliceContents::Note(ref details) => format!("{}", details),
       }
     )
   }
@@ -1233,7 +1230,7 @@ impl MusicXmlConverter {
         note_modifications.push(NoteModificationType::Pizzicato);
       }
     }
-    let item = TimeSliceContents::Note {
+    let item = TimeSliceContents::Note(NoteDetails {
       pitch,
       duration,
       accidental: accidental.unwrap_or(Accidental::None),
@@ -1244,7 +1241,7 @@ impl MusicXmlConverter {
       non_arpeggiated: non_arpeggiate,
       note_modifications,
       phrase_modifications,
-    };
+    });
     if chord {
       time_slices.get_mut(&staff_name).unwrap()[previous_cursor].push(item);
       0
@@ -1313,7 +1310,10 @@ impl Convert for MusicXmlConverter {
     for part in &score.content.part {
       let (mut cursor, mut previous_cursor): (usize, usize) = (0, 0);
       let divisions_per_quarter_note = MusicXmlConverter::find_divisions_per_quarter_note(&part.content);
-      let time_slices = part_data.data.get_mut(parts_map.get(&*part.attributes.id).unwrap()).unwrap();
+      let time_slices = part_data
+        .data
+        .get_mut(parts_map.get(&*part.attributes.id).unwrap())
+        .unwrap();
       for element in &part.content {
         if let musicxml::elements::PartElement::Measure(measure) = element {
           for measure_element in &measure.content {
@@ -1352,19 +1352,146 @@ impl Convert for MusicXmlConverter {
     }
 
     // Use the temporally ordered time slices to construct a final composition structure
-    print!("{}", part_data);
-    /*for part in &score.content.part {
-    let part_name = parts_map
-      .get(&*part.attributes.id)
-      .expect("Unknown Part ID encountered");
-    let composition_part = composition.get_part(&part_name).expect("Unknown part encountered");*/
+    for (part_name, staves) in &part_data.data {
+      let part = composition.get_part(&part_name).expect("Unknown part name encountered");
+      let section = part.add_default_section();
+      for (staff_name, time_slices) in staves {
+        let staff = section.borrow_mut().add_staff(staff_name, None, None, None);
+        let mut phrases: Vec<Rc<RefCell<Phrase>>> = Vec::new();
+        let mut phrase_ids: HashMap<u8, usize> = HashMap::new();
+        let mut multivoices: Vec<Rc<RefCell<MultiVoice>>> = Vec::new();
+        for time_slice in time_slices.iter() {
+          if !time_slice.is_empty() {
+            let mut notes = Vec::new();
+            let mut chord: Option<Rc<RefCell<Chord>>> = None;
+            for item in time_slice {
+              match item {
+                TimeSliceContents::Direction(direction) => {
+                  staff.borrow_mut().add_direction(direction.clone());
+                }
+                TimeSliceContents::ChordModification(modification) => match &chord {
+                  Some(chord) => {
+                    chord.borrow_mut().add_modification(modification.clone());
+                  }
+                  None => {
+                    let new_chord = if phrases.is_empty() {
+                      staff.borrow_mut().add_chord()
+                    } else {
+                      phrases.last().unwrap().borrow_mut().add_chord()
+                    };
+                    new_chord.borrow_mut().add_modification(modification.clone());
+                    chord = Some(new_chord);
+                  }
+                },
+                TimeSliceContents::PhraseModification(details) => {
+                  if details.is_start {
+                    let new_phrase = if !phrases.is_empty() {
+                      phrases.last().unwrap().borrow_mut().add_phrase()
+                    } else if !multivoices.is_empty() {
+                      multivoices.last().unwrap().borrow_mut().add_phrase()
+                    } else {
+                      staff.borrow_mut().add_phrase()
+                    };
+                    new_phrase.borrow_mut().add_modification(details.modification.clone());
+                    if let Some(number) = details.number {
+                      phrase_ids.insert(number, new_phrase.borrow().get_id());
+                    }
+                    phrases.push(new_phrase);
+                  } else if let Some(number) = &details.number {
+                    match phrase_ids.remove(number) {
+                      Some(phrase_id) => {
+                        phrases.retain(|phrase| phrase.borrow().get_id() != phrase_id);
+                      }
+                      None => (),
+                    }
+                  } else {
+                    phrases.pop();
+                  }
+                }
+                TimeSliceContents::JumpTo(label) => (),
+                TimeSliceContents::SectionStart(label) => (),
+                TimeSliceContents::Ending { start, numbers } => (),
+                TimeSliceContents::Repeat { start, times } => (),
+                TimeSliceContents::Note(details) => notes.push(details.clone()),
+              }
+            }
+            if notes.len() == 1 {
+              let note = notes.first().unwrap();
+              let new_note = if let Some(chord) = &chord {
+                chord.borrow_mut().add_note(
+                  note.pitch,
+                  note.duration,
+                  if note.accidental == Accidental::None {
+                    None
+                  } else {
+                    Some(note.accidental)
+                  },
+                )
+              } else if !phrases.is_empty() {
+                phrases.last().unwrap().borrow_mut().add_note(
+                  note.pitch,
+                  note.duration,
+                  if note.accidental == Accidental::None {
+                    None
+                  } else {
+                    Some(note.accidental)
+                  },
+                )
+              } else {
+                staff.borrow_mut().add_note(
+                  note.pitch,
+                  note.duration,
+                  if note.accidental == Accidental::None {
+                    None
+                  } else {
+                    Some(note.accidental)
+                  },
+                )
+              };
+              for modification in &note.note_modifications {
+                new_note.borrow_mut().add_modification(modification.clone());
+              }
+            } else if notes.len() > 1 {
+              let chord = if let Some(chord) = chord {
+                chord
+              } else if !phrases.is_empty() {
+                phrases.last().unwrap().borrow_mut().add_chord()
+              } else {
+                staff.borrow_mut().add_chord()
+              };
+              for note in &notes {
+                let new_note = chord.borrow_mut().add_note(
+                  note.pitch,
+                  note.duration,
+                  if note.accidental == Accidental::None {
+                    None
+                  } else {
+                    Some(note.accidental)
+                  },
+                );
+                for modification in &note.note_modifications {
+                  new_note.borrow_mut().add_modification(modification.clone());
+                }
+              }
+            }
+
+            /*pub tied: bool, <- creates new Phrase, if only one tied note in chord, creates new multivoice
+            pub voice: Option<String>,
+            pub tuplet: Option<(u32, u32)>, <- creates new Phrase, if only one tuplet note in chord, creates new multivoice
+            pub arpeggiated: bool,
+            pub non_arpeggiated: bool,
+            pub phrase_modifications: Vec<PhraseModDetails>,*/
+          }
+        }
+      }
+    }
 
     // Return the composition
     Ok(composition)
   }
 
   fn save(path: &str, composition: &Composition) -> Result<usize, String> {
-    //fs::write(path, contents)?;
+    // TODO: Implement saving to MusicXML (fs::write(path, contents)?;)
     Ok(0)
   }
 }
