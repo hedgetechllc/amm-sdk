@@ -10,7 +10,7 @@ fn main() {
     Ok(ref mut composition) => {
       println!("{}", composition);
       for part_name in &composition.get_part_names() {
-        println!("{}", composition.get_part(part_name).unwrap())
+        println!("{}", composition.get_part_by_name(part_name).unwrap())
       }
     }
     Err(error) => println!("{}", error),

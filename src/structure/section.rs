@@ -1,4 +1,4 @@
-use super::staff::Staff;
+use super::{chord::Chord, multivoice::MultiVoice, note::Note, phrase::Phrase, staff::Staff};
 use crate::context::{generate_id, Clef, Key, Tempo, TimeSignature};
 use crate::modification::{SectionModification, SectionModificationType};
 use std::{cell::RefCell, rc::Rc, slice::Iter};
@@ -103,9 +103,10 @@ impl Section {
       .collect()
   }
 
-  pub fn get_staff_by_id(&mut self, id: usize) -> Option<Rc<RefCell<Staff>>> {
+  pub fn get_staff(&mut self, id: usize) -> Option<Rc<RefCell<Staff>>> {
     self.content.iter().find_map(|item| match item {
       SectionContent::Staff(staff) if staff.borrow().get_id() == id => Some(Rc::clone(staff)),
+      SectionContent::Section(section) => section.borrow_mut().get_staff(id),
       _ => None,
     })
   }
@@ -117,9 +118,10 @@ impl Section {
     })
   }
 
-  pub fn get_section_by_id(&mut self, id: usize) -> Option<Rc<RefCell<Section>>> {
+  pub fn get_section(&mut self, id: usize) -> Option<Rc<RefCell<Section>>> {
     self.content.iter().find_map(|item| match item {
       SectionContent::Section(section) if section.borrow().get_id() == id => Some(Rc::clone(section)),
+      SectionContent::Section(section) => section.borrow_mut().get_section(id),
       _ => None,
     })
   }
@@ -128,6 +130,34 @@ impl Section {
     self.content.iter().find_map(|item| match item {
       SectionContent::Section(section) if section.borrow().get_name() == name => Some(Rc::clone(section)),
       _ => None,
+    })
+  }
+
+  pub fn get_chord(&mut self, id: usize) -> Option<Rc<RefCell<Chord>>> {
+    self.content.iter().find_map(|item| match item {
+      SectionContent::Staff(staff) => staff.borrow_mut().get_chord(id),
+      SectionContent::Section(section) => section.borrow_mut().get_chord(id),
+    })
+  }
+
+  pub fn get_multivoice(&mut self, id: usize) -> Option<Rc<RefCell<MultiVoice>>> {
+    self.content.iter().find_map(|item| match item {
+      SectionContent::Staff(staff) => staff.borrow_mut().get_multivoice(id),
+      SectionContent::Section(section) => section.borrow_mut().get_multivoice(id),
+    })
+  }
+
+  pub fn get_note(&mut self, id: usize) -> Option<Rc<RefCell<Note>>> {
+    self.content.iter().find_map(|item| match item {
+      SectionContent::Staff(staff) => staff.borrow_mut().get_note(id),
+      SectionContent::Section(section) => section.borrow_mut().get_note(id),
+    })
+  }
+
+  pub fn get_phrase(&mut self, id: usize) -> Option<Rc<RefCell<Phrase>>> {
+    self.content.iter().find_map(|item| match item {
+      SectionContent::Staff(staff) => staff.borrow_mut().get_phrase(id),
+      SectionContent::Section(section) => section.borrow_mut().get_phrase(id),
     })
   }
 
@@ -141,10 +171,18 @@ impl Section {
     })
   }
 
-  pub fn remove_item_by_id(&mut self, id: usize) -> &mut Self {
+  pub fn remove_item(&mut self, id: usize) -> &mut Self {
     self.content.retain(|item| match item {
       SectionContent::Staff(staff) => staff.borrow().get_id() != id,
       SectionContent::Section(section) => section.borrow().get_id() != id,
+    });
+    self.content.iter().for_each(|item| match item {
+      SectionContent::Staff(staff) => {
+        staff.borrow_mut().remove_item(id);
+      }
+      SectionContent::Section(section) => {
+        section.borrow_mut().remove_item(id);
+      }
     });
     self
   }

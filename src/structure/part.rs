@@ -1,4 +1,4 @@
-use super::section::Section;
+use super::{chord::Chord, multivoice::MultiVoice, note::Note, phrase::Phrase, section::Section, staff::Staff};
 use crate::context::{generate_id, Tempo};
 use std::{cell::RefCell, rc::Rc, slice::Iter};
 
@@ -58,10 +58,10 @@ impl Part {
       .collect()
   }
 
-  pub fn get_section_by_id(&mut self, id: usize) -> Option<Rc<RefCell<Section>>> {
+  pub fn get_section(&mut self, id: usize) -> Option<Rc<RefCell<Section>>> {
     self.content.iter().find_map(|item| match item {
       PartContent::Section(section) if section.borrow().get_id() == id => Some(Rc::clone(section)),
-      _ => None,
+      PartContent::Section(section) => section.borrow_mut().get_section(id),
     })
   }
 
@@ -74,6 +74,36 @@ impl Part {
 
   pub fn get_default_section(&mut self) -> Option<Rc<RefCell<Section>>> {
     self.get_section_by_name("default")
+  }
+
+  pub fn get_chord(&mut self, id: usize) -> Option<Rc<RefCell<Chord>>> {
+    self.content.iter().find_map(|item| match item {
+      PartContent::Section(section) => section.borrow_mut().get_chord(id),
+    })
+  }
+
+  pub fn get_multivoice(&mut self, id: usize) -> Option<Rc<RefCell<MultiVoice>>> {
+    self.content.iter().find_map(|item| match item {
+      PartContent::Section(section) => section.borrow_mut().get_multivoice(id),
+    })
+  }
+
+  pub fn get_note(&mut self, id: usize) -> Option<Rc<RefCell<Note>>> {
+    self.content.iter().find_map(|item| match item {
+      PartContent::Section(section) => section.borrow_mut().get_note(id),
+    })
+  }
+
+  pub fn get_phrase(&mut self, id: usize) -> Option<Rc<RefCell<Phrase>>> {
+    self.content.iter().find_map(|item| match item {
+      PartContent::Section(section) => section.borrow_mut().get_phrase(id),
+    })
+  }
+
+  pub fn get_staff(&mut self, id: usize) -> Option<Rc<RefCell<Staff>>> {
+    self.content.iter().find_map(|item| match item {
+      PartContent::Section(section) => section.borrow_mut().get_staff(id),
+    })
   }
 
   pub fn remove_section_by_id(&mut self, id: usize) -> &mut Self {
@@ -92,6 +122,18 @@ impl Part {
 
   pub fn remove_default_section(&mut self) -> &mut Self {
     self.remove_section_by_name("default")
+  }
+
+  pub fn remove_item(&mut self, id: usize) -> &mut Self {
+    self.content.retain(|item| match item {
+      PartContent::Section(section) => section.borrow().get_id() != id,
+    });
+    self.content.iter().for_each(|item| match item {
+      PartContent::Section(section) => {
+        section.borrow_mut().remove_item(id);
+      }
+    });
+    self
   }
 
   pub fn get_duration(&self, tempo: &Tempo) -> f64 {

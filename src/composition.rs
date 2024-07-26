@@ -1,6 +1,8 @@
 use crate::context::{Key, Tempo, TimeSignature};
-use crate::structure::Part;
+use crate::note::Note;
+use crate::structure::{Chord, MultiVoice, Part, Phrase, Section, Staff};
 use std::collections::HashMap;
+use std::{cell::RefCell, rc::Rc};
 
 pub struct Composition {
   title: String,
@@ -84,7 +86,7 @@ impl Composition {
   }
 
   pub fn add_part(&mut self, name: &str) -> &mut Part {
-    self.remove_part(name).parts.push(Part::new(name));
+    self.remove_part_by_name(name).parts.push(Part::new(name));
     self.parts.last_mut().unwrap()
   }
 
@@ -132,8 +134,36 @@ impl Composition {
     self.parts.iter().map(|part| String::from(part.get_name())).collect()
   }
 
-  pub fn get_part(&mut self, name: &str) -> Option<&mut Part> {
+  pub fn get_part_by_name(&mut self, name: &str) -> Option<&mut Part> {
     self.parts.iter_mut().find(|part| part.get_name() == name)
+  }
+
+  pub fn get_part(&mut self, id: usize) -> Option<&mut Part> {
+    self.parts.iter_mut().find(|part| part.get_id() == id)
+  }
+
+  pub fn get_chord(&mut self, id: usize) -> Option<Rc<RefCell<Chord>>> {
+    self.parts.iter_mut().find_map(|part| part.get_chord(id))
+  }
+
+  pub fn get_multivoice(&mut self, id: usize) -> Option<Rc<RefCell<MultiVoice>>> {
+    self.parts.iter_mut().find_map(|part| part.get_multivoice(id))
+  }
+
+  pub fn get_note(&mut self, id: usize) -> Option<Rc<RefCell<Note>>> {
+    self.parts.iter_mut().find_map(|part| part.get_note(id))
+  }
+
+  pub fn get_phrase(&mut self, id: usize) -> Option<Rc<RefCell<Phrase>>> {
+    self.parts.iter_mut().find_map(|part| part.get_phrase(id))
+  }
+
+  pub fn get_section(&mut self, id: usize) -> Option<Rc<RefCell<Section>>> {
+    self.parts.iter_mut().find_map(|part| part.get_section(id))
+  }
+
+  pub fn get_staff(&mut self, id: usize) -> Option<Rc<RefCell<Staff>>> {
+    self.parts.iter_mut().find_map(|part| part.get_staff(id))
   }
 
   pub fn get_duration(&self) -> f64 {
@@ -175,8 +205,16 @@ impl Composition {
     self
   }
 
-  pub fn remove_part(&mut self, name: &str) -> &mut Self {
+  pub fn remove_part_by_name(&mut self, name: &str) -> &mut Self {
     self.parts.retain(|part| part.get_name() != name);
+    self
+  }
+
+  pub fn remove_item(&mut self, id: usize) -> &mut Self {
+    self.parts.retain(|part| part.get_id() != id);
+    self.parts.iter_mut().for_each(|part| {
+      part.remove_item(id);
+    });
     self
   }
 }

@@ -1,5 +1,4 @@
-use super::chord::Chord;
-use super::note::Note;
+use super::{chord::Chord, note::Note};
 use crate::context::{generate_id, Tempo};
 use crate::modification::{PhraseModification, PhraseModificationType};
 use crate::note::{Accidental, Duration, Pitch};
@@ -81,6 +80,8 @@ impl Phrase {
   pub fn get_note(&mut self, id: usize) -> Option<Rc<RefCell<Note>>> {
     self.content.iter().find_map(|item| match item {
       PhraseContent::Note(note) if note.borrow().get_id() == id => Some(Rc::clone(note)),
+      PhraseContent::Chord(chord) => chord.borrow_mut().get_note(id),
+      PhraseContent::Phrase(phrase) => phrase.borrow_mut().get_note(id),
       _ => None,
     })
   }
@@ -88,6 +89,7 @@ impl Phrase {
   pub fn get_chord(&mut self, id: usize) -> Option<Rc<RefCell<Chord>>> {
     self.content.iter().find_map(|item| match item {
       PhraseContent::Chord(chord) if chord.borrow().get_id() == id => Some(Rc::clone(chord)),
+      PhraseContent::Phrase(phrase) => phrase.borrow_mut().get_chord(id),
       _ => None,
     })
   }
@@ -95,6 +97,7 @@ impl Phrase {
   pub fn get_phrase(&mut self, id: usize) -> Option<Rc<RefCell<Phrase>>> {
     self.content.iter().find_map(|item| match item {
       PhraseContent::Phrase(phrase) if phrase.borrow().get_id() == id => Some(Rc::clone(phrase)),
+      PhraseContent::Phrase(phrase) => phrase.borrow_mut().get_phrase(id),
       _ => None,
     })
   }
@@ -122,6 +125,15 @@ impl Phrase {
       PhraseContent::Note(note) => note.borrow().get_id() != id,
       PhraseContent::Chord(chord) => chord.borrow().get_id() != id,
       PhraseContent::Phrase(phrase) => phrase.borrow().get_id() != id,
+    });
+    self.content.iter().for_each(|item| match item {
+      PhraseContent::Chord(chord) => {
+        chord.borrow_mut().remove_item(id);
+      }
+      PhraseContent::Phrase(phrase) => {
+        phrase.borrow_mut().remove_item(id);
+      }
+      _ => (),
     });
     self
   }

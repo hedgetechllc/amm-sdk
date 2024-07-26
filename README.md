@@ -6,7 +6,4 @@ Abstract Music Manipulation (AMM) SDK
   -Determines that fastest possible timeslice and use that as the time quantization level
   -Can also select ranges of timeslices
 -Make get_audio_buffer(): Create PCM audio buffer for note + mods for use in direct playback
-
-
--Add way to retrieve any item within entire structure from top-level composition??
 -MusicXML parser: Take into account "time-only" attributes

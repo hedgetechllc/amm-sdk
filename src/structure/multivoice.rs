@@ -1,4 +1,4 @@
-use super::phrase::Phrase;
+use super::{chord::Chord, note::Note, phrase::Phrase};
 use crate::context::{generate_id, Tempo};
 use std::{cell::RefCell, rc::Rc, slice::Iter};
 
@@ -39,6 +39,7 @@ impl MultiVoice {
   pub fn get_phrase(&mut self, id: usize) -> Option<Rc<RefCell<Phrase>>> {
     self.content.iter().find_map(|item| match item {
       MultiVoiceContent::Phrase(phrase) if phrase.borrow().get_id() == id => Some(Rc::clone(phrase)),
+      MultiVoiceContent::Phrase(phrase) => phrase.borrow_mut().get_phrase(id),
       _ => None,
     })
   }
@@ -46,22 +47,37 @@ impl MultiVoice {
   pub fn get_multivoice(&mut self, id: usize) -> Option<Rc<RefCell<MultiVoice>>> {
     self.content.iter().find_map(|item| match item {
       MultiVoiceContent::MultiVoice(multivoice) if multivoice.borrow().get_id() == id => Some(Rc::clone(multivoice)),
+      MultiVoiceContent::MultiVoice(multivoice) => multivoice.borrow_mut().get_multivoice(id),
       _ => None,
     })
   }
 
-  pub fn remove_phrase(&mut self, id: usize) -> &mut Self {
-    self.content.retain(|item| match &item {
-      &MultiVoiceContent::Phrase(phrase) => phrase.borrow().get_id() != id,
-      _ => true,
-    });
-    self
+  pub fn get_chord(&mut self, id: usize) -> Option<Rc<RefCell<Chord>>> {
+    self.content.iter().find_map(|item| match item {
+      MultiVoiceContent::Phrase(phrase) => phrase.borrow_mut().get_chord(id),
+      MultiVoiceContent::MultiVoice(multivoice) => multivoice.borrow_mut().get_chord(id),
+    })
   }
 
-  pub fn remove_multivoice(&mut self, id: usize) -> &mut Self {
-    self.content.retain(|item| match &item {
-      &MultiVoiceContent::MultiVoice(multivoice) => multivoice.borrow().get_id() != id,
-      _ => true,
+  pub fn get_note(&mut self, id: usize) -> Option<Rc<RefCell<Note>>> {
+    self.content.iter().find_map(|item| match item {
+      MultiVoiceContent::Phrase(phrase) => phrase.borrow_mut().get_note(id),
+      MultiVoiceContent::MultiVoice(multivoice) => multivoice.borrow_mut().get_note(id),
+    })
+  }
+
+  pub fn remove_item(&mut self, id: usize) -> &mut Self {
+    self.content.retain(|item| match item {
+      MultiVoiceContent::Phrase(phrase) => phrase.borrow().get_id() != id,
+      MultiVoiceContent::MultiVoice(multivoice) => multivoice.borrow().get_id() != id,
+    });
+    self.content.iter().for_each(|item| match item {
+      MultiVoiceContent::Phrase(phrase) => {
+        phrase.borrow_mut().remove_item(id);
+      }
+      MultiVoiceContent::MultiVoice(multivoice) => {
+        multivoice.borrow_mut().remove_item(id);
+      }
     });
     self
   }

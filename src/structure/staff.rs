@@ -1,7 +1,4 @@
-use super::chord::Chord;
-use super::multivoice::MultiVoice;
-use super::note::Note;
-use super::phrase::Phrase;
+use super::{chord::Chord, multivoice::MultiVoice, note::Note, phrase::Phrase};
 use crate::context::{generate_id, Clef, Key, Tempo, TimeSignature};
 use crate::modification::{Direction, DirectionType};
 use crate::note::{Accidental, Duration, Pitch};
@@ -131,6 +128,9 @@ impl Staff {
   pub fn get_note(&mut self, id: usize) -> Option<Rc<RefCell<Note>>> {
     self.content.iter().find_map(|item| match item {
       StaffContent::Note(note) if note.borrow().get_id() == id => Some(Rc::clone(note)),
+      StaffContent::Chord(chord) => chord.borrow_mut().get_note(id),
+      StaffContent::Phrase(phrase) => phrase.borrow_mut().get_note(id),
+      StaffContent::MultiVoice(multivoice) => multivoice.borrow_mut().get_note(id),
       _ => None,
     })
   }
@@ -138,6 +138,8 @@ impl Staff {
   pub fn get_chord(&mut self, id: usize) -> Option<Rc<RefCell<Chord>>> {
     self.content.iter().find_map(|item| match item {
       StaffContent::Chord(chord) if chord.borrow().get_id() == id => Some(Rc::clone(chord)),
+      StaffContent::Phrase(phrase) => phrase.borrow_mut().get_chord(id),
+      StaffContent::MultiVoice(multivoice) => multivoice.borrow_mut().get_chord(id),
       _ => None,
     })
   }
@@ -145,6 +147,8 @@ impl Staff {
   pub fn get_phrase(&mut self, id: usize) -> Option<Rc<RefCell<Phrase>>> {
     self.content.iter().find_map(|item| match item {
       StaffContent::Phrase(phrase) if phrase.borrow().get_id() == id => Some(Rc::clone(phrase)),
+      StaffContent::Phrase(phrase) => phrase.borrow_mut().get_phrase(id),
+      StaffContent::MultiVoice(multivoice) => multivoice.borrow_mut().get_phrase(id),
       _ => None,
     })
   }
@@ -152,6 +156,7 @@ impl Staff {
   pub fn get_multivoice(&mut self, id: usize) -> Option<Rc<RefCell<MultiVoice>>> {
     self.content.iter().find_map(|item| match item {
       StaffContent::MultiVoice(multivoice) if multivoice.borrow().get_id() == id => Some(Rc::clone(multivoice)),
+      StaffContent::MultiVoice(multivoice) => multivoice.borrow_mut().get_multivoice(id),
       _ => None,
     })
   }
@@ -180,6 +185,18 @@ impl Staff {
       StaffContent::Phrase(phrase) => phrase.borrow().get_id() != id,
       StaffContent::MultiVoice(multivoice) => multivoice.borrow().get_id() != id,
       StaffContent::Direction(direction) => direction.borrow().get_id() != id,
+    });
+    self.content.iter().for_each(|item| match item {
+      StaffContent::Chord(chord) => {
+        chord.borrow_mut().remove_item(id);
+      }
+      StaffContent::Phrase(phrase) => {
+        phrase.borrow_mut().remove_item(id);
+      }
+      StaffContent::MultiVoice(multivoice) => {
+        multivoice.borrow_mut().remove_item(id);
+      }
+      _ => (),
     });
     self
   }

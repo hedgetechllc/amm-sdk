@@ -1357,7 +1357,9 @@ impl Convert for MusicXmlConverter {
 
     // Use the temporally ordered time slices to construct a final composition structure
     for (part_name, staves) in &part_data.data {
-      let part = composition.get_part(&part_name).expect("Unknown part name encountered");
+      let part = composition
+        .get_part_by_name(&part_name)
+        .expect("Unknown part name encountered");
       let section = part.add_default_section();
       for (staff_name, time_slices) in staves {
         let staff = section.borrow_mut().add_staff(staff_name, None, None, None);
