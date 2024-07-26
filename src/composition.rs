@@ -136,6 +136,15 @@ impl Composition {
     self.parts.iter_mut().find(|part| part.get_name() == name)
   }
 
+  pub fn get_duration(&self) -> f64 {
+    self
+      .parts
+      .iter()
+      .map(|part| part.get_duration(&self.tempo))
+      .reduce(f64::max)
+      .unwrap_or_default()
+  }
+
   pub fn remove_copyright(&mut self) -> &mut Self {
     self.copyright = None;
     self
@@ -174,7 +183,8 @@ impl Composition {
 
 impl std::fmt::Display for Composition {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-    write!(f, "Composition:\n  Title: {}\n  First Composer: {}\n  First Lyricist: {}\n  First Arranger: {}\n  Publisher: {}\n  Copyright: {}\n  Tempo: {}\n  Key: {}\n  Time Signature: {}\n  Num Parts: {}",
+    let duration = self.get_duration();
+    write!(f, "Composition:\n  Title: {}\n  First Composer: {}\n  First Lyricist: {}\n  First Arranger: {}\n  Publisher: {}\n  Copyright: {}\n  Tempo: {}\n  Key: {}\n  Time Signature: {}\n  Num Parts: {}\n  Length: {:02}:{:02}",
       self.title,
       self.composers.first().unwrap_or(&String::from("Unknown")),
       self.lyricists.first().unwrap_or(&String::from("Unknown")),
@@ -185,6 +195,8 @@ impl std::fmt::Display for Composition {
       self.starting_key,
       self.starting_time_signature,
       self.parts.len(),
+      duration as u32 / 60,
+      duration as u32 % 60
     )
   }
 }

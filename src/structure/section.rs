@@ -1,5 +1,5 @@
 use super::staff::Staff;
-use crate::context::{generate_id, Clef, Key, TimeSignature};
+use crate::context::{generate_id, Clef, Key, Tempo, TimeSignature};
 use crate::modification::{SectionModification, SectionModificationType};
 use std::{cell::RefCell, rc::Rc, slice::Iter};
 
@@ -162,6 +162,38 @@ impl Section {
       .modifications
       .retain(|modification| modification.borrow().get_id() != id);
     self
+  }
+
+  pub fn get_duration(&self, initial_tempo: &Tempo) -> f64 {
+    // Determine if this section specifies a tempo modification
+    let tempo = self
+      .modifications
+      .iter()
+      .find_map(|item| match item.borrow().get_modification() {
+        SectionModificationType::TempoExplicit { tempo } => Some(tempo.clone()),
+        SectionModificationType::TempoImplicit { tempo } => Some(Tempo {
+          base_note: initial_tempo.base_note,
+          beats_per_minute: tempo.value(),
+        }),
+        _ => None,
+      })
+      .unwrap_or_else(|| initial_tempo.clone());
+
+    // Calculate the duration of the section
+    let (mut duration, mut max_staff_duration) = (0.0, 0.0);
+    for content in &self.content {
+      match &content {
+        SectionContent::Section(section) => {
+          duration += section.borrow().get_duration(&tempo);
+          duration += max_staff_duration;
+          max_staff_duration = 0.0;
+        }
+        SectionContent::Staff(staff) => {
+          max_staff_duration = max_staff_duration.max(staff.borrow().get_duration(&tempo));
+        }
+      }
+    }
+    duration + max_staff_duration
   }
 
   pub fn iter(&self) -> Iter<'_, SectionContent> {

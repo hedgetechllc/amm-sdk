@@ -1,5 +1,5 @@
 use super::note::Note;
-use crate::context::generate_id;
+use crate::context::{generate_id, Tempo};
 use crate::modification::{ChordModification, ChordModificationType};
 use crate::note::{Accidental, Duration, Pitch};
 use std::{cell::RefCell, rc::Rc, slice::Iter};
@@ -70,6 +70,17 @@ impl Chord {
     self
   }
 
+  pub fn get_duration(&self, tempo: &Tempo, tuplet_ratio: Option<f64>) -> f64 {
+    self
+      .content
+      .iter()
+      .map(|content| match &content {
+        ChordContent::Note(note) => note.borrow().get_duration(&tempo, tuplet_ratio),
+      })
+      .reduce(f64::min)
+      .unwrap_or_default()
+  }
+
   pub fn iter(&self) -> Iter<'_, ChordContent> {
     self.content.iter()
   }
@@ -86,7 +97,7 @@ impl std::fmt::Display for Chord {
     let notes = self
       .content
       .iter()
-      .map(|item| match item {
+      .map(|item| match &item {
         ChordContent::Note(note) => note.borrow().to_string(),
       })
       .collect::<Vec<_>>()

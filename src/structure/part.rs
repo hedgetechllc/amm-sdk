@@ -1,5 +1,5 @@
 use super::section::Section;
-use crate::context::generate_id;
+use crate::context::{generate_id, Tempo};
 use std::{cell::RefCell, rc::Rc, slice::Iter};
 
 pub enum PartContent {
@@ -92,6 +92,16 @@ impl Part {
 
   pub fn remove_default_section(&mut self) -> &mut Self {
     self.remove_section_by_name("default")
+  }
+
+  pub fn get_duration(&self, tempo: &Tempo) -> f64 {
+    self
+      .content
+      .iter()
+      .map(|content| match &content {
+        PartContent::Section(section) => section.borrow().get_duration(tempo),
+      })
+      .sum()
   }
 
   pub fn iter(&self) -> Iter<'_, PartContent> {

@@ -124,6 +124,8 @@ enum TimeSliceContents {
   SectionStart(String),
   Ending { start: bool, numbers: Vec<u8> },
   Repeat { start: bool, times: u32 },
+  TempoChangeExplicit(Tempo),
+  TempoChangeImplicit(TempoMarking),
   Note(NoteDetails),
 }
 
@@ -132,13 +134,13 @@ impl std::fmt::Display for TimeSliceContents {
     write!(
       f,
       "{}",
-      match *self {
-        TimeSliceContents::Direction(ref direction) => format!("{}", direction),
-        TimeSliceContents::ChordModification(ref chord_mod) => format!("Chord Modification: {}", chord_mod),
-        TimeSliceContents::PhraseModification(ref phrase_mod) => format!("Phrase Modification: {}", phrase_mod),
-        TimeSliceContents::JumpTo(ref jump_to) => format!("Jump To: {}", jump_to),
-        TimeSliceContents::SectionStart(ref section_start) => format!("Section Start: {}", section_start),
-        TimeSliceContents::Ending { start, ref numbers } => format!(
+      match self {
+        TimeSliceContents::Direction(direction) => format!("{}", direction),
+        TimeSliceContents::ChordModification(chord_mod) => format!("Chord Modification: {}", chord_mod),
+        TimeSliceContents::PhraseModification(phrase_mod) => format!("Phrase Modification: {}", phrase_mod),
+        TimeSliceContents::JumpTo(jump_to) => format!("Jump To: {}", jump_to),
+        TimeSliceContents::SectionStart(section_start) => format!("Section Start: {}", section_start),
+        TimeSliceContents::Ending { start, numbers } => format!(
           "Ending: Start={} Iterations=[{}]",
           start,
           numbers
@@ -148,8 +150,10 @@ impl std::fmt::Display for TimeSliceContents {
             .join(", ")
         ),
         TimeSliceContents::Repeat { start, times } =>
-          format!("{} Repeat {} Times", if start { "Start" } else { "End" }, times),
-        TimeSliceContents::Note(ref details) => format!("{}", details),
+          format!("{} Repeat {} Times", if *start { "Start" } else { "End" }, times),
+        TimeSliceContents::TempoChangeExplicit(tempo) => format!("Tempo Change: {}", tempo),
+        TimeSliceContents::TempoChangeImplicit(tempo) => format!("Tempo Change: {}", tempo),
+        TimeSliceContents::Note(details) => format!("{}", details),
       }
     )
   }
@@ -425,7 +429,7 @@ impl MusicXmlConverter {
         String::from("1")
       };
       let item = TimeSliceContents::Direction(DirectionType::Clef {
-        clef: match item.content.sign.content {
+        clef: match &item.content.sign.content {
           musicxml::datatypes::ClefSign::G => match &item.content.line {
             Some(line) => match *line.content {
               1 => Clef::FrenchViolin,
@@ -653,7 +657,7 @@ impl MusicXmlConverter {
         }
         musicxml::elements::DirectionTypeContents::Metronome(metronome) => {
           if let Some(tempo) = Self::parse_tempo_from_metronome(metronome) {
-            let item = TimeSliceContents::Direction(DirectionType::TempoChange { tempo });
+            let item = TimeSliceContents::TempoChangeExplicit(tempo);
             time_slice.get_mut(&staff_name).unwrap()[cursor].push(item);
           }
         }
@@ -1213,7 +1217,7 @@ impl MusicXmlConverter {
             _ => note_modifications.push(NoteModificationType::Accent),
           },
           musicxml::elements::NotationContentTypes::Fermata(_fermata) => {
-            note_modifications.push(NoteModificationType::Fermata { relative_duration: 2 })
+            note_modifications.push(NoteModificationType::Fermata)
           }
           musicxml::elements::NotationContentTypes::Arpeggiate(_arpeggiate) => arpeggiate = true,
           musicxml::elements::NotationContentTypes::NonArpeggiate(_non_arpeggiate) => non_arpeggiate = true,
@@ -1408,6 +1412,8 @@ impl Convert for MusicXmlConverter {
                     phrases.pop();
                   }
                 }
+                TimeSliceContents::TempoChangeExplicit(tempo) => {}
+                TimeSliceContents::TempoChangeImplicit(tempo) => {}
                 TimeSliceContents::JumpTo(label) => (),
                 TimeSliceContents::SectionStart(label) => (),
                 TimeSliceContents::Ending { start, numbers } => (),
@@ -1459,6 +1465,7 @@ impl Convert for MusicXmlConverter {
               } else {
                 staff.borrow_mut().add_chord()
               };
+              let (mut arpeggiated, mut non_arpeggiated) = (false, false);
               for note in &notes {
                 let new_note = chord.borrow_mut().add_note(
                   note.pitch,
@@ -1472,14 +1479,24 @@ impl Convert for MusicXmlConverter {
                 for modification in &note.note_modifications {
                   new_note.borrow_mut().add_modification(modification.clone());
                 }
+                if note.arpeggiated {
+                  arpeggiated = true;
+                } else if note.non_arpeggiated {
+                  non_arpeggiated = true;
+                }
+              }
+              if arpeggiated {
+                chord.borrow_mut().add_modification(ChordModificationType::Arpeggiate);
+              } else if non_arpeggiated {
+                chord
+                  .borrow_mut()
+                  .add_modification(ChordModificationType::NonArpeggiate);
               }
             }
 
             /*pub tied: bool, <- creates new Phrase, if only one tied note in chord, creates new multivoice
             pub voice: Option<String>,
             pub tuplet: Option<(u32, u32)>, <- creates new Phrase, if only one tuplet note in chord, creates new multivoice
-            pub arpeggiated: bool,
-            pub non_arpeggiated: bool,
             pub phrase_modifications: Vec<PhraseModDetails>,*/
           }
         }

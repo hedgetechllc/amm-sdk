@@ -50,7 +50,7 @@ pub enum NoteModificationType {
   DownBow,
   Dynamic { dynamic: DynamicMarking },
   Falloff,
-  Fermata { relative_duration: u8 },
+  Fermata,
   Fingernails,
   Flip,
   Glissando { from_current: bool, going_up: bool },
@@ -131,7 +131,7 @@ impl std::fmt::Display for NoteModificationType {
       Self::DownBow => write!(f, "Down Bow"),
       Self::Dynamic { dynamic } => write!(f, "Dynamic: {}", dynamic),
       Self::Falloff => write!(f, "Falloff"),
-      Self::Fermata { relative_duration: _ } => write!(f, "Fermata"),
+      Self::Fermata => write!(f, "Fermata"),
       Self::Fingernails => write!(f, "Fingernails"),
       Self::Flip => write!(f, "Flip"),
       Self::Glissando { from_current, going_up } => write!(

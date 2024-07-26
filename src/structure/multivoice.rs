@@ -1,5 +1,5 @@
 use super::phrase::Phrase;
-use crate::context::generate_id;
+use crate::context::{generate_id, Tempo};
 use std::{cell::RefCell, rc::Rc, slice::Iter};
 
 pub enum MultiVoiceContent {
@@ -64,6 +64,18 @@ impl MultiVoice {
       _ => true,
     });
     self
+  }
+
+  pub fn get_duration(&self, tempo: &Tempo) -> f64 {
+    self
+      .content
+      .iter()
+      .map(|content| match &content {
+        MultiVoiceContent::Phrase(phrase) => phrase.borrow().get_duration(&tempo, None),
+        MultiVoiceContent::MultiVoice(multivoice) => multivoice.borrow().get_duration(&tempo),
+      })
+      .reduce(f64::max)
+      .unwrap_or_default()
   }
 
   pub fn iter(&self) -> Iter<'_, MultiVoiceContent> {

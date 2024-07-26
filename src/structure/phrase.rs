@@ -1,6 +1,6 @@
 use super::chord::Chord;
 use super::note::Note;
-use crate::context::generate_id;
+use crate::context::{generate_id, Tempo};
 use crate::modification::{PhraseModification, PhraseModificationType};
 use crate::note::{Accidental, Duration, Pitch};
 use std::{cell::RefCell, rc::Rc, slice::Iter};
@@ -131,6 +131,35 @@ impl Phrase {
       .modifications
       .retain(|modification| modification.borrow().get_id() != id);
     self
+  }
+
+  pub fn get_duration(&self, tempo: &Tempo, tuplet_ratio: Option<f64>) -> f64 {
+    // Determine if this phrase creates a tuplet
+    let new_tuplet_ratio = self
+      .modifications
+      .iter()
+      .find_map(|item| match item.borrow().get_modification() {
+        PhraseModificationType::Tuplet { into_beats } => Some(*into_beats as f64 / self.content.len() as f64),
+        _ => None,
+      });
+    let tuplet_ratio = match &tuplet_ratio {
+      Some(ratio) => match &new_tuplet_ratio {
+        Some(new_ratio) => Some(ratio * new_ratio),
+        None => Some(*ratio),
+      },
+      None => new_tuplet_ratio,
+    };
+
+    // Calculate the sum of all phrase component durations
+    self
+      .content
+      .iter()
+      .map(|content| match &content {
+        PhraseContent::Note(note) => note.borrow().get_duration(&tempo, tuplet_ratio),
+        PhraseContent::Chord(chord) => chord.borrow().get_duration(&tempo, tuplet_ratio),
+        PhraseContent::Phrase(phrase) => phrase.borrow().get_duration(&tempo, tuplet_ratio),
+      })
+      .sum()
   }
 
   pub fn iter(&self) -> Iter<'_, PhraseContent> {

@@ -1,4 +1,4 @@
-use crate::context::generate_id;
+use crate::context::{generate_id, Tempo};
 use crate::modification::{NoteModification, NoteModificationType};
 use crate::note::{Accidental, Duration, Pitch};
 use std::{cell::RefCell, rc::Rc};
@@ -41,5 +41,10 @@ impl Note {
       .modifications
       .retain(|modification| modification.borrow().get_id() != id);
     self
+  }
+
+  pub fn get_duration(&self, tempo: &Tempo, tuplet_ratio: Option<f64>) -> f64 {
+    self.beats(tempo.base_note.value()) * 60.0 / (tempo.beats_per_minute as f64)
+      * if let Some(ratio) = tuplet_ratio { ratio } else { 1.0 }
   }
 }

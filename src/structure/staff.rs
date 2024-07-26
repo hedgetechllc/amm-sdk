@@ -2,7 +2,7 @@ use super::chord::Chord;
 use super::multivoice::MultiVoice;
 use super::note::Note;
 use super::phrase::Phrase;
-use crate::context::{generate_id, Clef, Key, TimeSignature};
+use crate::context::{generate_id, Clef, Key, Tempo, TimeSignature};
 use crate::modification::{Direction, DirectionType};
 use crate::note::{Accidental, Duration, Pitch};
 use std::{cell::RefCell, rc::Rc, slice::Iter};
@@ -182,6 +182,20 @@ impl Staff {
       StaffContent::Direction(direction) => direction.borrow().get_id() != id,
     });
     self
+  }
+
+  pub fn get_duration(&self, tempo: &Tempo) -> f64 {
+    self
+      .content
+      .iter()
+      .map(|content| match &content {
+        StaffContent::Note(note) => note.borrow().get_duration(&tempo, None),
+        StaffContent::Chord(chord) => chord.borrow().get_duration(&tempo, None),
+        StaffContent::Phrase(phrase) => phrase.borrow().get_duration(&tempo, None),
+        StaffContent::MultiVoice(multivoice) => multivoice.borrow().get_duration(&tempo),
+        StaffContent::Direction(_) => 0.0,
+      })
+      .sum()
   }
 
   pub fn iter(&self) -> Iter<'_, StaffContent> {

@@ -1,4 +1,4 @@
-use crate::context::{generate_id, Clef, DynamicMarking, Key, Tempo, TimeSignature};
+use crate::context::{generate_id, Clef, DynamicMarking, Key, TimeSignature};
 use std::{cell::RefCell, rc::Rc};
 
 #[derive(Copy, Clone, Eq, PartialEq)]
@@ -10,7 +10,6 @@ pub enum DirectionType {
   Dynamic { dynamic: DynamicMarking },
   Key { key: Key },
   StringMute { on: bool },
-  TempoChange { tempo: Tempo },
   TimeSignature { time_signature: TimeSignature },
 }
 
@@ -57,7 +56,6 @@ impl std::fmt::Display for DirectionType {
       Self::Dynamic { dynamic } => write!(f, "Dynamic: {}", dynamic),
       Self::Key { key } => write!(f, "Key: {}", key),
       Self::StringMute { on } => write!(f, "String mute: {}", if *on { "on" } else { "off" }),
-      Self::TempoChange { tempo } => write!(f, "Tempo: {}", tempo),
       Self::TimeSignature { time_signature } => write!(f, "Time signature: {}", time_signature),
     }
   }

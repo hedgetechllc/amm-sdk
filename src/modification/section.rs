@@ -1,4 +1,4 @@
-use crate::context::{generate_id, Tempo};
+use crate::context::{generate_id, Tempo, TempoMarking};
 use std::{cell::RefCell, rc::Rc};
 
 #[derive(Clone, Eq, PartialEq)]
@@ -12,7 +12,8 @@ pub enum SectionModificationType {
   Ritenuto,
   Silence { num_beats: usize },
   Stringendo,
-  Tempo { tempo: Tempo },
+  TempoExplicit { tempo: Tempo },
+  TempoImplicit { tempo: TempoMarking },
 }
 
 #[derive(Clone, Eq, PartialEq)]
@@ -56,7 +57,8 @@ impl std::fmt::Display for SectionModificationType {
       Self::Ritenuto => write!(f, "Ritenuto"),
       Self::Silence { num_beats } => write!(f, "Silence for {} beats", num_beats),
       Self::Stringendo => write!(f, "Stringendo"),
-      Self::Tempo { tempo } => write!(f, "Tempo: {}", tempo),
+      Self::TempoExplicit { tempo } => write!(f, "Explicit Tempo: {}", tempo),
+      Self::TempoImplicit { tempo } => write!(f, "Implicit Tempo: {}", tempo),
     }
   }
 }
