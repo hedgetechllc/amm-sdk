@@ -1,9 +1,8 @@
 use crate::context::{Key, Tempo, TimeSignature};
 use crate::note::Note;
 use crate::structure::{Chord, MultiVoice, Part, Phrase, Section, Staff};
-use alloc::{rc::Rc, string::String, vec::Vec};
+use alloc::{collections::BTreeMap, rc::Rc, string::String, vec::Vec};
 use core::{cell::RefCell, slice::Iter};
-use std::collections::HashMap;
 
 pub struct Composition {
   title: String,
@@ -12,7 +11,7 @@ pub struct Composition {
   composers: Vec<String>,
   lyricists: Vec<String>,
   arrangers: Vec<String>,
-  metadata: HashMap<String, String>,
+  metadata: BTreeMap<String, String>,
   parts: Vec<Part>,
   tempo: Tempo,
   starting_key: Key,
@@ -28,7 +27,7 @@ impl Composition {
       composers: Vec::new(),
       lyricists: Vec::new(),
       arrangers: Vec::new(),
-      metadata: HashMap::new(),
+      metadata: BTreeMap::new(),
       parts: Vec::new(),
       tempo: tempo.unwrap_or_default(),
       starting_key: key.unwrap_or_default(),
@@ -143,7 +142,7 @@ impl Composition {
     &self.arrangers
   }
 
-  pub fn get_metadata(&self) -> &HashMap<String, String> {
+  pub fn get_metadata(&self) -> &BTreeMap<String, String> {
     &self.metadata
   }
 

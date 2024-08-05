@@ -4,10 +4,9 @@ use crate::{
   HandbellTechnique, Key, KeyMode, MultiVoice, NoteModificationType, PedalType, Phrase, PhraseModificationType, Pitch,
   SectionModificationType, Tempo, TempoMarking, TimeSignature,
 };
-use alloc::{rc::Rc, string::String, vec::Vec};
+use alloc::{collections::BTreeMap, rc::Rc, string::{String, ToString}, vec::Vec};
 use core::cell::RefCell;
 use musicxml;
-use std::collections::HashMap;
 
 pub struct MusicXmlConverter;
 
@@ -162,7 +161,7 @@ impl core::fmt::Display for TimeSliceContents {
 }
 
 struct TemporalPartData {
-  pub data: HashMap<String, HashMap<String, Vec<Vec<TimeSliceContents>>>>,
+  pub data: BTreeMap<String, BTreeMap<String, Vec<Vec<TimeSliceContents>>>>,
 }
 
 impl core::fmt::Display for TemporalPartData {
@@ -348,8 +347,8 @@ impl MusicXmlConverter {
     }
   }
 
-  fn find_parts(parts_list: &Vec<musicxml::elements::PartListElement>) -> HashMap<String, String> {
-    let mut parts_map: HashMap<String, String> = HashMap::new();
+  fn find_parts(parts_list: &Vec<musicxml::elements::PartListElement>) -> BTreeMap<String, String> {
+    let mut parts_map: BTreeMap<String, String> = BTreeMap::new();
     for parts_list_element in parts_list {
       match parts_list_element {
         musicxml::elements::PartListElement::ScorePart(score_part) => {
@@ -421,7 +420,7 @@ impl MusicXmlConverter {
 
   fn parse_attributes_element(
     element: &musicxml::elements::AttributesContents,
-    time_slices: &mut HashMap<String, Vec<Vec<TimeSliceContents>>>,
+    time_slices: &mut BTreeMap<String, Vec<Vec<TimeSliceContents>>>,
     cursor: usize,
   ) -> isize {
     element.clef.iter().for_each(|item| {
@@ -516,7 +515,7 @@ impl MusicXmlConverter {
 
   fn parse_direction_element(
     element: &musicxml::elements::Direction,
-    time_slice: &mut HashMap<String, Vec<Vec<TimeSliceContents>>>,
+    time_slice: &mut BTreeMap<String, Vec<Vec<TimeSliceContents>>>,
     cursor: usize,
   ) -> isize {
     let staff_name = if let Some(staff) = &element.content.staff {
@@ -689,7 +688,7 @@ impl MusicXmlConverter {
 
   fn parse_barline_element(
     element: &musicxml::elements::Barline,
-    time_slice: &mut HashMap<String, Vec<Vec<TimeSliceContents>>>,
+    time_slice: &mut BTreeMap<String, Vec<Vec<TimeSliceContents>>>,
     cursor: usize,
   ) -> isize {
     if let Some(ending) = &element.content.ending {
@@ -744,7 +743,7 @@ impl MusicXmlConverter {
 
   fn parse_note_element(
     note: &musicxml::elements::Note,
-    time_slices: &mut HashMap<String, Vec<Vec<TimeSliceContents>>>,
+    time_slices: &mut BTreeMap<String, Vec<Vec<TimeSliceContents>>>,
     divisions_per_quarter_note: usize,
     previous_cursor: usize,
     cursor: usize,
@@ -1297,7 +1296,7 @@ impl Convert for MusicXmlConverter {
     composition.set_tempo(MusicXmlConverter::find_tempo(&score.content.part));
 
     // Create a data structure to hold all temporally parsed musical data
-    let mut part_data = TemporalPartData { data: HashMap::new() };
+    let mut part_data = TemporalPartData { data: BTreeMap::new() };
     for part in &score.content.part {
       let part_name = parts_map
         .get(&*part.attributes.id)
@@ -1305,7 +1304,7 @@ impl Convert for MusicXmlConverter {
       let max_divisions = MusicXmlConverter::find_divisions_per_quarter_note(&part.content)
         * MusicXmlConverter::find_max_num_quarter_notes_per_measure(&part.content)
         * MusicXmlConverter::find_num_measures(&part.content);
-      part_data.data.insert(part_name.clone(), HashMap::new());
+      part_data.data.insert(part_name.clone(), BTreeMap::new());
       let part_staves = part_data.data.get_mut(part_name).unwrap();
       MusicXmlConverter::find_staves(&part.content).iter().for_each(|staff| {
         part_staves.insert(staff.clone(), vec![Vec::new(); max_divisions]);
@@ -1366,7 +1365,7 @@ impl Convert for MusicXmlConverter {
       for (staff_name, time_slices) in staves {
         let staff = section.borrow_mut().add_staff(staff_name, None, None, None);
         let mut phrases: Vec<Rc<RefCell<Phrase>>> = Vec::new();
-        let mut phrase_ids: HashMap<u8, usize> = HashMap::new();
+        let mut phrase_ids: BTreeMap<u8, usize> = BTreeMap::new();
         let mut multivoices: Vec<Rc<RefCell<MultiVoice>>> = Vec::new();
         for time_slice in time_slices.iter() {
           if !time_slice.is_empty() {

@@ -1,7 +1,7 @@
 use super::{Accidental, Duration, Pitch};
 use crate::context::Key;
 use crate::modification::NoteModification;
-use alloc::{rc::Rc, string::String, vec::Vec};
+use alloc::{rc::Rc, string::{String, ToString}, vec::Vec};
 use core::cell::RefCell;
 
 const A4_FREQUENCY_HZ: f32 = 440.0;
