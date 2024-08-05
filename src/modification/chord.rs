@@ -1,5 +1,6 @@
 use crate::context::{generate_id, DynamicMarking};
-use std::{cell::RefCell, rc::Rc};
+use alloc::rc::Rc;
+use core::cell::RefCell;
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub enum ChordModificationType {
@@ -54,14 +55,14 @@ impl ChordModification {
   }
 }
 
-impl std::fmt::Display for ChordModification {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for ChordModification {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(f, "{}", self.modification)
   }
 }
 
-impl std::fmt::Display for ChordModificationType {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for ChordModificationType {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     match self {
       Self::Accent => write!(f, "Accent"),
       Self::Arpeggiate => write!(f, "Arpeggiate"),

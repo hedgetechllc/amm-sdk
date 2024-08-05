@@ -1,3 +1,8 @@
+//#![no_std]
+
+#[macro_use]
+extern crate alloc;
+
 mod composition;
 mod context;
 mod modification;
@@ -18,8 +23,8 @@ pub use modification::{
 pub use note::{Accidental, Duration, Note, Pitch};
 pub use storage::Storage;
 pub use structure::{
-  Chord, ChordContent, MultiVoice, MultiVoiceContent, Part, PartContent, Phrase, PhraseContent, Section,
-  SectionContent, Staff, StaffContent,
+  Chord, ChordContent, DirectionalTimeslice, MultiVoice, MultiVoiceContent, MusicalTimeslice, Part, PartContent,
+  Phrase, PhraseContent, Section, SectionContent, Staff, StaffContent, Timeslice,
 };
 
 #[wasm_bindgen]

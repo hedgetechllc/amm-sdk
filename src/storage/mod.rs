@@ -1,5 +1,6 @@
 use crate::Composition;
 
+use alloc::string::String;
 use amm::AmmStorage;
 use midi::MidiConverter;
 use musicxml::MusicXmlConverter;
@@ -39,8 +40,8 @@ impl Storage {
   }
 }
 
-impl std::fmt::Display for Storage {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for Storage {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(
       f,
       "{}",

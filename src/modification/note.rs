@@ -1,5 +1,6 @@
 use crate::context::{generate_id, DynamicMarking};
-use std::{cell::RefCell, rc::Rc};
+use alloc::rc::Rc;
+use core::cell::RefCell;
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum HandbellTechnique {
@@ -17,8 +18,8 @@ pub enum HandbellTechnique {
   Swing,
 }
 
-impl std::fmt::Display for HandbellTechnique {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for HandbellTechnique {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(
       f,
       "{}",
@@ -114,14 +115,14 @@ impl NoteModification {
   }
 }
 
-impl std::fmt::Display for NoteModification {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for NoteModification {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(f, "{}", self.modification)
   }
 }
 
-impl std::fmt::Display for NoteModificationType {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for NoteModificationType {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     match self {
       Self::Accent => write!(f, "Accent"),
       Self::BrassBend => write!(f, "Brass Bend"),

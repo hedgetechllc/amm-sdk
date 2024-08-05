@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicUsize, Ordering};
+use core::sync::atomic::{AtomicUsize, Ordering};
 
 pub fn generate_id() -> usize {
   static COUNTER: AtomicUsize = AtomicUsize::new(1);

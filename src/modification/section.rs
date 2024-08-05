@@ -1,5 +1,6 @@
 use crate::context::{generate_id, Tempo, TempoMarking};
-use std::{cell::RefCell, rc::Rc};
+use alloc::{rc::Rc, string::String, vec::Vec};
+use core::cell::RefCell;
 
 #[derive(Clone, Eq, PartialEq)]
 pub enum SectionModificationType {
@@ -10,7 +11,7 @@ pub enum SectionModificationType {
   Repeat { num_times: u8 },
   Ritardando,
   Ritenuto,
-  Silence { num_beats: usize },
+  Silence,
   Stringendo,
   TempoExplicit { tempo: Tempo },
   TempoImplicit { tempo: TempoMarking },
@@ -39,14 +40,14 @@ impl SectionModification {
   }
 }
 
-impl std::fmt::Display for SectionModification {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for SectionModification {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(f, "{}", self.modification)
   }
 }
 
-impl std::fmt::Display for SectionModificationType {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for SectionModificationType {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     match self {
       Self::Accelerando => write!(f, "Accelerando"),
       Self::JumpAtEnd { section } => write!(f, "Jump at end of section to {}", section),
@@ -55,7 +56,7 @@ impl std::fmt::Display for SectionModificationType {
       Self::Repeat { num_times } => write!(f, "Repeat {} times", num_times),
       Self::Ritardando => write!(f, "Ritardando"),
       Self::Ritenuto => write!(f, "Ritenuto"),
-      Self::Silence { num_beats } => write!(f, "Silence for {} beats", num_beats),
+      Self::Silence => write!(f, "Silence"),
       Self::Stringendo => write!(f, "Stringendo"),
       Self::TempoExplicit { tempo } => write!(f, "Explicit Tempo: {}", tempo),
       Self::TempoImplicit { tempo } => write!(f, "Implicit Tempo: {}", tempo),

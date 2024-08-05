@@ -1,5 +1,6 @@
 use super::Convert;
 use crate::Composition;
+use alloc::string::String;
 use std::fs;
 
 pub struct MidiConverter;

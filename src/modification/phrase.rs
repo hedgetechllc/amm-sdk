@@ -1,5 +1,6 @@
 use crate::context::{generate_id, DynamicMarking};
-use std::{cell::RefCell, rc::Rc};
+use alloc::rc::Rc;
+use core::cell::RefCell;
 
 #[derive(Clone, Copy, Default, Eq, PartialEq)]
 pub enum PedalType {
@@ -52,8 +53,8 @@ impl PhraseModification {
   }
 }
 
-impl std::fmt::Display for PedalType {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for PedalType {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(
       f,
       "{}",
@@ -66,14 +67,14 @@ impl std::fmt::Display for PedalType {
   }
 }
 
-impl std::fmt::Display for PhraseModification {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for PhraseModification {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(f, "{}", self.modification)
   }
 }
 
-impl std::fmt::Display for PhraseModificationType {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for PhraseModificationType {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     match self {
       Self::Accelerando => write!(f, "Accelerando"),
       Self::Crescendo { final_dynamic } => write!(

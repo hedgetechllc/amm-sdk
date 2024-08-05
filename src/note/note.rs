@@ -1,7 +1,8 @@
 use super::{Accidental, Duration, Pitch};
 use crate::context::Key;
 use crate::modification::NoteModification;
-use std::{cell::RefCell, rc::Rc};
+use alloc::{rc::Rc, string::String, vec::Vec};
+use core::cell::RefCell;
 
 const A4_FREQUENCY_HZ: f32 = 440.0;
 const MIDI_NUMBER_A4: i16 = 69;
@@ -57,8 +58,8 @@ impl PartialEq for Note {
   }
 }
 
-impl std::fmt::Display for Note {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for Note {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     let mods = self
       .modifications
       .iter()

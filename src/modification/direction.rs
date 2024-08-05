@@ -1,5 +1,6 @@
 use crate::context::{generate_id, Clef, DynamicMarking, Key, TimeSignature};
-use std::{cell::RefCell, rc::Rc};
+use alloc::{rc::Rc, string::String};
+use core::cell::RefCell;
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum DirectionType {
@@ -36,8 +37,8 @@ impl Direction {
   }
 }
 
-impl std::fmt::Display for DirectionType {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for DirectionType {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     match self {
       Self::AccordionRegistration { high, middle, low } => write!(
         f,

@@ -1,8 +1,9 @@
 use crate::context::{Key, Tempo, TimeSignature};
 use crate::note::Note;
 use crate::structure::{Chord, MultiVoice, Part, Phrase, Section, Staff};
+use alloc::{rc::Rc, string::String, vec::Vec};
+use core::{cell::RefCell, slice::Iter};
 use std::collections::HashMap;
-use std::{cell::RefCell, rc::Rc};
 
 pub struct Composition {
   title: String,
@@ -32,6 +33,22 @@ impl Composition {
       tempo: tempo.unwrap_or_default(),
       starting_key: key.unwrap_or_default(),
       starting_time_signature: time_signature.unwrap_or_default(),
+    }
+  }
+
+  pub fn flatten(&self) -> Self {
+    Self {
+      title: self.title.clone(),
+      copyright: self.copyright.clone(),
+      publisher: self.publisher.clone(),
+      composers: self.composers.clone(),
+      lyricists: self.lyricists.clone(),
+      arrangers: self.arrangers.clone(),
+      metadata: self.metadata.clone(),
+      parts: self.parts.iter().map(|part| part.flatten()).collect(),
+      tempo: self.tempo.clone(),
+      starting_key: self.starting_key.clone(),
+      starting_time_signature: self.starting_time_signature.clone(),
     }
   }
 
@@ -217,10 +234,14 @@ impl Composition {
     });
     self
   }
+
+  pub fn iter(&self) -> Iter<'_, Part> {
+    self.parts.iter()
+  }
 }
 
-impl std::fmt::Display for Composition {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for Composition {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     let duration = self.get_duration();
     write!(f, "Composition:\n  Title: {}\n  First Composer: {}\n  First Lyricist: {}\n  First Arranger: {}\n  Publisher: {}\n  Copyright: {}\n  Tempo: {}\n  Key: {}\n  Time Signature: {}\n  Num Parts: {}\n  Length: {:02}:{:02}",
       self.title,
@@ -236,5 +257,13 @@ impl std::fmt::Display for Composition {
       duration as u32 / 60,
       duration as u32 % 60
     )
+  }
+}
+
+impl<'a> IntoIterator for &'a Composition {
+  type Item = <Iter<'a, Part> as Iterator>::Item;
+  type IntoIter = Iter<'a, Part>;
+  fn into_iter(self) -> Self::IntoIter {
+    self.parts.as_slice().into_iter()
   }
 }

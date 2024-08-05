@@ -1,3 +1,5 @@
+use alloc::string::String;
+
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum Duration {
   Maxima(u8),
@@ -54,8 +56,8 @@ fn dots_to_text(dots: u8) -> String {
   }
 }
 
-impl std::fmt::Display for Duration {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for Duration {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(
       f,
       "{}",

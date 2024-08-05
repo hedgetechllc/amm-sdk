@@ -4,8 +4,10 @@ use crate::{
   HandbellTechnique, Key, KeyMode, MultiVoice, NoteModificationType, PedalType, Phrase, PhraseModificationType, Pitch,
   SectionModificationType, Tempo, TempoMarking, TimeSignature,
 };
+use alloc::{rc::Rc, string::String, vec::Vec};
+use core::cell::RefCell;
 use musicxml;
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::collections::HashMap;
 
 pub struct MusicXmlConverter;
 
@@ -16,8 +18,8 @@ struct PhraseModDetails {
   pub number: Option<u8>,
 }
 
-impl std::fmt::Display for PhraseModDetails {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for PhraseModDetails {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(
       f,
       "{} {} (ID: {})",
@@ -42,8 +44,8 @@ struct NoteDetails {
   pub phrase_modifications: Vec<PhraseModDetails>,
 }
 
-impl std::fmt::Display for NoteDetails {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for NoteDetails {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     let note_mods = self
       .note_modifications
       .iter()
@@ -129,8 +131,8 @@ enum TimeSliceContents {
   Note(NoteDetails),
 }
 
-impl std::fmt::Display for TimeSliceContents {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for TimeSliceContents {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(
       f,
       "{}",
@@ -163,8 +165,8 @@ struct TemporalPartData {
   pub data: HashMap<String, HashMap<String, Vec<Vec<TimeSliceContents>>>>,
 }
 
-impl std::fmt::Display for TemporalPartData {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for TemporalPartData {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     for (part_name, staves) in &self.data {
       write!(f, "\nPart: {}", part_name)?;
       for (staff_name, time_slices) in staves {

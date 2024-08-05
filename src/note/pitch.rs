@@ -1,3 +1,5 @@
+use alloc::string::String;
+
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum Pitch {
   Rest,
@@ -12,7 +14,7 @@ pub enum Pitch {
 
 impl Pitch {
   pub fn is_rest(&self) -> bool {
-    std::mem::discriminant(self) == std::mem::discriminant(&Self::Rest)
+    core::mem::discriminant(self) == core::mem::discriminant(&Self::Rest)
   }
 
   pub fn value(&self) -> (usize, i16) {
@@ -29,8 +31,8 @@ impl Pitch {
   }
 }
 
-impl std::fmt::Display for Pitch {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for Pitch {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(
       f,
       "{}",
