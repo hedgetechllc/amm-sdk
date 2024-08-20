@@ -1,9 +1,15 @@
-use super::{chord::Chord, multivoice::MultiVoice, note::Note, phrase::Phrase};
+use super::{chord::Chord, multivoice::MultiVoice, phrase::Phrase, timeslice::Timeslice};
 use crate::context::{generate_id, Clef, Key, Tempo, TimeSignature};
 use crate::modification::{Direction, DirectionType};
-use crate::note::{Accidental, Duration, Pitch};
-use std::{cell::RefCell, rc::Rc, slice::Iter};
+use crate::note::{Accidental, Duration, Note, Pitch};
+use alloc::{
+  rc::Rc,
+  string::{String, ToString},
+  vec::Vec,
+};
+use core::{cell::RefCell, slice::Iter};
 
+#[derive(Clone)]
 pub enum StaffContent {
   Note(Rc<RefCell<Note>>),
   Chord(Rc<RefCell<Chord>>),
@@ -12,6 +18,7 @@ pub enum StaffContent {
   Direction(Rc<RefCell<Direction>>),
 }
 
+#[derive(Clone)]
 pub struct Staff {
   id: usize,
   name: String,
@@ -19,6 +26,7 @@ pub struct Staff {
 }
 
 impl Staff {
+  #[must_use]
   pub fn new(
     name: &str,
     clef: Option<Clef>,
@@ -42,10 +50,31 @@ impl Staff {
     Rc::new(RefCell::new(staff))
   }
 
+  #[must_use]
+  pub fn flatten(&self) -> Rc<RefCell<Self>> {
+    Rc::new(RefCell::new(Self {
+      id: self.id,
+      name: self.name.clone(),
+      content: self
+        .content
+        .iter()
+        .map(|item| match item {
+          StaffContent::Note(note) => StaffContent::Note(Rc::clone(note)),
+          StaffContent::Chord(chord) => StaffContent::Chord(Rc::clone(chord)),
+          StaffContent::Phrase(phrase) => StaffContent::Phrase(phrase.borrow().flatten(false)),
+          StaffContent::MultiVoice(multivoice) => StaffContent::Phrase(multivoice.borrow().flatten()),
+          StaffContent::Direction(direction) => StaffContent::Direction(Rc::clone(direction)),
+        })
+        .collect(),
+    }))
+  }
+
+  #[must_use]
   pub fn get_id(&self) -> usize {
     self.id
   }
 
+  #[must_use]
   pub fn get_name(&self) -> &str {
     &self.name
   }
@@ -125,6 +154,7 @@ impl Staff {
     direction
   }
 
+  #[must_use]
   pub fn get_note(&mut self, id: usize) -> Option<Rc<RefCell<Note>>> {
     self.content.iter().find_map(|item| match item {
       StaffContent::Note(note) if note.borrow().get_id() == id => Some(Rc::clone(note)),
@@ -135,6 +165,7 @@ impl Staff {
     })
   }
 
+  #[must_use]
   pub fn get_chord(&mut self, id: usize) -> Option<Rc<RefCell<Chord>>> {
     self.content.iter().find_map(|item| match item {
       StaffContent::Chord(chord) if chord.borrow().get_id() == id => Some(Rc::clone(chord)),
@@ -144,6 +175,7 @@ impl Staff {
     })
   }
 
+  #[must_use]
   pub fn get_phrase(&mut self, id: usize) -> Option<Rc<RefCell<Phrase>>> {
     self.content.iter().find_map(|item| match item {
       StaffContent::Phrase(phrase) if phrase.borrow().get_id() == id => Some(Rc::clone(phrase)),
@@ -153,6 +185,7 @@ impl Staff {
     })
   }
 
+  #[must_use]
   pub fn get_multivoice(&mut self, id: usize) -> Option<Rc<RefCell<MultiVoice>>> {
     self.content.iter().find_map(|item| match item {
       StaffContent::MultiVoice(multivoice) if multivoice.borrow().get_id() == id => Some(Rc::clone(multivoice)),
@@ -161,6 +194,7 @@ impl Staff {
     })
   }
 
+  #[must_use]
   pub fn get_direction(&mut self, id: usize) -> Option<Rc<RefCell<Direction>>> {
     self.content.iter().find_map(|item| match item {
       StaffContent::Direction(direction) if direction.borrow().get_id() == id => Some(Rc::clone(direction)),
@@ -168,6 +202,7 @@ impl Staff {
     })
   }
 
+  #[must_use]
   pub fn get_index_of_item(&mut self, id: usize) -> Option<usize> {
     self.content.iter().position(|item| match item {
       StaffContent::Note(note) => note.borrow().get_id() == id,
@@ -176,6 +211,26 @@ impl Staff {
       StaffContent::MultiVoice(multivoice) => multivoice.borrow().get_id() == id,
       StaffContent::Direction(direction) => direction.borrow().get_id() == id,
     })
+  }
+
+  #[must_use]
+  pub fn get_beats(&self, beat_base: &Duration) -> f64 {
+    self
+      .content
+      .iter()
+      .map(|content| match &content {
+        StaffContent::Note(note) => note.borrow().get_beats(beat_base, None),
+        StaffContent::Chord(chord) => chord.borrow().get_beats(beat_base, None),
+        StaffContent::Phrase(phrase) => phrase.borrow().get_beats(beat_base, None),
+        StaffContent::MultiVoice(multivoice) => multivoice.borrow().get_beats(beat_base, None),
+        StaffContent::Direction(_) => 0.0,
+      })
+      .sum()
+  }
+
+  #[must_use]
+  pub fn get_duration(&self, tempo: &Tempo) -> f64 {
+    self.get_beats(&tempo.base_note) * 60.0 / f64::from(tempo.beats_per_minute)
   }
 
   pub fn remove_item(&mut self, id: usize) -> &mut Self {
@@ -201,27 +256,40 @@ impl Staff {
     self
   }
 
-  pub fn get_duration(&self, tempo: &Tempo) -> f64 {
-    self
-      .content
-      .iter()
-      .map(|content| match &content {
-        StaffContent::Note(note) => note.borrow().get_duration(&tempo, None),
-        StaffContent::Chord(chord) => chord.borrow().get_duration(&tempo, None),
-        StaffContent::Phrase(phrase) => phrase.borrow().get_duration(&tempo, None),
-        StaffContent::MultiVoice(multivoice) => multivoice.borrow().get_duration(&tempo),
-        StaffContent::Direction(_) => 0.0,
-      })
-      .sum()
-  }
-
   pub fn iter(&self) -> Iter<'_, StaffContent> {
     self.content.iter()
   }
+
+  #[must_use]
+  pub fn iter_timeslices(&self) -> Vec<Timeslice> {
+    let mut timeslices = Vec::new();
+    self.content.iter().for_each(|item| match item {
+      StaffContent::Note(note) => {
+        let mut timeslice = Timeslice::new();
+        timeslice.add_note(note);
+        timeslices.push(timeslice);
+      }
+      StaffContent::Chord(chord) => {
+        timeslices.push(chord.borrow().to_timeslice());
+      }
+      StaffContent::Phrase(phrase) => {
+        timeslices.append(&mut phrase.borrow().iter_timeslices());
+      }
+      StaffContent::MultiVoice(multivoice) => {
+        timeslices.append(&mut multivoice.borrow().iter_timeslices());
+      }
+      StaffContent::Direction(direction) => {
+        let mut timeslice = Timeslice::new();
+        timeslice.add_direction(direction);
+        timeslices.push(timeslice);
+      }
+    });
+    timeslices
+  }
 }
 
-impl std::fmt::Display for Staff {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for Staff {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     let items = self
       .content
       .iter()
@@ -234,14 +302,22 @@ impl std::fmt::Display for Staff {
       })
       .collect::<Vec<_>>()
       .join(", ");
-    write!(f, "Staff {}: [{}]", self.name, items)
+    write!(f, "Staff {}: [{items}]", self.name)
+  }
+}
+
+impl IntoIterator for Staff {
+  type Item = StaffContent;
+  type IntoIter = std::vec::IntoIter<Self::Item>;
+  fn into_iter(self) -> Self::IntoIter {
+    self.content.into_iter()
   }
 }
 
 impl<'a> IntoIterator for &'a Staff {
-  type Item = <Iter<'a, StaffContent> as Iterator>::Item;
+  type Item = &'a StaffContent;
   type IntoIter = Iter<'a, StaffContent>;
   fn into_iter(self) -> Self::IntoIter {
-    self.content.as_slice().into_iter()
+    self.iter()
   }
 }

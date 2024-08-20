@@ -1,18 +1,16 @@
 use crate::context::{generate_id, Tempo, TempoMarking};
-use alloc::{rc::Rc, string::String, vec::Vec};
+use alloc::{rc::Rc, vec::Vec};
 use core::cell::RefCell;
 
 #[derive(Clone, Eq, PartialEq)]
 pub enum SectionModificationType {
-  Accelerando,
-  JumpAtEnd { section: String },
+  Accelerando, // Quick tempo acceleration over few notes or measures
   OnlyPlay { iterations: Vec<u8> },
-  Rallentando,
+  Rallentando, // Gradual tempo reduction leading to context change
   Repeat { num_times: u8 },
-  Ritardando,
-  Ritenuto,
-  Silence,
-  Stringendo,
+  Ritardando, // Gradual tempo reduction leading to complete stop
+  Ritenuto,   // Immediate tempo reduction
+  Stringendo, // Gradual tempo acceleration leading to context change
   TempoExplicit { tempo: Tempo },
   TempoImplicit { tempo: TempoMarking },
 }
@@ -24,6 +22,7 @@ pub struct SectionModification {
 }
 
 impl SectionModification {
+  #[must_use]
   pub fn new(modification: SectionModificationType) -> Rc<RefCell<Self>> {
     Rc::new(RefCell::new(Self {
       id: generate_id(),
@@ -31,10 +30,12 @@ impl SectionModification {
     }))
   }
 
+  #[must_use]
   pub fn get_id(&self) -> usize {
     self.id
   }
 
+  #[must_use]
   pub fn get_modification(&self) -> &SectionModificationType {
     &self.modification
   }
@@ -50,16 +51,14 @@ impl core::fmt::Display for SectionModificationType {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     match self {
       Self::Accelerando => write!(f, "Accelerando"),
-      Self::JumpAtEnd { section } => write!(f, "Jump at end of section to {}", section),
       Self::OnlyPlay { iterations } => write!(f, "Only play {} times", iterations.len()),
       Self::Rallentando => write!(f, "Rallentando"),
-      Self::Repeat { num_times } => write!(f, "Repeat {} times", num_times),
+      Self::Repeat { num_times } => write!(f, "Repeat {num_times} times"),
       Self::Ritardando => write!(f, "Ritardando"),
       Self::Ritenuto => write!(f, "Ritenuto"),
-      Self::Silence => write!(f, "Silence"),
       Self::Stringendo => write!(f, "Stringendo"),
-      Self::TempoExplicit { tempo } => write!(f, "Explicit Tempo: {}", tempo),
-      Self::TempoImplicit { tempo } => write!(f, "Implicit Tempo: {}", tempo),
+      Self::TempoExplicit { tempo } => write!(f, "Explicit Tempo: {tempo}"),
+      Self::TempoImplicit { tempo } => write!(f, "Implicit Tempo: {tempo}"),
     }
   }
 }

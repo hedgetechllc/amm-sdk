@@ -21,6 +21,7 @@ pub struct Direction {
 }
 
 impl Direction {
+  #[must_use]
   pub fn new(modification: DirectionType) -> Rc<RefCell<Self>> {
     Rc::new(RefCell::new(Self {
       id: generate_id(),
@@ -28,10 +29,12 @@ impl Direction {
     }))
   }
 
+  #[must_use]
   pub fn get_id(&self) -> usize {
     self.id
   }
 
+  #[must_use]
   pub fn get_modification(&self) -> &DirectionType {
     &self.modification
   }
@@ -53,11 +56,17 @@ impl core::fmt::Display for DirectionType {
       ),
       Self::BreathMark => write!(f, "Breath mark"),
       Self::Caesura => write!(f, "Caesura"),
-      Self::Clef { clef } => write!(f, "Clef: {}", clef),
-      Self::Dynamic { dynamic } => write!(f, "Dynamic: {}", dynamic),
-      Self::Key { key } => write!(f, "Key: {}", key),
+      Self::Clef { clef } => write!(f, "Clef: {clef}"),
+      Self::Dynamic { dynamic } => write!(f, "Dynamic: {dynamic}"),
+      Self::Key { key } => write!(f, "Key: {key}"),
       Self::StringMute { on } => write!(f, "String mute: {}", if *on { "on" } else { "off" }),
-      Self::TimeSignature { time_signature } => write!(f, "Time signature: {}", time_signature),
+      Self::TimeSignature { time_signature } => write!(f, "Time signature: {time_signature}"),
     }
+  }
+}
+
+impl core::fmt::Display for Direction {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+    write!(f, "{}", self.modification)
   }
 }

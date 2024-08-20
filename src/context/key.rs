@@ -75,13 +75,13 @@ impl Key {
   const FIFTHS_E_MINOR: i8 = 1;
   const FIFTHS_E_FLAT_MINOR: i8 = -6;
 
+  #[must_use]
   pub fn from_fifths(fifths: i8, mode: Option<KeyMode>) -> Self {
     match (fifths, mode.unwrap_or(KeyMode::Major)) {
       (Self::FIFTHS_A_MAJOR, KeyMode::Major) => Self::AMajor,
       (Self::FIFTHS_A_FLAT_MAJOR, KeyMode::Major) => Self::AFlatMajor,
       (Self::FIFTHS_B_MAJOR, KeyMode::Major) => Self::BMajor,
       (Self::FIFTHS_B_FLAT_MAJOR, KeyMode::Major) => Self::BFlatMajor,
-      (Self::FIFTHS_C_MAJOR, KeyMode::Major) => Self::CMajor,
       (Self::FIFTHS_C_SHARP_MAJOR, KeyMode::Major) => Self::CSharpMajor,
       (Self::FIFTHS_C_FLAT_MAJOR, KeyMode::Major) => Self::CFlatMajor,
       (Self::FIFTHS_D_MAJOR, KeyMode::Major) => Self::DMajor,
@@ -111,6 +111,7 @@ impl Key {
     }
   }
 
+  #[must_use]
   pub fn fifths(&self) -> i8 {
     match self {
       Self::AMajor => Self::FIFTHS_A_MAJOR,
@@ -146,9 +147,11 @@ impl Key {
     }
   }
 
+  #[must_use]
+  #[allow(clippy::too_many_lines)]
   pub fn accidentals(&self) -> [Accidental; 8] {
     match self {
-      Self::AMajor => [
+      Self::AMajor | Self::FSharpMinor => [
         Accidental::None,
         Accidental::None,
         Accidental::None,
@@ -158,7 +161,7 @@ impl Key {
         Accidental::Sharp,
         Accidental::Sharp,
       ],
-      Self::AMinor => [
+      Self::AMinor | Self::CMajor => [
         Accidental::None,
         Accidental::None,
         Accidental::None,
@@ -168,7 +171,7 @@ impl Key {
         Accidental::None,
         Accidental::None,
       ],
-      Self::ASharpMinor => [
+      Self::ASharpMinor | Self::CSharpMajor => [
         Accidental::None,
         Accidental::Sharp,
         Accidental::Sharp,
@@ -178,7 +181,7 @@ impl Key {
         Accidental::Sharp,
         Accidental::Sharp,
       ],
-      Self::AFlatMajor => [
+      Self::AFlatMajor | Self::FMinor => [
         Accidental::None,
         Accidental::Flat,
         Accidental::Flat,
@@ -188,7 +191,7 @@ impl Key {
         Accidental::None,
         Accidental::None,
       ],
-      Self::AFlatMinor => [
+      Self::AFlatMinor | Self::CFlatMajor => [
         Accidental::None,
         Accidental::Flat,
         Accidental::Flat,
@@ -198,7 +201,7 @@ impl Key {
         Accidental::Flat,
         Accidental::Flat,
       ],
-      Self::BMajor => [
+      Self::BMajor | Self::GSharpMinor => [
         Accidental::None,
         Accidental::Sharp,
         Accidental::None,
@@ -208,7 +211,7 @@ impl Key {
         Accidental::Sharp,
         Accidental::Sharp,
       ],
-      Self::BMinor => [
+      Self::BMinor | Self::DMajor => [
         Accidental::None,
         Accidental::None,
         Accidental::None,
@@ -218,7 +221,7 @@ impl Key {
         Accidental::Sharp,
         Accidental::None,
       ],
-      Self::BFlatMajor => [
+      Self::BFlatMajor | Self::GMinor => [
         Accidental::None,
         Accidental::None,
         Accidental::Flat,
@@ -228,7 +231,7 @@ impl Key {
         Accidental::None,
         Accidental::None,
       ],
-      Self::BFlatMinor => [
+      Self::BFlatMinor | Self::DFlatMajor => [
         Accidental::None,
         Accidental::Flat,
         Accidental::Flat,
@@ -238,17 +241,7 @@ impl Key {
         Accidental::None,
         Accidental::Flat,
       ],
-      Self::CMajor => [
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-      ],
-      Self::CMinor => [
+      Self::CMinor | Self::EFlatMajor => [
         Accidental::None,
         Accidental::Flat,
         Accidental::Flat,
@@ -258,17 +251,7 @@ impl Key {
         Accidental::None,
         Accidental::None,
       ],
-      Self::CSharpMajor => [
-        Accidental::None,
-        Accidental::Sharp,
-        Accidental::Sharp,
-        Accidental::Sharp,
-        Accidental::Sharp,
-        Accidental::Sharp,
-        Accidental::Sharp,
-        Accidental::Sharp,
-      ],
-      Self::CSharpMinor => [
+      Self::CSharpMinor | Self::EMajor => [
         Accidental::None,
         Accidental::None,
         Accidental::None,
@@ -278,27 +261,7 @@ impl Key {
         Accidental::Sharp,
         Accidental::Sharp,
       ],
-      Self::CFlatMajor => [
-        Accidental::None,
-        Accidental::Flat,
-        Accidental::Flat,
-        Accidental::Flat,
-        Accidental::Flat,
-        Accidental::Flat,
-        Accidental::Flat,
-        Accidental::Flat,
-      ],
-      Self::DMajor => [
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-        Accidental::Sharp,
-        Accidental::None,
-        Accidental::None,
-        Accidental::Sharp,
-        Accidental::None,
-      ],
-      Self::DMinor => [
+      Self::DMinor | Self::FMajor => [
         Accidental::None,
         Accidental::None,
         Accidental::Flat,
@@ -308,7 +271,7 @@ impl Key {
         Accidental::None,
         Accidental::None,
       ],
-      Self::DSharpMinor => [
+      Self::DSharpMinor | Self::FSharpMajor => [
         Accidental::None,
         Accidental::Sharp,
         Accidental::None,
@@ -318,27 +281,7 @@ impl Key {
         Accidental::Sharp,
         Accidental::Sharp,
       ],
-      Self::DFlatMajor => [
-        Accidental::None,
-        Accidental::Flat,
-        Accidental::Flat,
-        Accidental::None,
-        Accidental::Flat,
-        Accidental::Flat,
-        Accidental::None,
-        Accidental::Flat,
-      ],
-      Self::EMajor => [
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-        Accidental::Sharp,
-        Accidental::Sharp,
-        Accidental::None,
-        Accidental::Sharp,
-        Accidental::Sharp,
-      ],
-      Self::EMinor => [
+      Self::EMinor | Self::GMajor => [
         Accidental::None,
         Accidental::None,
         Accidental::None,
@@ -348,97 +291,7 @@ impl Key {
         Accidental::Sharp,
         Accidental::None,
       ],
-      Self::EFlatMajor => [
-        Accidental::None,
-        Accidental::Flat,
-        Accidental::Flat,
-        Accidental::None,
-        Accidental::None,
-        Accidental::Flat,
-        Accidental::None,
-        Accidental::None,
-      ],
-      Self::EFlatMinor => [
-        Accidental::None,
-        Accidental::Flat,
-        Accidental::Flat,
-        Accidental::Flat,
-        Accidental::Flat,
-        Accidental::Flat,
-        Accidental::None,
-        Accidental::Flat,
-      ],
-      Self::FMajor => [
-        Accidental::None,
-        Accidental::None,
-        Accidental::Flat,
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-      ],
-      Self::FMinor => [
-        Accidental::None,
-        Accidental::Flat,
-        Accidental::Flat,
-        Accidental::None,
-        Accidental::Flat,
-        Accidental::Flat,
-        Accidental::None,
-        Accidental::None,
-      ],
-      Self::FSharpMajor => [
-        Accidental::None,
-        Accidental::Sharp,
-        Accidental::None,
-        Accidental::Sharp,
-        Accidental::Sharp,
-        Accidental::Sharp,
-        Accidental::Sharp,
-        Accidental::Sharp,
-      ],
-      Self::FSharpMinor => [
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-        Accidental::Sharp,
-        Accidental::None,
-        Accidental::None,
-        Accidental::Sharp,
-        Accidental::Sharp,
-      ],
-      Self::GMajor => [
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-        Accidental::Sharp,
-        Accidental::None,
-      ],
-      Self::GMinor => [
-        Accidental::None,
-        Accidental::None,
-        Accidental::Flat,
-        Accidental::None,
-        Accidental::None,
-        Accidental::Flat,
-        Accidental::None,
-        Accidental::None,
-      ],
-      Self::GSharpMinor => [
-        Accidental::None,
-        Accidental::Sharp,
-        Accidental::None,
-        Accidental::Sharp,
-        Accidental::Sharp,
-        Accidental::None,
-        Accidental::Sharp,
-        Accidental::Sharp,
-      ],
-      Self::GFlatMajor => [
+      Self::EFlatMinor | Self::GFlatMajor => [
         Accidental::None,
         Accidental::Flat,
         Accidental::Flat,

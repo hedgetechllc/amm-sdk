@@ -26,6 +26,7 @@ pub enum ChordModificationType {
   Staccatissimo,
   Stress,
   Tenuto,
+  Tie,
   Toe,
   Tremolo { relative_speed: u8 },
   Unstress,
@@ -39,6 +40,7 @@ pub struct ChordModification {
 }
 
 impl ChordModification {
+  #[must_use]
   pub fn new(modification: ChordModificationType) -> Rc<RefCell<Self>> {
     Rc::new(RefCell::new(Self {
       id: generate_id(),
@@ -46,10 +48,12 @@ impl ChordModification {
     }))
   }
 
+  #[must_use]
   pub fn get_id(&self) -> usize {
     self.id
   }
 
+  #[must_use]
   pub fn get_modification(&self) -> &ChordModificationType {
     &self.modification
   }
@@ -68,7 +72,7 @@ impl core::fmt::Display for ChordModificationType {
       Self::Arpeggiate => write!(f, "Arpeggiate"),
       Self::DetachedLegato => write!(f, "Detached Legato"),
       Self::DownBow => write!(f, "Down Bow"),
-      Self::Dynamic { dynamic } => write!(f, "Dynamic: {}", dynamic),
+      Self::Dynamic { dynamic } => write!(f, "Dynamic: {dynamic}"),
       Self::Fermata => write!(f, "Fermata"),
       Self::Fingernails => write!(f, "Fingernails"),
       Self::HalfMuted => write!(f, "Half Muted"),
@@ -91,8 +95,9 @@ impl core::fmt::Display for ChordModificationType {
       Self::Staccatissimo => write!(f, "Staccatissimo"),
       Self::Stress => write!(f, "Stress"),
       Self::Tenuto => write!(f, "Tenuto"),
+      Self::Tie => write!(f, "Tied"),
       Self::Toe => write!(f, "Toe"),
-      Self::Tremolo { relative_speed } => write!(f, "Tremolo at {}x speed", relative_speed),
+      Self::Tremolo { relative_speed } => write!(f, "Tremolo at {relative_speed}x speed"),
       Self::Unstress => write!(f, "Unstress"),
       Self::UpBow => write!(f, "Up Bow"),
     }

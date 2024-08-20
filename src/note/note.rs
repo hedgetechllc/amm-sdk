@@ -1,7 +1,11 @@
 use super::{Accidental, Duration, Pitch};
 use crate::context::Key;
 use crate::modification::NoteModification;
-use alloc::{rc::Rc, string::{String, ToString}, vec::Vec};
+use alloc::{
+  rc::Rc,
+  string::{String, ToString},
+  vec::Vec,
+};
 use core::cell::RefCell;
 
 const A4_FREQUENCY_HZ: f32 = 440.0;
@@ -17,32 +21,39 @@ pub struct Note {
 }
 
 impl Note {
-  fn semitone_distance(&self, key_accidentals: &[Accidental; 8]) -> i16 {
+  #[must_use]
+  fn semitone_distance(&self, key_accidentals: [Accidental; 8]) -> i16 {
     let (pitch_index, num_semitones) = self.pitch.value();
     num_semitones
-      + if self.accidental != Accidental::None {
-        self.accidental.value()
-      } else {
+      + if self.accidental == Accidental::None {
         key_accidentals[pitch_index].value()
+      } else {
+        self.accidental.value()
       }
   }
 
+  #[must_use]
   pub fn is_same_pitch(&self, other: &Note) -> bool {
     self.pitch == other.pitch
   }
 
+  #[must_use]
   pub fn is_rest(&self) -> bool {
     self.pitch.is_rest()
   }
 
-  pub fn pitch_hz(&self, key_accidentals: &[Accidental; 8], a4_frequency_hz: Option<f32>) -> f32 {
-    a4_frequency_hz.unwrap_or(A4_FREQUENCY_HZ) * 2.0_f32.powf(f32::from(self.semitone_distance(key_accidentals)) / 12.0)
+  #[must_use]
+  pub fn pitch_hz(&self, key_accidentals: [Accidental; 8], a4_frequency_hz: Option<f32>) -> f32 {
+    a4_frequency_hz.unwrap_or(A4_FREQUENCY_HZ) * 2f32.powf(f32::from(self.semitone_distance(key_accidentals)) / 12.0)
   }
 
-  pub fn midi_number(&self, key_accidentals: &[Accidental; 8]) -> u8 {
+  #[must_use]
+  #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+  pub fn midi_number(&self, key_accidentals: [Accidental; 8]) -> u8 {
     (MIDI_NUMBER_A4 + self.semitone_distance(key_accidentals)) as u8
   }
 
+  #[must_use]
   pub fn beats(&self, base_beat_value: f64) -> f64 {
     self.duration.beats(base_beat_value)
   }
@@ -50,7 +61,7 @@ impl Note {
 
 impl PartialEq for Note {
   fn eq(&self, other: &Self) -> bool {
-    let c_major_accidentals = &Key::CMajor.accidentals();
+    let c_major_accidentals = Key::CMajor.accidentals();
     let quarter_duration = Duration::Quarter(0).value();
     (self.semitone_distance(c_major_accidentals) == other.semitone_distance(c_major_accidentals))
       && (self.beats(quarter_duration) == other.beats(quarter_duration))
@@ -77,7 +88,7 @@ impl core::fmt::Display for Note {
       if mods.is_empty() {
         String::new()
       } else {
-        format!(" ({})", mods)
+        format!(" ({mods})")
       },
     )
   }

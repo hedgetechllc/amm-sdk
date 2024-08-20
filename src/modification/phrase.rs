@@ -12,7 +12,6 @@ pub enum PedalType {
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub enum PhraseModificationType {
-  Accelerando,
   Crescendo { final_dynamic: DynamicMarking },
   Decrescendo { final_dynamic: DynamicMarking },
   Glissando,
@@ -21,13 +20,8 @@ pub enum PhraseModificationType {
   OctaveShift { num_octaves: i8 },
   Pedal { r#type: PedalType },
   Portamento,
-  Rallentando,
-  Ritardando,
-  Ritenuto,
-  Stringendo,
-  Tied,
   Tremolo { relative_speed: u8 },
-  Tuplet { into_beats: u8 },
+  Tuplet { num_beats: u8, into_beats: u8 },
 }
 
 #[derive(Clone, Eq, PartialEq)]
@@ -37,6 +31,7 @@ pub struct PhraseModification {
 }
 
 impl PhraseModification {
+  #[must_use]
   pub fn new(modification: PhraseModificationType) -> Rc<RefCell<Self>> {
     Rc::new(RefCell::new(Self {
       id: generate_id(),
@@ -44,10 +39,12 @@ impl PhraseModification {
     }))
   }
 
+  #[must_use]
   pub fn get_id(&self) -> usize {
     self.id
   }
 
+  #[must_use]
   pub fn get_modification(&self) -> &PhraseModificationType {
     &self.modification
   }
@@ -76,7 +73,6 @@ impl core::fmt::Display for PhraseModification {
 impl core::fmt::Display for PhraseModificationType {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     match self {
-      Self::Accelerando => write!(f, "Accelerando"),
       Self::Crescendo { final_dynamic } => write!(
         f,
         "Crescendo{}{}",
@@ -109,16 +105,11 @@ impl core::fmt::Display for PhraseModificationType {
         maximum_dynamic
       ),
       Self::Legato => write!(f, "Legato"),
-      Self::OctaveShift { num_octaves } => write!(f, "Shift by {} octaves", num_octaves),
-      Self::Pedal { r#type } => write!(f, "{} Pedal", r#type),
+      Self::OctaveShift { num_octaves } => write!(f, "Shift by {num_octaves} octaves"),
+      Self::Pedal { r#type } => write!(f, "{type} Pedal"),
       Self::Portamento => write!(f, "Portamento"),
-      Self::Rallentando => write!(f, "Rallentando"),
-      Self::Ritardando => write!(f, "Ritardando"),
-      Self::Ritenuto => write!(f, "Ritenuto"),
-      Self::Stringendo => write!(f, "Stringendo"),
-      Self::Tied => write!(f, "Tied"),
-      Self::Tremolo { relative_speed } => write!(f, "Tremolo at {}x speed", relative_speed),
-      Self::Tuplet { into_beats } => write!(f, "Tuplet into {} beats", into_beats),
+      Self::Tremolo { relative_speed } => write!(f, "Tremolo at {relative_speed}x speed"),
+      Self::Tuplet { num_beats, into_beats } => write!(f, "{num_beats}:{into_beats} Tuplet"),
     }
   }
 }

@@ -12,7 +12,7 @@ impl core::fmt::Display for TimeSignature {
     match *self {
       Self::CommonTime => write!(f, "Common Time"),
       Self::CutTime => write!(f, "Cut Time"),
-      Self::Explicit(numerator, denominator) => write!(f, "{}/{}", numerator, denominator),
+      Self::Explicit(numerator, denominator) => write!(f, "{numerator}/{denominator}"),
       Self::None => write!(f, "Senza Misura"),
     }
   }

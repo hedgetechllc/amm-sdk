@@ -4,7 +4,12 @@ use crate::{
   HandbellTechnique, Key, KeyMode, MultiVoice, NoteModificationType, PedalType, Phrase, PhraseModificationType, Pitch,
   SectionModificationType, Tempo, TempoMarking, TimeSignature,
 };
-use alloc::{collections::BTreeMap, rc::Rc, string::{String, ToString}, vec::Vec};
+use alloc::{
+  collections::BTreeMap,
+  rc::Rc,
+  string::{String, ToString},
+  vec::Vec,
+};
 use core::cell::RefCell;
 use musicxml;
 
@@ -48,70 +53,55 @@ impl core::fmt::Display for NoteDetails {
     let note_mods = self
       .note_modifications
       .iter()
-      .map(|note_mod| format!("{}", note_mod))
+      .map(|note_mod| format!("{note_mod}"))
       .collect::<Vec<String>>()
       .join(", ");
     let phrase_mods = self
       .phrase_modifications
       .iter()
-      .map(|phrase_mod| format!("{}", phrase_mod))
+      .map(|phrase_mod| format!("{phrase_mod}"))
       .collect::<Vec<String>>()
       .join(", ");
     write!(
       f,
-      "{}",
-      format!(
-        "{}: {}{}{}{} ({}{}{}{}{}{}{} )",
-        format!("{}", if self.pitch.is_rest() { "Rest" } else { "Note" }),
-        self.pitch,
-        self.accidental,
-        if self.pitch.is_rest() { "" } else { " " },
-        self.duration,
-        if self.tied { " Tied" } else { "" },
-        format!(
-          "{}{}",
-          if self.voice.is_some() { " Voice=" } else { "" },
-          if self.voice.is_some() {
-            self.voice.clone().unwrap()
-          } else {
-            String::from("")
-          }
-        ),
-        format!(
-          "{}{}{}{}{}",
-          if self.tuplet.is_some() { " Tuplet=(" } else { "" },
-          if self.tuplet.is_some() {
-            self.tuplet.clone().unwrap().0.to_string()
-          } else {
-            String::from("")
-          },
-          if self.tuplet.is_some() { ", " } else { "" },
-          if self.tuplet.is_some() {
-            self.tuplet.clone().unwrap().1.to_string()
-          } else {
-            String::from("")
-          },
-          if self.tuplet.is_some() { ")" } else { "" }
-        ),
-        if self.arpeggiated { " Arpeggiated" } else { "" },
-        if self.non_arpeggiated { " NonArpeggiated" } else { "" },
-        format!(
-          "{}{}{}",
-          if note_mods.is_empty() { "" } else { " Mods=[" },
-          if note_mods.is_empty() { "" } else { note_mods.as_str() },
-          if note_mods.is_empty() { "" } else { "]" },
-        ),
-        format!(
-          "{}{}{}",
-          if phrase_mods.is_empty() { "" } else { " PhraseMods=[" },
-          if phrase_mods.is_empty() {
-            ""
-          } else {
-            phrase_mods.as_str()
-          },
-          if phrase_mods.is_empty() { "" } else { "]" },
-        ),
-      )
+      "{}: {}{}{}{} ({}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{} )",
+      if self.pitch.is_rest() { "Rest" } else { "Note" },
+      self.pitch,
+      self.accidental,
+      if self.pitch.is_rest() { "" } else { " " },
+      self.duration,
+      if self.tied { " Tied" } else { "" },
+      if self.voice.is_some() { " Voice=" } else { "" },
+      if self.voice.is_some() {
+        self.voice.clone().unwrap()
+      } else {
+        String::new()
+      },
+      if self.tuplet.is_some() { " Tuplet=(" } else { "" },
+      if self.tuplet.is_some() {
+        self.tuplet.unwrap().0.to_string()
+      } else {
+        String::new()
+      },
+      if self.tuplet.is_some() { ", " } else { "" },
+      if self.tuplet.is_some() {
+        self.tuplet.unwrap().1.to_string()
+      } else {
+        String::new()
+      },
+      if self.tuplet.is_some() { ")" } else { "" },
+      if self.arpeggiated { " Arpeggiated" } else { "" },
+      if self.non_arpeggiated { " NonArpeggiated" } else { "" },
+      if note_mods.is_empty() { "" } else { " Mods=[" },
+      if note_mods.is_empty() { "" } else { note_mods.as_str() },
+      if note_mods.is_empty() { "" } else { "]" },
+      if phrase_mods.is_empty() { "" } else { " PhraseMods=[" },
+      if phrase_mods.is_empty() {
+        ""
+      } else {
+        phrase_mods.as_str()
+      },
+      if phrase_mods.is_empty() { "" } else { "]" },
     )
   }
 }
@@ -136,25 +126,24 @@ impl core::fmt::Display for TimeSliceContents {
       f,
       "{}",
       match self {
-        TimeSliceContents::Direction(direction) => format!("{}", direction),
-        TimeSliceContents::ChordModification(chord_mod) => format!("Chord Modification: {}", chord_mod),
-        TimeSliceContents::PhraseModification(phrase_mod) => format!("Phrase Modification: {}", phrase_mod),
-        TimeSliceContents::JumpTo(jump_to) => format!("Jump To: {}", jump_to),
-        TimeSliceContents::SectionStart(section_start) => format!("Section Start: {}", section_start),
+        TimeSliceContents::Direction(direction) => format!("{direction}"),
+        TimeSliceContents::ChordModification(chord_mod) => format!("Chord Modification: {chord_mod}"),
+        TimeSliceContents::PhraseModification(phrase_mod) => format!("Phrase Modification: {phrase_mod}"),
+        TimeSliceContents::JumpTo(jump_to) => format!("Jump To: {jump_to}"),
+        TimeSliceContents::SectionStart(section_start) => format!("Section Start: {section_start}"),
         TimeSliceContents::Ending { start, numbers } => format!(
-          "Ending: Start={} Iterations=[{}]",
-          start,
+          "Ending: Start={start} Iterations=[{}]",
           numbers
             .iter()
-            .map(|number| number.to_string())
+            .map(ToString::to_string)
             .collect::<Vec<String>>()
             .join(", ")
         ),
         TimeSliceContents::Repeat { start, times } =>
-          format!("{} Repeat {} Times", if *start { "Start" } else { "End" }, times),
-        TimeSliceContents::TempoChangeExplicit(tempo) => format!("Tempo Change: {}", tempo),
-        TimeSliceContents::TempoChangeImplicit(tempo) => format!("Tempo Change: {}", tempo),
-        TimeSliceContents::Note(details) => format!("{}", details),
+          format!("{} Repeat {times} Times", if *start { "Start" } else { "End" }),
+        TimeSliceContents::TempoChangeExplicit(tempo) => format!("Tempo Change: {tempo}"),
+        TimeSliceContents::TempoChangeImplicit(tempo) => format!("Tempo Change: {tempo}"),
+        TimeSliceContents::Note(details) => format!("{details}"),
       }
     )
   }
@@ -167,16 +156,16 @@ struct TemporalPartData {
 impl core::fmt::Display for TemporalPartData {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     for (part_name, staves) in &self.data {
-      write!(f, "\nPart: {}", part_name)?;
+      write!(f, "\nPart: {part_name}")?;
       for (staff_name, time_slices) in staves {
-        writeln!(f, "\n  Staff: {}", staff_name)?;
+        writeln!(f, "\n  Staff: {staff_name}")?;
         for (time, time_slice) in time_slices.iter().enumerate() {
           if !time_slice.is_empty() {
-            write!(f, "    Time: {}\n      Items: [ ", time)?;
+            write!(f, "    Time: {time}\n      Items: [ ")?;
             for item in time_slice {
-              write!(f, "\"{}\" ", item)?;
+              write!(f, "\"{item}\" ")?;
             }
-            write!(f, "]\n")?;
+            writeln!(f, "]")?;
           }
         }
       }
@@ -186,6 +175,7 @@ impl core::fmt::Display for TemporalPartData {
 }
 
 impl MusicXmlConverter {
+  #[allow(clippy::cast_possible_truncation)]
   fn calculate_num_dots(base_divisions: usize, total_divisions: usize) -> u8 {
     let (mut num_dots, mut remaining_divisions) = (0, total_divisions - base_divisions);
     while remaining_divisions > 0 {
@@ -239,6 +229,7 @@ impl MusicXmlConverter {
     TimeSignature::default()
   }
 
+  #[allow(clippy::cast_possible_truncation)]
   fn parse_tempo_from_metronome(metronome: &musicxml::elements::Metronome) -> Option<Tempo> {
     if let musicxml::elements::MetronomeContents::BeatBased(beat_data) = &metronome.content {
       let num_dots: u8 = beat_data.beat_unit_dot.len() as u8;
@@ -327,7 +318,7 @@ impl MusicXmlConverter {
             "composer" => composition.add_composer(creator.content.as_str()),
             "lyricist" => composition.add_lyricist(creator.content.as_str()),
             "arranger" => composition.add_arranger(creator.content.as_str()),
-            "publisher" => composition.set_publisher(&creator.content.as_str()),
+            "publisher" => composition.set_publisher(creator.content.as_str()),
             other => composition.add_metadata(other, creator.content.as_str()),
           };
         } else {
@@ -350,14 +341,11 @@ impl MusicXmlConverter {
   fn find_parts(parts_list: &Vec<musicxml::elements::PartListElement>) -> BTreeMap<String, String> {
     let mut parts_map: BTreeMap<String, String> = BTreeMap::new();
     for parts_list_element in parts_list {
-      match parts_list_element {
-        musicxml::elements::PartListElement::ScorePart(score_part) => {
-          parts_map.insert(
-            (*score_part.attributes.id).clone(),
-            score_part.content.part_name.content.clone(),
-          );
-        }
-        _ => (),
+      if let musicxml::elements::PartListElement::ScorePart(score_part) = parts_list_element {
+        parts_map.insert(
+          (*score_part.attributes.id).clone(),
+          score_part.content.part_name.content.clone(),
+        );
       }
     }
     parts_map
@@ -378,7 +366,7 @@ impl MusicXmlConverter {
     vec![String::from("1")]
   }
 
-  fn find_num_measures(part_elements: &Vec<musicxml::elements::PartElement>) -> usize {
+  fn find_num_measures(part_elements: &[musicxml::elements::PartElement]) -> usize {
     part_elements.len()
   }
 
@@ -506,11 +494,11 @@ impl MusicXmlConverter {
   }
 
   fn parse_backup_element(element: &musicxml::elements::BackupContents) -> isize {
-    return -(*element.duration.content as isize);
+    -(*element.duration.content as isize)
   }
 
   fn parse_forward_element(element: &musicxml::elements::ForwardContents) -> isize {
-    return *element.duration.content as isize;
+    *element.duration.content as isize
   }
 
   fn parse_direction_element(
@@ -669,8 +657,7 @@ impl MusicXmlConverter {
               .content
               .accordion_middle
               .as_ref()
-              .map(|middle| *middle.content)
-              .unwrap_or(0),
+              .map_or(0, |middle| *middle.content),
             low: registration.content.accordion_low.is_some(),
           });
           time_slice.get_mut(&staff_name).unwrap()[cursor].push(item);
@@ -708,31 +695,31 @@ impl MusicXmlConverter {
     if let Some(repeat) = &element.content.repeat {
       let item = TimeSliceContents::Repeat {
         start: repeat.attributes.direction == musicxml::datatypes::BackwardForward::Forward,
-        times: repeat.attributes.times.as_ref().map(|item| **item).unwrap_or(1),
+        times: repeat.attributes.times.as_ref().map_or(1, |item| **item),
       };
       for slice in time_slice.values_mut() {
         slice[cursor].push(item.clone());
       }
     }
-    if let Some(_) = &element.content.coda {
+    if element.content.coda.is_some() {
       let item = TimeSliceContents::SectionStart(String::from("Coda"));
       for slice in time_slice.values_mut() {
         slice[cursor].push(item.clone());
       }
     }
-    if let Some(_) = &element.content.segno {
+    if element.content.segno.is_some() {
       let item = TimeSliceContents::SectionStart(String::from("Segno"));
       for slice in time_slice.values_mut() {
         slice[cursor].push(item.clone());
       }
     }
-    if let Some(_) = &element.attributes.coda {
+    if element.attributes.coda.is_some() {
       let item = TimeSliceContents::JumpTo(String::from("Coda"));
       for slice in time_slice.values_mut() {
         slice[cursor].push(item.clone());
       }
     }
-    if let Some(_) = &element.attributes.segno {
+    if element.attributes.segno.is_some() {
       let item = TimeSliceContents::JumpTo(String::from("Segno"));
       for slice in time_slice.values_mut() {
         slice[cursor].push(item.clone());
@@ -922,10 +909,7 @@ impl MusicXmlConverter {
               phrase_modifications.push(PhraseModDetails {
                 modification: PhraseModificationType::Legato,
                 is_start: slur.attributes.r#type == musicxml::datatypes::StartStopContinue::Start,
-                number: match &slur.attributes.number {
-                  Some(number) => Some(**number),
-                  None => None,
-                },
+                number: slur.attributes.number.as_ref().map(|number| **number),
               })
             }
           }
@@ -934,19 +918,13 @@ impl MusicXmlConverter {
             phrase_modifications.push(PhraseModDetails {
               modification: PhraseModificationType::Glissando,
               is_start: glissando.attributes.r#type == musicxml::datatypes::StartStop::Start,
-              number: match &glissando.attributes.number {
-                Some(number) => Some(**number),
-                None => None,
-              },
-            })
+              number: glissando.attributes.number.as_ref().map(|number| **number),
+            });
           }
           musicxml::elements::NotationContentTypes::Slide(slide) => phrase_modifications.push(PhraseModDetails {
             modification: PhraseModificationType::Portamento,
             is_start: slide.attributes.r#type == musicxml::datatypes::StartStop::Start,
-            number: match &slide.attributes.number {
-              Some(number) => Some(**number),
-              None => None,
-            },
+            number: slide.attributes.number.as_ref().map(|number| **number),
           }),
           musicxml::elements::NotationContentTypes::Ornaments(ornaments) => {
             note_modifications.extend(
@@ -1179,12 +1157,12 @@ impl MusicXmlConverter {
             musicxml::elements::DynamicsType::Ppppp(_pppp_it) => {
               note_modifications.push(NoteModificationType::Dynamic {
                 dynamic: DynamicMarking::Piano(5),
-              })
+              });
             }
             musicxml::elements::DynamicsType::Pppppp(_ppp_it) => {
               note_modifications.push(NoteModificationType::Dynamic {
                 dynamic: DynamicMarking::Piano(6),
-              })
+              });
             }
             musicxml::elements::DynamicsType::F(_f) => note_modifications.push(NoteModificationType::Dynamic {
               dynamic: DynamicMarking::Forte(1),
@@ -1201,12 +1179,12 @@ impl MusicXmlConverter {
             musicxml::elements::DynamicsType::Fffff(_ffff_it) => {
               note_modifications.push(NoteModificationType::Dynamic {
                 dynamic: DynamicMarking::Forte(5),
-              })
+              });
             }
             musicxml::elements::DynamicsType::Ffffff(_fff_it) => {
               note_modifications.push(NoteModificationType::Dynamic {
                 dynamic: DynamicMarking::Forte(6),
-              })
+              });
             }
             musicxml::elements::DynamicsType::Mp(_mp) => note_modifications.push(NoteModificationType::Dynamic {
               dynamic: DynamicMarking::MezzoPiano,
@@ -1218,7 +1196,7 @@ impl MusicXmlConverter {
             _ => note_modifications.push(NoteModificationType::Accent),
           },
           musicxml::elements::NotationContentTypes::Fermata(_fermata) => {
-            note_modifications.push(NoteModificationType::Fermata)
+            note_modifications.push(NoteModificationType::Fermata);
           }
           musicxml::elements::NotationContentTypes::Arpeggiate(_arpeggiate) => arpeggiate = true,
           musicxml::elements::NotationContentTypes::NonArpeggiate(_non_arpeggiate) => non_arpeggiate = true,
@@ -1227,10 +1205,9 @@ impl MusicXmlConverter {
     });
     if let Some(pizzicato) = &note.attributes.pizzicato {
       if *pizzicato == musicxml::datatypes::YesNo::Yes
-        && !note_modifications.iter().any(|modification| match modification {
-          NoteModificationType::Pizzicato => true,
-          _ => false,
-        })
+        && !note_modifications
+          .iter()
+          .any(|modification| matches!(modification, NoteModificationType::Pizzicato))
       {
         note_modifications.push(NoteModificationType::Pizzicato);
       }

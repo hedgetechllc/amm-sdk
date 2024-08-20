@@ -1,20 +1,28 @@
-use super::note::Note;
+use super::timeslice::Timeslice;
 use crate::context::{generate_id, Tempo};
-use crate::modification::{ChordModification, ChordModificationType};
-use crate::note::{Accidental, Duration, Pitch};
-use std::{cell::RefCell, rc::Rc, slice::Iter};
+use crate::modification::{ChordModification, ChordModificationType, NoteModification};
+use crate::note::{Accidental, Duration, Note, Pitch};
+use alloc::{
+  rc::Rc,
+  string::{String, ToString},
+  vec::Vec,
+};
+use core::{cell::RefCell, slice::Iter};
 
+#[derive(Clone)]
 pub enum ChordContent {
   Note(Rc<RefCell<Note>>),
 }
 
+#[derive(Clone)]
 pub struct Chord {
-  id: usize,
-  content: Vec<ChordContent>,
-  modifications: Vec<Rc<RefCell<ChordModification>>>,
+  pub(crate) id: usize,
+  pub(crate) content: Vec<ChordContent>,
+  pub(crate) modifications: Vec<Rc<RefCell<ChordModification>>>,
 }
 
 impl Chord {
+  #[must_use]
   pub fn new() -> Rc<RefCell<Self>> {
     Rc::new(RefCell::new(Self {
       id: generate_id(),
@@ -23,6 +31,7 @@ impl Chord {
     }))
   }
 
+  #[must_use]
   pub fn get_id(&self) -> usize {
     self.id
   }
@@ -34,18 +43,23 @@ impl Chord {
   }
 
   pub fn add_modification(&mut self, modification: ChordModificationType) -> Rc<RefCell<ChordModification>> {
+    self
+      .modifications
+      .retain(|mods| *mods.borrow().get_modification() != modification);
     let modification = ChordModification::new(modification);
     self.modifications.push(Rc::clone(&modification));
     modification
   }
 
+  #[must_use]
   pub fn get_note(&mut self, id: usize) -> Option<Rc<RefCell<Note>>> {
     self.content.iter().find_map(|item| match item {
       ChordContent::Note(note) if note.borrow().get_id() == id => Some(Rc::clone(note)),
-      _ => None,
+      ChordContent::Note(_) => None,
     })
   }
 
+  #[must_use]
   pub fn get_modification(&mut self, id: usize) -> Option<Rc<RefCell<ChordModification>>> {
     self.modifications.iter().find_map(|modification| {
       if modification.borrow().get_id() == id {
@@ -70,24 +84,71 @@ impl Chord {
     self
   }
 
-  pub fn get_duration(&self, tempo: &Tempo, tuplet_ratio: Option<f64>) -> f64 {
+  #[must_use]
+  pub fn get_beats(&self, beat_base: &Duration, tuplet_ratio: Option<f64>) -> f64 {
     self
       .content
       .iter()
       .map(|content| match &content {
-        ChordContent::Note(note) => note.borrow().get_duration(&tempo, tuplet_ratio),
+        ChordContent::Note(note) => note.borrow().get_beats(beat_base, tuplet_ratio),
       })
       .reduce(f64::min)
       .unwrap_or_default()
   }
 
+  #[must_use]
+  pub fn get_duration(&self, tempo: &Tempo, tuplet_ratio: Option<f64>) -> f64 {
+    self.get_beats(&tempo.base_note, tuplet_ratio) * 60.0 / f64::from(tempo.beats_per_minute)
+  }
+
   pub fn iter(&self) -> Iter<'_, ChordContent> {
     self.content.iter()
   }
+
+  #[must_use]
+  pub fn to_timeslice(&self) -> Timeslice {
+    let mut timeslice = Timeslice::new();
+    timeslice.arpeggiated = self.modifications.iter().any(|modification| {
+      matches!(
+        modification.borrow().get_modification(),
+        ChordModificationType::Arpeggiate
+      )
+    });
+    let transferrable_modifications = self
+      .modifications
+      .iter()
+      .filter_map(|modification| {
+        let modification = modification.borrow();
+        if matches!(
+          modification.get_modification(),
+          ChordModificationType::Arpeggiate | ChordModificationType::NonArpeggiate
+        ) {
+          None
+        } else {
+          Some(NoteModification::from_chord_modification(
+            modification.get_modification(),
+          ))
+        }
+      })
+      .collect::<Vec<_>>();
+    self.content.iter().for_each(|item| match item {
+      ChordContent::Note(note) => {
+        let mut chord_note = note.borrow().clone();
+        for modification in &transferrable_modifications {
+          chord_note
+            .modifications
+            .retain(|chord_mod| chord_mod.borrow().get_modification() != modification.borrow().get_modification());
+          chord_note.modifications.push(Rc::clone(modification));
+        }
+        timeslice.add_note(&Rc::new(RefCell::new(chord_note)));
+      }
+    });
+    timeslice
+  }
 }
 
-impl std::fmt::Display for Chord {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for Chord {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     let mods = self
       .modifications
       .iter()
@@ -104,21 +165,28 @@ impl std::fmt::Display for Chord {
       .join(", ");
     write!(
       f,
-      "Chord{}: [{}]",
+      "Chord{}: [{notes}]",
       if mods.is_empty() {
         String::new()
       } else {
-        format!(" ({})", mods)
-      },
-      notes
+        format!(" ({mods})")
+      }
     )
   }
 }
 
+impl IntoIterator for Chord {
+  type Item = ChordContent;
+  type IntoIter = std::vec::IntoIter<Self::Item>;
+  fn into_iter(self) -> Self::IntoIter {
+    self.content.into_iter()
+  }
+}
+
 impl<'a> IntoIterator for &'a Chord {
-  type Item = <Iter<'a, ChordContent> as Iterator>::Item;
+  type Item = &'a ChordContent;
   type IntoIter = Iter<'a, ChordContent>;
   fn into_iter(self) -> Self::IntoIter {
-    self.content.as_slice().into_iter()
+    self.iter()
   }
 }

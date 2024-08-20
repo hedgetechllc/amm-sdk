@@ -24,6 +24,7 @@ pub enum TempoMarking {
 }
 
 impl TempoMarking {
+  #[must_use]
   pub fn description(&self) -> &str {
     match self {
       Self::Larghissimo => "very, very slowly",
@@ -44,12 +45,13 @@ impl TempoMarking {
       Self::Vivace => "lively and fast",
       Self::Vivacissimo => "very fast and lively",
       Self::Allegrissimo => "very fast",
-      Self::AllegroVivace => "very fast",
+      Self::AllegroVivace => "very lively and fast",
       Self::Presto => "very, very fast",
       Self::Prestissimo => "extremely fast",
     }
   }
 
+  #[must_use]
   pub fn bpm_range(&self) -> (u16, u16) {
     match self {
       Self::Larghissimo => (10, 24),
@@ -69,13 +71,14 @@ impl TempoMarking {
       Self::Allegro => (120, 168),
       Self::Vivace => (168, 176),
       Self::Vivacissimo => (172, 176),
-      Self::Allegrissimo => (172, 176),
-      Self::AllegroVivace => (172, 176),
+      Self::Allegrissimo => (172, 178),
+      Self::AllegroVivace => (174, 178),
       Self::Presto => (168, 200),
       Self::Prestissimo => (200, 240),
     }
   }
 
+  #[must_use]
   pub fn value(&self) -> u16 {
     match self {
       Self::Larghissimo => 22,
@@ -95,8 +98,8 @@ impl TempoMarking {
       Self::Allegro => 140,
       Self::Vivace => 172,
       Self::Vivacissimo => 174,
-      Self::Allegrissimo => 174,
-      Self::AllegroVivace => 174,
+      Self::Allegrissimo => 175,
+      Self::AllegroVivace => 176,
       Self::Presto => 190,
       Self::Prestissimo => 220,
     }

@@ -21,16 +21,12 @@ pub enum Clef {
 }
 
 impl Clef {
+  #[must_use]
   pub fn clef_type(&self) -> ClefType {
     match self {
-      Self::Treble => ClefType::GClef,
-      Self::Bass => ClefType::FClef,
-      Self::FrenchViolin => ClefType::GClef,
-      Self::Subbass => ClefType::FClef,
-      Self::Tenor => ClefType::CClef,
-      Self::Alto => ClefType::CClef,
-      Self::Soprano => ClefType::CClef,
-      Self::MezzoSoprano => ClefType::CClef,
+      Self::Treble | Self::FrenchViolin => ClefType::GClef,
+      Self::Bass | Self::Subbass => ClefType::FClef,
+      Self::Tenor | Self::Alto | Self::Soprano | Self::MezzoSoprano => ClefType::CClef,
       Self::Baritone(clef_type) => *clef_type,
     }
   }

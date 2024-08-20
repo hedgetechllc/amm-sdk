@@ -10,6 +10,7 @@ pub enum Accidental {
 }
 
 impl Accidental {
+  #[must_use]
   pub fn value(&self) -> i16 {
     match self {
       Self::Sharp => 1,
@@ -32,7 +33,7 @@ impl core::fmt::Display for Accidental {
         Self::Flat => "♭",
         Self::DoubleSharp => "𝄪",
         Self::DoubleFlat => "𝄫",
-        _ => "",
+        Self::None => "",
       }
     )
   }

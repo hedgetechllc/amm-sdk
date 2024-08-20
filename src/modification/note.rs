@@ -1,3 +1,4 @@
+use super::chord::ChordModificationType;
 use crate::context::{generate_id, DynamicMarking};
 use alloc::rc::Rc;
 use core::cell::RefCell;
@@ -83,6 +84,7 @@ pub enum NoteModificationType {
   Tap,
   Tenuto,
   ThumbPosition,
+  Tie,
   Toe,
   Tremolo { relative_speed: u8 },
   Trill { upper: bool },
@@ -99,6 +101,7 @@ pub struct NoteModification {
 }
 
 impl NoteModification {
+  #[must_use]
   pub fn new(modification: NoteModificationType) -> Rc<RefCell<Self>> {
     Rc::new(RefCell::new(Self {
       id: generate_id(),
@@ -106,10 +109,47 @@ impl NoteModification {
     }))
   }
 
+  #[must_use]
+  pub fn from_chord_modification(modification: &ChordModificationType) -> Rc<RefCell<Self>> {
+    Rc::new(RefCell::new(Self {
+      id: 0,
+      modification: match *modification {
+        ChordModificationType::Accent => NoteModificationType::Accent,
+        ChordModificationType::DetachedLegato => NoteModificationType::DetachedLegato,
+        ChordModificationType::DownBow => NoteModificationType::DownBow,
+        ChordModificationType::Dynamic { dynamic } => NoteModificationType::Dynamic { dynamic },
+        ChordModificationType::Fermata => NoteModificationType::Fermata,
+        ChordModificationType::Fingernails => NoteModificationType::Fingernails,
+        ChordModificationType::HalfMuted => NoteModificationType::HalfMuted,
+        ChordModificationType::HarmonMute { open, half } => NoteModificationType::HarmonMute { open, half },
+        ChordModificationType::Heel => NoteModificationType::Heel,
+        ChordModificationType::Marcato => NoteModificationType::Marcato,
+        ChordModificationType::Open => NoteModificationType::Open,
+        ChordModificationType::Pizzicato => NoteModificationType::Pizzicato,
+        ChordModificationType::Sforzando => NoteModificationType::Sforzando,
+        ChordModificationType::Smear => NoteModificationType::Smear,
+        ChordModificationType::SoftAccent => NoteModificationType::SoftAccent,
+        ChordModificationType::Spiccato => NoteModificationType::Spiccato,
+        ChordModificationType::Staccato => NoteModificationType::Staccato,
+        ChordModificationType::Staccatissimo => NoteModificationType::Staccatissimo,
+        ChordModificationType::Stress => NoteModificationType::Stress,
+        ChordModificationType::Tenuto => NoteModificationType::Tenuto,
+        ChordModificationType::Tie => NoteModificationType::Tie,
+        ChordModificationType::Toe => NoteModificationType::Toe,
+        ChordModificationType::Tremolo { relative_speed } => NoteModificationType::Tremolo { relative_speed },
+        ChordModificationType::Unstress => NoteModificationType::Unstress,
+        ChordModificationType::UpBow => NoteModificationType::UpBow,
+        _ => unsafe { core::hint::unreachable_unchecked() },
+      },
+    }))
+  }
+
+  #[must_use]
   pub fn get_id(&self) -> usize {
     self.id
   }
 
+  #[must_use]
   pub fn get_modification(&self) -> &NoteModificationType {
     &self.modification
   }
@@ -130,7 +170,7 @@ impl core::fmt::Display for NoteModificationType {
       Self::Doit => write!(f, "Doit"),
       Self::DoubleTongue => write!(f, "Double Tongue"),
       Self::DownBow => write!(f, "Down Bow"),
-      Self::Dynamic { dynamic } => write!(f, "Dynamic: {}", dynamic),
+      Self::Dynamic { dynamic } => write!(f, "Dynamic: {dynamic}"),
       Self::Falloff => write!(f, "Falloff"),
       Self::Fermata => write!(f, "Fermata"),
       Self::Fingernails => write!(f, "Fingernails"),
@@ -147,12 +187,11 @@ impl core::fmt::Display for NoteModificationType {
         note_value,
       } => write!(
         f,
-        "{} Grace Note: {}",
+        "{} Grace Note: {note_value}",
         if *acciaccatura { "Acciaccatura" } else { "Appoggiatura" },
-        note_value
       ),
       Self::HalfMuted => write!(f, "Half Muted"),
-      Self::Handbell { technique } => write!(f, "Handbell: {}", technique),
+      Self::Handbell { technique } => write!(f, "Handbell: {technique}"),
       Self::HarmonMute { open, half } => write!(
         f,
         "Harmon Mute: {}{}",
@@ -192,8 +231,9 @@ impl core::fmt::Display for NoteModificationType {
       Self::Tap => write!(f, "Tap"),
       Self::Tenuto => write!(f, "Tenuto"),
       Self::ThumbPosition => write!(f, "Thumb Position"),
+      Self::Tie => write!(f, "Tied"),
       Self::Toe => write!(f, "Toe"),
-      Self::Tremolo { relative_speed } => write!(f, "Tremolo at {}x speed", relative_speed),
+      Self::Tremolo { relative_speed } => write!(f, "Tremolo at {relative_speed}x speed"),
       Self::Trill { upper } => write!(f, "{} Trill", if *upper { "Upper" } else { "Lower" }),
       Self::TripleTongue => write!(f, "Triple Tongue"),
       Self::Turn {
