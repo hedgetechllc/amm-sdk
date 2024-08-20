@@ -308,7 +308,7 @@ impl core::fmt::Display for Staff {
 
 impl IntoIterator for Staff {
   type Item = StaffContent;
-  type IntoIter = std::vec::IntoIter<Self::Item>;
+  type IntoIter = alloc::vec::IntoIter<Self::Item>;
   fn into_iter(self) -> Self::IntoIter {
     self.content.into_iter()
   }

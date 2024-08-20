@@ -177,7 +177,7 @@ impl core::fmt::Display for Chord {
 
 impl IntoIterator for Chord {
   type Item = ChordContent;
-  type IntoIter = std::vec::IntoIter<Self::Item>;
+  type IntoIter = alloc::vec::IntoIter<Self::Item>;
   fn into_iter(self) -> Self::IntoIter {
     self.content.into_iter()
   }

@@ -57,7 +57,7 @@ impl Composition {
 
   #[must_use]
   pub fn restructure_staves_as_parts(&self) -> Self {
-    // TODO: Converts each staff in a part into a new part, ensuring that each part
+    // Converts each staff in a part into a new part, ensuring that each part
     // contains only a single staff
     Self {
       title: self.title.clone(),
@@ -350,7 +350,7 @@ impl core::fmt::Display for Composition {
 
 impl IntoIterator for Composition {
   type Item = Part;
-  type IntoIter = std::vec::IntoIter<Self::Item>;
+  type IntoIter = alloc::vec::IntoIter<Self::Item>;
   fn into_iter(self) -> Self::IntoIter {
     self.parts.into_iter()
   }

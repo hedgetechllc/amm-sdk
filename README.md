@@ -20,3 +20,4 @@ Abstract Music Manipulation (AMM) SDK
 * Finish AMM Reader Implementation
 * Finish AMM Writer Implementation
 * Make fully `no_std` compatible
+* Hide all `format!`, `write!`, and `to_string()` calls behind "print" feature

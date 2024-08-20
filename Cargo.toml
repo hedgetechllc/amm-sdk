@@ -21,8 +21,9 @@ wasm-bindgen = { version = "0.2", default-features = false }
 web-sys = { version = "0.3", default-features = false, features = ["console"] }
 
 [features]
-default = ["std"]
+default = ["std", "print"]
 std = []
+print = []
 
 [lib]
 crate-type = ["rlib", "cdylib"]

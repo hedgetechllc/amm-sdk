@@ -2,9 +2,8 @@ use crate::context::{Key, Tempo, TimeSignature};
 use crate::modification::{Direction, PhraseModificationType};
 use crate::note::{Accidental, Duration, Pitch};
 use crate::structure::note::Note;
-use alloc::{rc::Rc, vec::Vec};
+use alloc::{collections::BTreeMap, rc::Rc, vec::Vec};
 use core::cell::RefCell;
-use std::collections::BTreeMap;
 
 #[derive(Clone, Copy, Default)]
 pub struct TimesliceContext {

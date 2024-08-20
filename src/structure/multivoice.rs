@@ -527,7 +527,7 @@ impl core::fmt::Display for MultiVoice {
 
 impl IntoIterator for MultiVoice {
   type Item = MultiVoiceContent;
-  type IntoIter = std::vec::IntoIter<Self::Item>;
+  type IntoIter = alloc::vec::IntoIter<Self::Item>;
   fn into_iter(self) -> Self::IntoIter {
     self.content.into_iter()
   }
