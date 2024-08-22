@@ -70,20 +70,6 @@ impl Chord {
     })
   }
 
-  pub fn remove_item(&mut self, id: usize) -> &mut Self {
-    self.content.retain(|item| match item {
-      ChordContent::Note(note) => note.borrow().get_id() != id,
-    });
-    self
-  }
-
-  pub fn remove_modification(&mut self, id: usize) -> &mut Self {
-    self
-      .modifications
-      .retain(|modification| modification.borrow().get_id() != id);
-    self
-  }
-
   #[must_use]
   pub fn get_beats(&self, beat_base: &Duration, tuplet_ratio: Option<f64>) -> f64 {
     self
@@ -99,6 +85,20 @@ impl Chord {
   #[must_use]
   pub fn get_duration(&self, tempo: &Tempo, tuplet_ratio: Option<f64>) -> f64 {
     self.get_beats(&tempo.base_note, tuplet_ratio) * 60.0 / f64::from(tempo.beats_per_minute)
+  }
+
+  pub fn remove_item(&mut self, id: usize) -> &mut Self {
+    self.content.retain(|item| match item {
+      ChordContent::Note(note) => note.borrow().get_id() != id,
+    });
+    self
+  }
+
+  pub fn remove_modification(&mut self, id: usize) -> &mut Self {
+    self
+      .modifications
+      .retain(|modification| modification.borrow().get_id() != id);
+    self
   }
 
   pub fn iter(&self) -> Iter<'_, ChordContent> {
@@ -147,6 +147,22 @@ impl Chord {
   }
 }
 
+impl IntoIterator for Chord {
+  type Item = ChordContent;
+  type IntoIter = alloc::vec::IntoIter<Self::Item>;
+  fn into_iter(self) -> Self::IntoIter {
+    self.content.into_iter()
+  }
+}
+
+impl<'a> IntoIterator for &'a Chord {
+  type Item = &'a ChordContent;
+  type IntoIter = Iter<'a, ChordContent>;
+  fn into_iter(self) -> Self::IntoIter {
+    self.iter()
+  }
+}
+
 impl core::fmt::Display for Chord {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     let mods = self
@@ -172,21 +188,5 @@ impl core::fmt::Display for Chord {
         format!(" ({mods})")
       }
     )
-  }
-}
-
-impl IntoIterator for Chord {
-  type Item = ChordContent;
-  type IntoIter = alloc::vec::IntoIter<Self::Item>;
-  fn into_iter(self) -> Self::IntoIter {
-    self.content.into_iter()
-  }
-}
-
-impl<'a> IntoIterator for &'a Chord {
-  type Item = &'a ChordContent;
-  type IntoIter = Iter<'a, ChordContent>;
-  fn into_iter(self) -> Self::IntoIter {
-    self.iter()
   }
 }

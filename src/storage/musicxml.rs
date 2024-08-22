@@ -2,7 +2,7 @@ use super::Convert;
 use crate::{
   Accidental, Chord, ChordModificationType, Clef, ClefType, Composition, DirectionType, Duration, DynamicMarking,
   HandbellTechnique, Key, KeyMode, MultiVoice, NoteModificationType, PedalType, Phrase, PhraseModificationType, Pitch,
-  SectionModificationType, Tempo, TempoMarking, TimeSignature,
+  Section, SectionModificationType, Tempo, TempoMarking, TimeSignature,
 };
 use alloc::{
   collections::BTreeMap,

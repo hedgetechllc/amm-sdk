@@ -31,7 +31,7 @@ impl Section {
   }
 
   #[must_use]
-  pub(crate) fn deep_section_clone(&self, retained_staff: &str) -> Rc<RefCell<Self>> {
+  pub(crate) fn single_staff_clone(&self, retained_staff: &str) -> Rc<RefCell<Self>> {
     // Create a clone of this section with a new ID
     let mut clone = Self {
       id: generate_id(),
@@ -63,7 +63,7 @@ impl Section {
           }
           SectionContent::Section(section) => {
             section_beats.push(0.0);
-            sections.push(section.borrow().deep_section_clone(retained_staff));
+            sections.push(section.borrow().single_staff_clone(retained_staff));
             implicit_section = None;
           }
         }
@@ -488,6 +488,22 @@ impl Section {
   }
 }
 
+impl IntoIterator for Section {
+  type Item = SectionContent;
+  type IntoIter = alloc::vec::IntoIter<Self::Item>;
+  fn into_iter(self) -> Self::IntoIter {
+    self.content.into_iter()
+  }
+}
+
+impl<'a> IntoIterator for &'a Section {
+  type Item = &'a SectionContent;
+  type IntoIter = Iter<'a, SectionContent>;
+  fn into_iter(self) -> Self::IntoIter {
+    self.iter()
+  }
+}
+
 impl core::fmt::Display for Section {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     let mods = self
@@ -514,21 +530,5 @@ impl core::fmt::Display for Section {
         format!(" ({mods})")
       }
     )
-  }
-}
-
-impl IntoIterator for Section {
-  type Item = SectionContent;
-  type IntoIter = alloc::vec::IntoIter<Self::Item>;
-  fn into_iter(self) -> Self::IntoIter {
-    self.content.into_iter()
-  }
-}
-
-impl<'a> IntoIterator for &'a Section {
-  type Item = &'a SectionContent;
-  type IntoIter = Iter<'a, SectionContent>;
-  fn into_iter(self) -> Self::IntoIter {
-    self.iter()
   }
 }

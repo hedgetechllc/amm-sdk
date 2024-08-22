@@ -65,7 +65,7 @@ impl Part {
         staff_parts.iter_mut().for_each(|(staff_name, part)| {
           part
             .content
-            .push(PartContent::Section(section.borrow().deep_section_clone(staff_name)))
+            .push(PartContent::Section(section.borrow().single_staff_clone(staff_name)))
         });
       }
     });
@@ -252,20 +252,6 @@ impl Part {
   }
 }
 
-impl core::fmt::Display for Part {
-  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-    let sections = self
-      .content
-      .iter()
-      .map(|item| match item {
-        PartContent::Section(section) => section.borrow().to_string(),
-      })
-      .collect::<Vec<_>>()
-      .join(", ");
-    write!(f, "Part {}: [{sections}]", self.name)
-  }
-}
-
 impl IntoIterator for Part {
   type Item = PartContent;
   type IntoIter = alloc::vec::IntoIter<Self::Item>;
@@ -279,5 +265,19 @@ impl<'a> IntoIterator for &'a Part {
   type IntoIter = Iter<'a, PartContent>;
   fn into_iter(self) -> Self::IntoIter {
     self.iter()
+  }
+}
+
+impl core::fmt::Display for Part {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+    let sections = self
+      .content
+      .iter()
+      .map(|item| match item {
+        PartContent::Section(section) => section.borrow().to_string(),
+      })
+      .collect::<Vec<_>>()
+      .join(", ");
+    write!(f, "Part {}: [{sections}]", self.name)
   }
 }

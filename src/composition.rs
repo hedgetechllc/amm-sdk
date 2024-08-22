@@ -327,6 +327,22 @@ impl Composition {
   }
 }
 
+impl IntoIterator for Composition {
+  type Item = Part;
+  type IntoIter = alloc::vec::IntoIter<Self::Item>;
+  fn into_iter(self) -> Self::IntoIter {
+    self.parts.into_iter()
+  }
+}
+
+impl<'a> IntoIterator for &'a Composition {
+  type Item = &'a Part;
+  type IntoIter = Iter<'a, Part>;
+  fn into_iter(self) -> Self::IntoIter {
+    self.iter()
+  }
+}
+
 impl core::fmt::Display for Composition {
   #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
@@ -345,21 +361,5 @@ impl core::fmt::Display for Composition {
       duration as u32 / 60,
       duration as u32 % 60
     )
-  }
-}
-
-impl IntoIterator for Composition {
-  type Item = Part;
-  type IntoIter = alloc::vec::IntoIter<Self::Item>;
-  fn into_iter(self) -> Self::IntoIter {
-    self.parts.into_iter()
-  }
-}
-
-impl<'a> IntoIterator for &'a Composition {
-  type Item = &'a Part;
-  type IntoIter = Iter<'a, Part>;
-  fn into_iter(self) -> Self::IntoIter {
-    self.iter()
   }
 }

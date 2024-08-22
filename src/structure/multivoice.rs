@@ -426,22 +426,6 @@ impl MultiVoice {
     })
   }
 
-  pub fn remove_item(&mut self, id: usize) -> &mut Self {
-    self.content.retain(|item| match item {
-      MultiVoiceContent::Phrase(phrase) => phrase.borrow().get_id() != id,
-      MultiVoiceContent::MultiVoice(multivoice) => multivoice.borrow().get_id() != id,
-    });
-    self.content.iter().for_each(|item| match item {
-      MultiVoiceContent::Phrase(phrase) => {
-        phrase.borrow_mut().remove_item(id);
-      }
-      MultiVoiceContent::MultiVoice(multivoice) => {
-        multivoice.borrow_mut().remove_item(id);
-      }
-    });
-    self
-  }
-
   #[must_use]
   pub fn get_beats(&self, beat_base: &Duration, tuplet_ratio: Option<f64>) -> f64 {
     self
@@ -458,6 +442,22 @@ impl MultiVoice {
   #[must_use]
   pub fn get_duration(&self, tempo: &Tempo, tuplet_ratio: Option<f64>) -> f64 {
     self.get_beats(&tempo.base_note, tuplet_ratio) * 60.0 / f64::from(tempo.beats_per_minute)
+  }
+
+  pub fn remove_item(&mut self, id: usize) -> &mut Self {
+    self.content.retain(|item| match item {
+      MultiVoiceContent::Phrase(phrase) => phrase.borrow().get_id() != id,
+      MultiVoiceContent::MultiVoice(multivoice) => multivoice.borrow().get_id() != id,
+    });
+    self.content.iter().for_each(|item| match item {
+      MultiVoiceContent::Phrase(phrase) => {
+        phrase.borrow_mut().remove_item(id);
+      }
+      MultiVoiceContent::MultiVoice(multivoice) => {
+        multivoice.borrow_mut().remove_item(id);
+      }
+    });
+    self
   }
 
   #[must_use]
@@ -510,21 +510,6 @@ impl MultiVoice {
   }
 }
 
-impl core::fmt::Display for MultiVoice {
-  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-    let voices = self
-      .content
-      .iter()
-      .map(|item| match item {
-        MultiVoiceContent::Phrase(phrase) => phrase.borrow().to_string(),
-        MultiVoiceContent::MultiVoice(multi_voice) => multi_voice.borrow().to_string(),
-      })
-      .collect::<Vec<_>>()
-      .join(", ");
-    write!(f, "MultiVoice: [{voices}]")
-  }
-}
-
 impl IntoIterator for MultiVoice {
   type Item = MultiVoiceContent;
   type IntoIter = alloc::vec::IntoIter<Self::Item>;
@@ -538,6 +523,21 @@ impl<'a> IntoIterator for &'a MultiVoice {
   type IntoIter = Iter<'a, MultiVoiceContent>;
   fn into_iter(self) -> Self::IntoIter {
     self.iter()
+  }
+}
+
+impl core::fmt::Display for MultiVoice {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+    let voices = self
+      .content
+      .iter()
+      .map(|item| match item {
+        MultiVoiceContent::Phrase(phrase) => phrase.borrow().to_string(),
+        MultiVoiceContent::MultiVoice(multi_voice) => multi_voice.borrow().to_string(),
+      })
+      .collect::<Vec<_>>()
+      .join(", ");
+    write!(f, "MultiVoice: [{voices}]")
   }
 }
 

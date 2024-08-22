@@ -288,6 +288,22 @@ impl Staff {
   }
 }
 
+impl IntoIterator for Staff {
+  type Item = StaffContent;
+  type IntoIter = alloc::vec::IntoIter<Self::Item>;
+  fn into_iter(self) -> Self::IntoIter {
+    self.content.into_iter()
+  }
+}
+
+impl<'a> IntoIterator for &'a Staff {
+  type Item = &'a StaffContent;
+  type IntoIter = Iter<'a, StaffContent>;
+  fn into_iter(self) -> Self::IntoIter {
+    self.iter()
+  }
+}
+
 impl core::fmt::Display for Staff {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     let items = self
@@ -303,21 +319,5 @@ impl core::fmt::Display for Staff {
       .collect::<Vec<_>>()
       .join(", ");
     write!(f, "Staff {}: [{items}]", self.name)
-  }
-}
-
-impl IntoIterator for Staff {
-  type Item = StaffContent;
-  type IntoIter = alloc::vec::IntoIter<Self::Item>;
-  fn into_iter(self) -> Self::IntoIter {
-    self.content.into_iter()
-  }
-}
-
-impl<'a> IntoIterator for &'a Staff {
-  type Item = &'a StaffContent;
-  type IntoIter = Iter<'a, StaffContent>;
-  fn into_iter(self) -> Self::IntoIter {
-    self.iter()
   }
 }

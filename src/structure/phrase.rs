@@ -346,6 +346,22 @@ impl Phrase {
   }
 }
 
+impl IntoIterator for Phrase {
+  type Item = PhraseContent;
+  type IntoIter = alloc::vec::IntoIter<Self::Item>;
+  fn into_iter(self) -> Self::IntoIter {
+    self.content.into_iter()
+  }
+}
+
+impl<'a> IntoIterator for &'a Phrase {
+  type Item = &'a PhraseContent;
+  type IntoIter = Iter<'a, PhraseContent>;
+  fn into_iter(self) -> Self::IntoIter {
+    self.iter()
+  }
+}
+
 impl core::fmt::Display for Phrase {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     let mods = self
@@ -374,22 +390,6 @@ impl core::fmt::Display for Phrase {
         format!(" ({mods})")
       }
     )
-  }
-}
-
-impl IntoIterator for Phrase {
-  type Item = PhraseContent;
-  type IntoIter = alloc::vec::IntoIter<Self::Item>;
-  fn into_iter(self) -> Self::IntoIter {
-    self.content.into_iter()
-  }
-}
-
-impl<'a> IntoIterator for &'a Phrase {
-  type Item = &'a PhraseContent;
-  type IntoIter = Iter<'a, PhraseContent>;
-  fn into_iter(self) -> Self::IntoIter {
-    self.iter()
   }
 }
 
