@@ -18,9 +18,9 @@ pub enum PartContent {
 
 #[derive(Clone)]
 pub struct Part {
-  id: usize,
-  name: String,
-  content: Vec<PartContent>,
+  pub(crate) id: usize,
+  pub(crate) name: String,
+  pub(crate) content: Vec<PartContent>,
 }
 
 impl Part {

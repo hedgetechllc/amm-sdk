@@ -20,9 +20,9 @@ pub enum StaffContent {
 
 #[derive(Clone)]
 pub struct Staff {
-  id: usize,
-  name: String,
-  content: Vec<StaffContent>,
+  pub(crate) id: usize,
+  pub(crate) name: String,
+  pub(crate) content: Vec<StaffContent>,
 }
 
 impl Staff {

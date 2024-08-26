@@ -1,5 +1,5 @@
 use crate::context::{Key, Tempo, TimeSignature};
-use crate::modification::{Direction, PhraseModificationType};
+use crate::modification::{Direction, NoteModificationType, PhraseModificationType};
 use crate::note::{Accidental, Duration, Pitch};
 use crate::structure::note::Note;
 use alloc::{collections::BTreeMap, rc::Rc, vec::Vec};
@@ -139,7 +139,7 @@ impl Timeslice {
     self
   }
 
-  pub fn combine(&mut self, other: &mut Self) -> &mut Self {
+  pub fn combine_with(&mut self, other: &mut Self) -> &mut Self {
     self.arpeggiated = self.arpeggiated || other.arpeggiated;
     self.content.append(other.content.as_mut());
     self.directions.append(other.directions.as_mut());

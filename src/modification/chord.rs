@@ -1,4 +1,5 @@
 use crate::context::{generate_id, DynamicMarking};
+use super::note::NoteModificationType;
 use alloc::rc::Rc;
 use core::cell::RefCell;
 
@@ -45,6 +46,41 @@ impl ChordModification {
     Rc::new(RefCell::new(Self {
       id: generate_id(),
       modification,
+    }))
+  }
+
+  #[must_use]
+  pub fn from_note_modification(modification: &NoteModificationType) -> Rc<RefCell<Self>> {
+    Rc::new(RefCell::new(Self {
+      id: generate_id(),
+      modification: match *modification {
+        NoteModificationType::Accent => ChordModificationType::Accent,
+        NoteModificationType::DetachedLegato => ChordModificationType::DetachedLegato,
+        NoteModificationType::DownBow => ChordModificationType::DownBow,
+        NoteModificationType::Dynamic { dynamic } => ChordModificationType::Dynamic { dynamic },
+        NoteModificationType::Fermata => ChordModificationType::Fermata,
+        NoteModificationType::Fingernails => ChordModificationType::Fingernails,
+        NoteModificationType::HalfMuted => ChordModificationType::HalfMuted,
+        NoteModificationType::HarmonMute { open, half } => ChordModificationType::HarmonMute { open, half },
+        NoteModificationType::Heel => ChordModificationType::Heel,
+        NoteModificationType::Marcato => ChordModificationType::Marcato,
+        NoteModificationType::Open => ChordModificationType::Open,
+        NoteModificationType::Pizzicato => ChordModificationType::Pizzicato,
+        NoteModificationType::Sforzando => ChordModificationType::Sforzando,
+        NoteModificationType::Smear => ChordModificationType::Smear,
+        NoteModificationType::SoftAccent => ChordModificationType::SoftAccent,
+        NoteModificationType::Spiccato => ChordModificationType::Spiccato,
+        NoteModificationType::Staccato => ChordModificationType::Staccato,
+        NoteModificationType::Staccatissimo => ChordModificationType::Staccatissimo,
+        NoteModificationType::Stress => ChordModificationType::Stress,
+        NoteModificationType::Tenuto => ChordModificationType::Tenuto,
+        NoteModificationType::Tie => ChordModificationType::Tie,
+        NoteModificationType::Toe => ChordModificationType::Toe,
+        NoteModificationType::Tremolo { relative_speed } => ChordModificationType::Tremolo { relative_speed },
+        NoteModificationType::Unstress => ChordModificationType::Unstress,
+        NoteModificationType::UpBow => ChordModificationType::UpBow,
+        _ => unsafe { core::hint::unreachable_unchecked() },
+      },
     }))
   }
 

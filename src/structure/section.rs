@@ -13,10 +13,10 @@ pub enum SectionContent {
 
 #[derive(Clone)]
 pub struct Section {
-  id: usize,
-  name: String,
-  content: Vec<SectionContent>,
-  modifications: Vec<Rc<RefCell<SectionModification>>>,
+  pub(crate) id: usize,
+  pub(crate) name: String,
+  pub(crate) content: Vec<SectionContent>,
+  pub(crate) modifications: Vec<Rc<RefCell<SectionModification>>>,
 }
 
 impl Section {
@@ -468,7 +468,7 @@ impl Section {
                     };
                   }
                   if (slice_time - curr_time).abs() < 0.000_001 {
-                    existing_slice.combine(&mut slice);
+                    existing_slice.combine_with(&mut slice);
                   } else {
                     timeslices.insert(index, (curr_time, slice));
                   }

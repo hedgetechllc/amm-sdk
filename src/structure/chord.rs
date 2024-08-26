@@ -118,17 +118,7 @@ impl Chord {
       .modifications
       .iter()
       .filter_map(|modification| {
-        let modification = modification.borrow();
-        if matches!(
-          modification.get_modification(),
-          ChordModificationType::Arpeggiate | ChordModificationType::NonArpeggiate
-        ) {
-          None
-        } else {
-          Some(NoteModification::from_chord_modification(
-            modification.get_modification(),
-          ))
-        }
+        NoteModification::from_chord_modification(modification.borrow().get_modification())
       })
       .collect::<Vec<_>>();
     self.content.iter().for_each(|item| match item {

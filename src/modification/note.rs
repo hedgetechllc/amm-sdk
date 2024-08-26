@@ -110,38 +110,38 @@ impl NoteModification {
   }
 
   #[must_use]
-  pub fn from_chord_modification(modification: &ChordModificationType) -> Rc<RefCell<Self>> {
-    Rc::new(RefCell::new(Self {
-      id: 0,
-      modification: match *modification {
-        ChordModificationType::Accent => NoteModificationType::Accent,
-        ChordModificationType::DetachedLegato => NoteModificationType::DetachedLegato,
-        ChordModificationType::DownBow => NoteModificationType::DownBow,
-        ChordModificationType::Dynamic { dynamic } => NoteModificationType::Dynamic { dynamic },
-        ChordModificationType::Fermata => NoteModificationType::Fermata,
-        ChordModificationType::Fingernails => NoteModificationType::Fingernails,
-        ChordModificationType::HalfMuted => NoteModificationType::HalfMuted,
-        ChordModificationType::HarmonMute { open, half } => NoteModificationType::HarmonMute { open, half },
-        ChordModificationType::Heel => NoteModificationType::Heel,
-        ChordModificationType::Marcato => NoteModificationType::Marcato,
-        ChordModificationType::Open => NoteModificationType::Open,
-        ChordModificationType::Pizzicato => NoteModificationType::Pizzicato,
-        ChordModificationType::Sforzando => NoteModificationType::Sforzando,
-        ChordModificationType::Smear => NoteModificationType::Smear,
-        ChordModificationType::SoftAccent => NoteModificationType::SoftAccent,
-        ChordModificationType::Spiccato => NoteModificationType::Spiccato,
-        ChordModificationType::Staccato => NoteModificationType::Staccato,
-        ChordModificationType::Staccatissimo => NoteModificationType::Staccatissimo,
-        ChordModificationType::Stress => NoteModificationType::Stress,
-        ChordModificationType::Tenuto => NoteModificationType::Tenuto,
-        ChordModificationType::Tie => NoteModificationType::Tie,
-        ChordModificationType::Toe => NoteModificationType::Toe,
-        ChordModificationType::Tremolo { relative_speed } => NoteModificationType::Tremolo { relative_speed },
-        ChordModificationType::Unstress => NoteModificationType::Unstress,
-        ChordModificationType::UpBow => NoteModificationType::UpBow,
-        _ => unsafe { core::hint::unreachable_unchecked() },
-      },
-    }))
+  pub fn from_chord_modification(modification: &ChordModificationType) -> Option<Rc<RefCell<Self>>> {
+    match *modification {
+      ChordModificationType::Accent => Some(NoteModificationType::Accent),
+      ChordModificationType::DetachedLegato => Some(NoteModificationType::DetachedLegato),
+      ChordModificationType::DownBow => Some(NoteModificationType::DownBow),
+      ChordModificationType::Dynamic { dynamic } => Some(NoteModificationType::Dynamic { dynamic }),
+      ChordModificationType::Fermata => Some(NoteModificationType::Fermata),
+      ChordModificationType::Fingernails => Some(NoteModificationType::Fingernails),
+      ChordModificationType::HalfMuted => Some(NoteModificationType::HalfMuted),
+      ChordModificationType::HarmonMute { open, half } => Some(NoteModificationType::HarmonMute { open, half }),
+      ChordModificationType::Heel =>Some( NoteModificationType::Heel),
+      ChordModificationType::Marcato => Some(NoteModificationType::Marcato),
+      ChordModificationType::Open => Some(NoteModificationType::Open),
+      ChordModificationType::Pizzicato => Some(NoteModificationType::Pizzicato),
+      ChordModificationType::Sforzando => Some(NoteModificationType::Sforzando),
+      ChordModificationType::Smear => Some(NoteModificationType::Smear),
+      ChordModificationType::SoftAccent => Some(NoteModificationType::SoftAccent),
+      ChordModificationType::Spiccato => Some(NoteModificationType::Spiccato),
+      ChordModificationType::Staccato => Some(NoteModificationType::Staccato),
+      ChordModificationType::Staccatissimo => Some(NoteModificationType::Staccatissimo),
+      ChordModificationType::Stress => Some(NoteModificationType::Stress),
+      ChordModificationType::Tenuto => Some(NoteModificationType::Tenuto),
+      ChordModificationType::Tie => Some(NoteModificationType::Tie),
+      ChordModificationType::Toe => Some(NoteModificationType::Toe),
+      ChordModificationType::Tremolo { relative_speed } => Some(NoteModificationType::Tremolo { relative_speed }),
+      ChordModificationType::Unstress => Some(NoteModificationType::Unstress),
+      ChordModificationType::UpBow => Some(NoteModificationType::UpBow),
+      _ => None,
+    }.map(|modification| Rc::new(RefCell::new(Self {
+      id: generate_id(),
+      modification,
+    })))
   }
 
   #[must_use]

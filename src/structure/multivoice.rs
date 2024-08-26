@@ -12,13 +12,12 @@ use core::{cell::RefCell, slice::Iter};
 #[derive(Clone)]
 pub enum MultiVoiceContent {
   Phrase(Rc<RefCell<Phrase>>),
-  MultiVoice(Rc<RefCell<MultiVoice>>),
 }
 
 #[derive(Clone)]
 pub struct MultiVoice {
-  id: usize,
-  content: Vec<MultiVoiceContent>,
+  pub(crate) id: usize,
+  pub(crate) content: Vec<MultiVoiceContent>,
 }
 
 impl MultiVoice {
@@ -41,7 +40,6 @@ impl MultiVoice {
       .iter()
       .map(|item| match item {
         MultiVoiceContent::Phrase(phrase) => phrase.borrow().flatten(true),
-        MultiVoiceContent::MultiVoice(multivoice) => multivoice.borrow().flatten(),
       })
       .collect();
 
@@ -386,27 +384,18 @@ impl MultiVoice {
     phrase
   }
 
-  pub fn add_multivoice(&mut self) -> Rc<RefCell<MultiVoice>> {
-    let multivoice = MultiVoice::new();
-    self.content.push(MultiVoiceContent::MultiVoice(Rc::clone(&multivoice)));
-    multivoice
-  }
-
   #[must_use]
   pub fn get_phrase(&mut self, id: usize) -> Option<Rc<RefCell<Phrase>>> {
     self.content.iter().find_map(|item| match item {
       MultiVoiceContent::Phrase(phrase) if phrase.borrow().get_id() == id => Some(Rc::clone(phrase)),
       MultiVoiceContent::Phrase(phrase) => phrase.borrow_mut().get_phrase(id),
-      MultiVoiceContent::MultiVoice(_) => None,
     })
   }
 
   #[must_use]
   pub fn get_multivoice(&mut self, id: usize) -> Option<Rc<RefCell<MultiVoice>>> {
     self.content.iter().find_map(|item| match item {
-      MultiVoiceContent::MultiVoice(multivoice) if multivoice.borrow().get_id() == id => Some(Rc::clone(multivoice)),
-      MultiVoiceContent::MultiVoice(multivoice) => multivoice.borrow_mut().get_multivoice(id),
-      MultiVoiceContent::Phrase(_) => None,
+      MultiVoiceContent::Phrase(phrase) => phrase.borrow_mut().get_multivoice(id),
     })
   }
 
@@ -414,7 +403,6 @@ impl MultiVoice {
   pub fn get_chord(&mut self, id: usize) -> Option<Rc<RefCell<Chord>>> {
     self.content.iter().find_map(|item| match item {
       MultiVoiceContent::Phrase(phrase) => phrase.borrow_mut().get_chord(id),
-      MultiVoiceContent::MultiVoice(multivoice) => multivoice.borrow_mut().get_chord(id),
     })
   }
 
@@ -422,7 +410,6 @@ impl MultiVoice {
   pub fn get_note(&mut self, id: usize) -> Option<Rc<RefCell<Note>>> {
     self.content.iter().find_map(|item| match item {
       MultiVoiceContent::Phrase(phrase) => phrase.borrow_mut().get_note(id),
-      MultiVoiceContent::MultiVoice(multivoice) => multivoice.borrow_mut().get_note(id),
     })
   }
 
@@ -433,7 +420,6 @@ impl MultiVoice {
       .iter()
       .map(|content| match &content {
         MultiVoiceContent::Phrase(phrase) => phrase.borrow().get_beats(beat_base, tuplet_ratio),
-        MultiVoiceContent::MultiVoice(multivoice) => multivoice.borrow().get_beats(beat_base, tuplet_ratio),
       })
       .reduce(f64::max)
       .unwrap_or_default()
@@ -447,14 +433,10 @@ impl MultiVoice {
   pub fn remove_item(&mut self, id: usize) -> &mut Self {
     self.content.retain(|item| match item {
       MultiVoiceContent::Phrase(phrase) => phrase.borrow().get_id() != id,
-      MultiVoiceContent::MultiVoice(multivoice) => multivoice.borrow().get_id() != id,
     });
     self.content.iter().for_each(|item| match item {
       MultiVoiceContent::Phrase(phrase) => {
         phrase.borrow_mut().remove_item(id);
-      }
-      MultiVoiceContent::MultiVoice(multivoice) => {
-        multivoice.borrow_mut().remove_item(id);
       }
     });
     self
@@ -477,7 +459,6 @@ impl MultiVoice {
       let (mut index, mut curr_time) = (0, 0.0);
       for mut slice in match item {
         MultiVoiceContent::Phrase(phrase) => phrase.borrow().iter_timeslices(),
-        MultiVoiceContent::MultiVoice(multivoice) => multivoice.borrow().iter_timeslices(),
       } {
         let slice_duration = slice.get_beats(&beat_base_note);
         if let Some((mut slice_time, existing_slice)) = timeslices.get_mut(index) {
@@ -495,7 +476,7 @@ impl MultiVoice {
             };
           }
           if (slice_time - curr_time).abs() < 0.000_001 {
-            existing_slice.combine(&mut slice);
+            existing_slice.combine_with(&mut slice);
           } else {
             timeslices.insert(index, (curr_time, slice));
           }
@@ -533,7 +514,6 @@ impl core::fmt::Display for MultiVoice {
       .iter()
       .map(|item| match item {
         MultiVoiceContent::Phrase(phrase) => phrase.borrow().to_string(),
-        MultiVoiceContent::MultiVoice(multi_voice) => multi_voice.borrow().to_string(),
       })
       .collect::<Vec<_>>()
       .join(", ");

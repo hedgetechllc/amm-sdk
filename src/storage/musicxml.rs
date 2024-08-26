@@ -1,8 +1,6 @@
 use super::Convert;
 use crate::{
-  Accidental, Chord, ChordModificationType, Clef, ClefType, Composition, DirectionType, Duration, DynamicMarking,
-  HandbellTechnique, Key, KeyMode, MultiVoice, NoteModificationType, PedalType, Phrase, PhraseModificationType, Pitch,
-  Section, SectionModificationType, Tempo, TempoMarking, TimeSignature,
+  Accidental, Chord, ChordContent, ChordModification, ChordModificationType, Clef, ClefType, Composition, Direction, DirectionType, Duration, DynamicMarking, HandbellTechnique, Key, KeyMode, MultiVoice, Note, NoteModification, NoteModificationType, PedalType, Phrase, PhraseContent, PhraseModification, PhraseModificationType, Pitch, Section, SectionModificationType, Staff, StaffContent, Tempo, TempoMarking, TimeSignature, Timeslice
 };
 use alloc::{
   collections::BTreeMap,
@@ -20,16 +18,21 @@ struct PhraseModDetails {
   pub modification: PhraseModificationType,
   pub is_start: bool,
   pub number: Option<u8>,
+  pub for_voice: Option<String>,
 }
 
 impl core::fmt::Display for PhraseModDetails {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(
       f,
-      "{} {} (ID: {})",
-      self.modification,
+      "{} {} (ID: {}{})",
       if self.is_start { "Start" } else { "End" },
-      self.number.unwrap_or(0)
+      self.modification,
+      self.number.unwrap_or(0),
+      match self.for_voice {
+        Some(ref voice) => format!(", Voice: {}", voice),
+        None => String::new(),
+      }
     )
   }
 }
@@ -39,13 +42,12 @@ struct NoteDetails {
   pub pitch: Pitch,
   pub duration: Duration,
   pub accidental: Accidental,
-  pub tied: bool,
   pub voice: Option<String>,
-  pub tuplet: Option<(u32, u32)>,
   pub arpeggiated: bool,
   pub non_arpeggiated: bool,
   pub note_modifications: Vec<NoteModificationType>,
-  pub phrase_modifications: Vec<PhraseModDetails>,
+  pub phrase_modifications_start: Vec<PhraseModDetails>,
+  pub phrase_modifications_end: Vec<PhraseModDetails>,
 }
 
 impl core::fmt::Display for NoteDetails {
@@ -56,40 +58,30 @@ impl core::fmt::Display for NoteDetails {
       .map(|note_mod| format!("{note_mod}"))
       .collect::<Vec<String>>()
       .join(", ");
-    let phrase_mods = self
-      .phrase_modifications
+    let mut phrase_modifications = self
+      .phrase_modifications_start
       .iter()
       .map(|phrase_mod| format!("{phrase_mod}"))
-      .collect::<Vec<String>>()
-      .join(", ");
+      .collect::<Vec<String>>();
+    phrase_modifications.extend(self
+      .phrase_modifications_end
+      .iter()
+      .map(|phrase_mod| format!("{phrase_mod}")));
+    let phrase_mods = phrase_modifications.join(", ");
     write!(
       f,
-      "{}: {}{}{}{} ({}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{} )",
+      "{}: {}{}{}{} ({}{}{}{}{}{}{}{}{}{} )",
       if self.pitch.is_rest() { "Rest" } else { "Note" },
       self.pitch,
       self.accidental,
       if self.pitch.is_rest() { "" } else { " " },
       self.duration,
-      if self.tied { " Tied" } else { "" },
       if self.voice.is_some() { " Voice=" } else { "" },
       if self.voice.is_some() {
         self.voice.clone().unwrap()
       } else {
         String::new()
       },
-      if self.tuplet.is_some() { " Tuplet=(" } else { "" },
-      if self.tuplet.is_some() {
-        self.tuplet.unwrap().0.to_string()
-      } else {
-        String::new()
-      },
-      if self.tuplet.is_some() { ", " } else { "" },
-      if self.tuplet.is_some() {
-        self.tuplet.unwrap().1.to_string()
-      } else {
-        String::new()
-      },
-      if self.tuplet.is_some() { ")" } else { "" },
       if self.arpeggiated { " Arpeggiated" } else { "" },
       if self.non_arpeggiated { " NonArpeggiated" } else { "" },
       if note_mods.is_empty() { "" } else { " Mods=[" },
@@ -106,51 +98,105 @@ impl core::fmt::Display for NoteDetails {
   }
 }
 
-#[derive(Clone)]
-enum TimeSliceContents {
-  Direction(DirectionType),
-  ChordModification(ChordModificationType),
-  PhraseModification(PhraseModDetails),
-  JumpTo(String),
-  SectionStart(String),
-  Ending { start: bool, numbers: Vec<u8> },
-  Repeat { start: bool, times: u32 },
-  TempoChangeExplicit(Tempo),
-  TempoChangeImplicit(TempoMarking),
-  Note(NoteDetails),
+#[derive(Default, Clone)]
+struct TimeSliceContainer {
+  pub direction: Vec<DirectionType>,
+  pub chord_modification: Vec<ChordModificationType>,
+  pub phrase_modification_start: Vec<PhraseModDetails>,
+  pub phrase_modification_end: Vec<PhraseModDetails>,
+  pub jump_to: Vec<String>,
+  pub section_start: Vec<String>,
+  pub ending: Vec<(bool, Vec<u8>)>,
+  pub repeat: Vec<(bool, u32)>,
+  pub tempo_change_explicit: Vec<Tempo>,
+  pub tempo_change_implicit: Vec<TempoMarking>,
+  pub notes: Vec<NoteDetails>,
 }
 
-impl core::fmt::Display for TimeSliceContents {
+impl TimeSliceContainer {
+  pub fn is_empty(&self) -> bool {
+    self.direction.is_empty()
+      && self.chord_modification.is_empty()
+      && self.phrase_modification_start.is_empty()
+      && self.phrase_modification_end.is_empty()
+      && self.jump_to.is_empty()
+      && self.section_start.is_empty()
+      && self.ending.is_empty()
+      && self.repeat.is_empty()
+      && self.tempo_change_explicit.is_empty()
+      && self.tempo_change_implicit.is_empty()
+      && self.notes.is_empty()
+  }
+}
+
+impl core::fmt::Display for TimeSliceContainer {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-    write!(
-      f,
-      "{}",
-      match self {
-        TimeSliceContents::Direction(direction) => format!("{direction}"),
-        TimeSliceContents::ChordModification(chord_mod) => format!("Chord Modification: {chord_mod}"),
-        TimeSliceContents::PhraseModification(phrase_mod) => format!("Phrase Modification: {phrase_mod}"),
-        TimeSliceContents::JumpTo(jump_to) => format!("Jump To: {jump_to}"),
-        TimeSliceContents::SectionStart(section_start) => format!("Section Start: {section_start}"),
-        TimeSliceContents::Ending { start, numbers } => format!(
-          "Ending: Start={start} Iterations=[{}]",
-          numbers
-            .iter()
-            .map(ToString::to_string)
-            .collect::<Vec<String>>()
-            .join(", ")
-        ),
-        TimeSliceContents::Repeat { start, times } =>
-          format!("{} Repeat {times} Times", if *start { "Start" } else { "End" }),
-        TimeSliceContents::TempoChangeExplicit(tempo) => format!("Tempo Change: {tempo}"),
-        TimeSliceContents::TempoChangeImplicit(tempo) => format!("Tempo Change: {tempo}"),
-        TimeSliceContents::Note(details) => format!("{details}"),
-      }
-    )
+    let mut description = self
+      .direction
+      .iter()
+      .map(|item| format!("\"{item}\""))
+      .collect::<Vec<String>>();
+    description.extend(
+      self
+        .chord_modification
+        .iter()
+        .map(|item| format!("\"Chord Modification: {item}\"")),
+    );
+    description.extend(
+      self
+        .phrase_modification_start
+        .iter()
+        .map(|item| format!("\"Phrase Modification: {item}\"")),
+    );
+    description.extend(
+      self
+        .phrase_modification_end
+        .iter()
+        .map(|item| format!("\"Phrase Modification: {item}\"")),
+    );
+    description.extend(self.jump_to.iter().map(|item| format!("\"Jump To: {item}\"")));
+    description.extend(
+      self
+        .section_start
+        .iter()
+        .map(|item| format!("\"Section Start: {item}\"")),
+    );
+    description.extend(self.ending.iter().map(|(start, numbers)| {
+      format!(
+        "\"Ending: Start={start} Iterations=[{}]\"",
+        numbers
+          .iter()
+          .map(ToString::to_string)
+          .collect::<Vec<String>>()
+          .join(", ")
+      )
+    }));
+    description.extend(
+      self
+        .repeat
+        .iter()
+        .map(|(start, times)| format!("\"{} Repeat {times} Times\"", if *start { "Start" } else { "End" })),
+    );
+    description.extend(
+      self
+        .tempo_change_explicit
+        .iter()
+        .map(|item| format!("\"Tempo Change: {item}\"")),
+    );
+    description.extend(
+      self
+        .tempo_change_implicit
+        .iter()
+        .map(|item| format!("\"Tempo Change: {item}\"")),
+    );
+    description.extend(self.notes.iter().map(|item| format!("\"{item}\"")));
+    let desc = description.join(", ");
+    write!(f, "{desc}")
   }
 }
 
 struct TemporalPartData {
-  pub data: BTreeMap<String, BTreeMap<String, Vec<Vec<TimeSliceContents>>>>,
+  pub data: BTreeMap<String, BTreeMap<String, Vec<TimeSliceContainer>>>,
 }
 
 impl core::fmt::Display for TemporalPartData {
@@ -161,11 +207,7 @@ impl core::fmt::Display for TemporalPartData {
         writeln!(f, "\n  Staff: {staff_name}")?;
         for (time, time_slice) in time_slices.iter().enumerate() {
           if !time_slice.is_empty() {
-            write!(f, "    Time: {time}\n      Items: [ ")?;
-            for item in time_slice {
-              write!(f, "\"{item}\" ")?;
-            }
-            writeln!(f, "]")?;
+            write!(f, "    Time: {time}\n      Items: [ {time_slice} ]\n")?;
           }
         }
       }
@@ -408,7 +450,7 @@ impl MusicXmlConverter {
 
   fn parse_attributes_element(
     element: &musicxml::elements::AttributesContents,
-    time_slices: &mut BTreeMap<String, Vec<Vec<TimeSliceContents>>>,
+    time_slices: &mut BTreeMap<String, Vec<TimeSliceContainer>>,
     cursor: usize,
   ) -> isize {
     element.clef.iter().for_each(|item| {
@@ -417,7 +459,7 @@ impl MusicXmlConverter {
       } else {
         String::from("1")
       };
-      let item = TimeSliceContents::Direction(DirectionType::Clef {
+      let item = DirectionType::Clef {
         clef: match &item.content.sign.content {
           musicxml::datatypes::ClefSign::G => match &item.content.line {
             Some(line) => match *line.content {
@@ -446,8 +488,8 @@ impl MusicXmlConverter {
           },
           _ => Clef::Treble,
         },
-      });
-      time_slices.get_mut(&staff_name).unwrap()[cursor].push(item);
+      };
+      time_slices.get_mut(&staff_name).unwrap()[cursor].direction.push(item);
     });
     element.key.iter().for_each(|item| {
       if let musicxml::elements::KeyContents::Explicit(key) = &item.content {
@@ -463,10 +505,10 @@ impl MusicXmlConverter {
           },
           None => KeyMode::Major,
         };
-        let item = TimeSliceContents::Direction(DirectionType::Key {
+        let item = DirectionType::Key {
           key: Key::from_fifths(*key.fifths.content, Some(mode)),
-        });
-        time_slices.get_mut(&staff_name).unwrap()[cursor].push(item);
+        };
+        time_slices.get_mut(&staff_name).unwrap()[cursor].direction.push(item);
       }
     });
     element.time.iter().for_each(|item| {
@@ -476,19 +518,19 @@ impl MusicXmlConverter {
         String::from("1")
       };
       let item = if item.content.senza_misura.is_some() {
-        TimeSliceContents::Direction(DirectionType::TimeSignature {
+        DirectionType::TimeSignature {
           time_signature: TimeSignature::None,
-        })
+        }
       } else {
         let beat_element = &item.content.beats[0];
-        TimeSliceContents::Direction(DirectionType::TimeSignature {
+        DirectionType::TimeSignature {
           time_signature: TimeSignature::Explicit(
             (*beat_element.beats.content).parse().unwrap(),
             (*beat_element.beat_type.content).parse().unwrap(),
           ),
-        })
+        }
       };
-      time_slices.get_mut(&staff_name).unwrap()[cursor].push(item);
+      time_slices.get_mut(&staff_name).unwrap()[cursor].direction.push(item);
     });
     0
   }
@@ -503,7 +545,7 @@ impl MusicXmlConverter {
 
   fn parse_direction_element(
     element: &musicxml::elements::Direction,
-    time_slice: &mut BTreeMap<String, Vec<Vec<TimeSliceContents>>>,
+    time_slice: &mut BTreeMap<String, Vec<TimeSliceContainer>>,
     cursor: usize,
   ) -> isize {
     let staff_name = if let Some(staff) = &element.content.staff {
@@ -517,20 +559,23 @@ impl MusicXmlConverter {
       .iter()
       .for_each(|item| match &item.content {
         musicxml::elements::DirectionTypeContents::Rehearsal(rehearsal) => {
-          let item = TimeSliceContents::SectionStart(rehearsal[0].content.clone());
-          time_slice.get_mut(&staff_name).unwrap()[cursor].push(item);
+          time_slice.get_mut(&staff_name).unwrap()[cursor]
+            .section_start
+            .push(rehearsal[0].content.clone());
         }
         musicxml::elements::DirectionTypeContents::Segno(_segno) => {
-          let item = TimeSliceContents::SectionStart(String::from("Segno"));
-          time_slice.get_mut(&staff_name).unwrap()[cursor].push(item);
+          time_slice.get_mut(&staff_name).unwrap()[cursor]
+            .section_start
+            .push(String::from("Segno"));
         }
         musicxml::elements::DirectionTypeContents::Coda(_coda) => {
-          let item = TimeSliceContents::SectionStart(String::from("Coda"));
-          time_slice.get_mut(&staff_name).unwrap()[cursor].push(item);
+          time_slice.get_mut(&staff_name).unwrap()[cursor]
+            .section_start
+            .push(String::from("Coda"));
         }
         musicxml::elements::DirectionTypeContents::Wedge(wedge) => {
           if wedge.attributes.r#type != musicxml::datatypes::WedgeType::Continue {
-            let item = TimeSliceContents::PhraseModification(PhraseModDetails {
+            let item = PhraseModDetails {
               modification: match wedge.attributes.r#type {
                 musicxml::datatypes::WedgeType::Diminuendo => PhraseModificationType::Decrescendo {
                   final_dynamic: DynamicMarking::None,
@@ -541,8 +586,17 @@ impl MusicXmlConverter {
               },
               is_start: wedge.attributes.r#type != musicxml::datatypes::WedgeType::Stop,
               number: wedge.attributes.number.as_ref().map(|number| **number),
-            });
-            time_slice.get_mut(&staff_name).unwrap()[cursor].push(item);
+              for_voice: None,
+            };
+            if item.is_start {
+              time_slice.get_mut(&staff_name).unwrap()[cursor]
+                .phrase_modification_start
+                .push(item);
+            } else {
+              time_slice.get_mut(&staff_name).unwrap()[cursor]
+                .phrase_modification_end
+                .push(item);
+            }
           }
         }
         musicxml::elements::DirectionTypeContents::Dynamics(dynamics) => {
@@ -565,68 +619,86 @@ impl MusicXmlConverter {
             _ => Some(DynamicMarking::None),
           };
           if let Some(dynamic_type) = dynamic_type {
-            let item = if dynamic_type == DynamicMarking::None {
-              TimeSliceContents::ChordModification(ChordModificationType::Accent)
+            if dynamic_type == DynamicMarking::None {
+              time_slice.get_mut(&staff_name).unwrap()[cursor]
+                .chord_modification
+                .push(ChordModificationType::Accent);
             } else {
-              TimeSliceContents::Direction(DirectionType::Dynamic { dynamic: dynamic_type })
-            };
-            time_slice.get_mut(&staff_name).unwrap()[cursor].push(item);
+              time_slice.get_mut(&staff_name).unwrap()[cursor]
+                .direction
+                .push(DirectionType::Dynamic { dynamic: dynamic_type });
+            }
           }
         }
         musicxml::elements::DirectionTypeContents::Pedal(pedal) => match &pedal.attributes.r#type {
           musicxml::datatypes::PedalType::Start => {
-            let item = TimeSliceContents::PhraseModification(PhraseModDetails {
+            let item = PhraseModDetails {
               modification: PhraseModificationType::Pedal {
                 r#type: PedalType::Sustain,
               },
               is_start: true,
               number: pedal.attributes.number.as_ref().map(|number| **number),
-            });
-            time_slice.get_mut(&staff_name).unwrap()[cursor].push(item);
+              for_voice: None,
+            };
+            time_slice.get_mut(&staff_name).unwrap()[cursor]
+              .phrase_modification_start
+              .push(item);
           }
           musicxml::datatypes::PedalType::Stop => {
-            let item = TimeSliceContents::PhraseModification(PhraseModDetails {
+            let item = PhraseModDetails {
               modification: PhraseModificationType::Pedal {
                 r#type: PedalType::Sustain,
               },
               is_start: false,
               number: pedal.attributes.number.as_ref().map(|number| **number),
-            });
-            time_slice.get_mut(&staff_name).unwrap()[cursor].push(item);
+              for_voice: None,
+            };
+            time_slice.get_mut(&staff_name).unwrap()[cursor]
+              .phrase_modification_end
+              .push(item);
           }
           musicxml::datatypes::PedalType::Sostenuto => {
-            let item = TimeSliceContents::PhraseModification(PhraseModDetails {
+            let item = PhraseModDetails {
               modification: PhraseModificationType::Pedal {
                 r#type: PedalType::Sostenuto,
               },
               is_start: true,
               number: pedal.attributes.number.as_ref().map(|number| **number),
-            });
-            time_slice.get_mut(&staff_name).unwrap()[cursor].push(item);
+              for_voice: None,
+            };
+            time_slice.get_mut(&staff_name).unwrap()[cursor]
+              .phrase_modification_start
+              .push(item);
           }
           musicxml::datatypes::PedalType::Change => {
-            let item1 = TimeSliceContents::PhraseModification(PhraseModDetails {
+            let item1 = PhraseModDetails {
               modification: PhraseModificationType::Pedal {
                 r#type: PedalType::Sustain,
               },
               is_start: false,
               number: pedal.attributes.number.as_ref().map(|number| **number),
-            });
-            let item2 = TimeSliceContents::PhraseModification(PhraseModDetails {
+              for_voice: None,
+            };
+            let item2 = PhraseModDetails {
               modification: PhraseModificationType::Pedal {
                 r#type: PedalType::Sustain,
               },
               is_start: true,
               number: pedal.attributes.number.as_ref().map(|number| **number),
-            });
-            time_slice.get_mut(&staff_name).unwrap()[cursor].push(item1);
-            time_slice.get_mut(&staff_name).unwrap()[cursor].push(item2);
+              for_voice: None,
+            };
+            time_slice.get_mut(&staff_name).unwrap()[cursor]
+              .phrase_modification_end
+              .push(item1);
+            time_slice.get_mut(&staff_name).unwrap()[cursor]
+              .phrase_modification_start
+              .push(item2);
           }
           _ => (),
         },
         musicxml::elements::DirectionTypeContents::OctaveShift(octave_shift) => {
           if octave_shift.attributes.r#type != musicxml::datatypes::UpDownStopContinue::Continue {
-            let item = TimeSliceContents::PhraseModification(PhraseModDetails {
+            let item = PhraseModDetails {
               modification: PhraseModificationType::OctaveShift {
                 num_octaves: match &octave_shift.attributes.size {
                   Some(musicxml::datatypes::PositiveInteger(15)) => 2,
@@ -640,18 +712,28 @@ impl MusicXmlConverter {
               },
               is_start: octave_shift.attributes.r#type != musicxml::datatypes::UpDownStopContinue::Stop,
               number: octave_shift.attributes.number.as_ref().map(|number| **number),
-            });
-            time_slice.get_mut(&staff_name).unwrap()[cursor].push(item);
+              for_voice: None,
+            };
+            if item.is_start {
+              time_slice.get_mut(&staff_name).unwrap()[cursor]
+                .phrase_modification_start
+                .push(item);
+            } else {
+              time_slice.get_mut(&staff_name).unwrap()[cursor]
+                .phrase_modification_end
+                .push(item);
+            }
           }
         }
         musicxml::elements::DirectionTypeContents::Metronome(metronome) => {
           if let Some(tempo) = Self::parse_tempo_from_metronome(metronome) {
-            let item = TimeSliceContents::TempoChangeExplicit(tempo);
-            time_slice.get_mut(&staff_name).unwrap()[cursor].push(item);
+            time_slice.get_mut(&staff_name).unwrap()[cursor]
+              .tempo_change_explicit
+              .push(tempo);
           }
         }
         musicxml::elements::DirectionTypeContents::AccordionRegistration(registration) => {
-          let item = TimeSliceContents::Direction(DirectionType::AccordionRegistration {
+          let item = DirectionType::AccordionRegistration {
             high: registration.content.accordion_high.is_some(),
             middle: registration
               .content
@@ -659,14 +741,14 @@ impl MusicXmlConverter {
               .as_ref()
               .map_or(0, |middle| *middle.content),
             low: registration.content.accordion_low.is_some(),
-          });
-          time_slice.get_mut(&staff_name).unwrap()[cursor].push(item);
+          };
+          time_slice.get_mut(&staff_name).unwrap()[cursor].direction.push(item);
         }
         musicxml::elements::DirectionTypeContents::StringMute(string_mute) => {
-          let item = TimeSliceContents::Direction(DirectionType::StringMute {
+          let item = DirectionType::StringMute {
             on: string_mute.attributes.r#type == musicxml::datatypes::OnOff::On,
-          });
-          time_slice.get_mut(&staff_name).unwrap()[cursor].push(item);
+          };
+          time_slice.get_mut(&staff_name).unwrap()[cursor].direction.push(item);
         }
         _ => (),
       });
@@ -675,54 +757,50 @@ impl MusicXmlConverter {
 
   fn parse_barline_element(
     element: &musicxml::elements::Barline,
-    time_slice: &mut BTreeMap<String, Vec<Vec<TimeSliceContents>>>,
+    time_slice: &mut BTreeMap<String, Vec<TimeSliceContainer>>,
     cursor: usize,
   ) -> isize {
     if let Some(ending) = &element.content.ending {
-      let item = TimeSliceContents::Ending {
-        start: ending.attributes.r#type == musicxml::datatypes::StartStopDiscontinue::Start,
-        numbers: ending
+      let item = (
+        ending.attributes.r#type == musicxml::datatypes::StartStopDiscontinue::Start,
+        ending
           .attributes
           .number
           .split(&[',', ' '][..])
           .map(|item| item.parse().unwrap())
           .collect(),
-      };
+      );
       for slice in time_slice.values_mut() {
-        slice[cursor].push(item.clone());
+        slice[cursor].ending.push(item.clone());
       }
     }
     if let Some(repeat) = &element.content.repeat {
-      let item = TimeSliceContents::Repeat {
-        start: repeat.attributes.direction == musicxml::datatypes::BackwardForward::Forward,
-        times: repeat.attributes.times.as_ref().map_or(1, |item| **item),
-      };
+      let item = (
+        repeat.attributes.direction == musicxml::datatypes::BackwardForward::Forward,
+        repeat.attributes.times.as_ref().map_or(1, |item| **item),
+      );
       for slice in time_slice.values_mut() {
-        slice[cursor].push(item.clone());
+        slice[cursor].repeat.push(item.clone());
       }
     }
     if element.content.coda.is_some() {
-      let item = TimeSliceContents::SectionStart(String::from("Coda"));
       for slice in time_slice.values_mut() {
-        slice[cursor].push(item.clone());
+        slice[cursor].section_start.push(String::from("Coda"));
       }
     }
     if element.content.segno.is_some() {
-      let item = TimeSliceContents::SectionStart(String::from("Segno"));
       for slice in time_slice.values_mut() {
-        slice[cursor].push(item.clone());
+        slice[cursor].section_start.push(String::from("Segno"));
       }
     }
     if element.attributes.coda.is_some() {
-      let item = TimeSliceContents::JumpTo(String::from("Coda"));
       for slice in time_slice.values_mut() {
-        slice[cursor].push(item.clone());
+        slice[cursor].jump_to.push(String::from("Coda"));
       }
     }
     if element.attributes.segno.is_some() {
-      let item = TimeSliceContents::JumpTo(String::from("Segno"));
       for slice in time_slice.values_mut() {
-        slice[cursor].push(item.clone());
+        slice[cursor].jump_to.push(String::from("Segno"));
       }
     }
     0
@@ -730,7 +808,7 @@ impl MusicXmlConverter {
 
   fn parse_note_element(
     note: &musicxml::elements::Note,
-    time_slices: &mut BTreeMap<String, Vec<Vec<TimeSliceContents>>>,
+    time_slices: &mut BTreeMap<String, Vec<TimeSliceContainer>>,
     divisions_per_quarter_note: usize,
     previous_cursor: usize,
     cursor: usize,
@@ -886,14 +964,15 @@ impl MusicXmlConverter {
         musicxml::datatypes::AccidentalValue::FlatFlat => Accidental::DoubleFlat,
         _ => Accidental::None,
       });
-    let tuplet = note.content.time_modification.as_ref().map(|time_modification| {
-      let actual_notes = *time_modification.content.actual_notes.content;
-      let normal_notes = *time_modification.content.normal_notes.content;
-      (actual_notes, normal_notes)
+    let tuplet_details = note.content.time_modification.as_ref().map(|time_modification| {
+      PhraseModificationType::Tuplet {
+        num_beats: *time_modification.content.actual_notes.content as u8,
+        into_beats: *time_modification.content.normal_notes.content as u8,
+      }
     });
     let (mut arpeggiate, mut non_arpeggiate) = (false, false);
     let mut note_modifications: Vec<NoteModificationType> = Vec::new();
-    let mut phrase_modifications: Vec<PhraseModDetails> = Vec::new();
+    let (mut phrase_modifications_start, mut phrase_modifications_end) = (Vec::new(), Vec::new());
     note.content.notations.iter().for_each(|notation| {
       notation
         .content
@@ -906,26 +985,58 @@ impl MusicXmlConverter {
           }
           musicxml::elements::NotationContentTypes::Slur(slur) => {
             if slur.attributes.r#type != musicxml::datatypes::StartStopContinue::Continue {
-              phrase_modifications.push(PhraseModDetails {
+              let item = PhraseModDetails {
                 modification: PhraseModificationType::Legato,
                 is_start: slur.attributes.r#type == musicxml::datatypes::StartStopContinue::Start,
                 number: slur.attributes.number.as_ref().map(|number| **number),
-              })
+                for_voice: None,
+              };
+              if item.is_start {
+                phrase_modifications_start.push(item);
+              } else {
+                phrase_modifications_end.push(item);
+              }
             }
           }
-          musicxml::elements::NotationContentTypes::Tuplet(_tuplet) => {} // Ignore in favor of <time-modification>
+          musicxml::elements::NotationContentTypes::Tuplet(tuplet) => {
+            let item = PhraseModDetails {
+              modification: tuplet_details.unwrap(),
+              is_start: tuplet.attributes.r#type == musicxml::datatypes::StartStop::Start,
+              number: tuplet.attributes.number.as_ref().map(|number| **number),
+              for_voice: voice.clone(),
+            };
+            if item.is_start {
+              phrase_modifications_start.push(item);
+            } else {
+              phrase_modifications_end.push(item);
+            }
+          }
           musicxml::elements::NotationContentTypes::Glissando(glissando) => {
-            phrase_modifications.push(PhraseModDetails {
+            let item = PhraseModDetails {
               modification: PhraseModificationType::Glissando,
               is_start: glissando.attributes.r#type == musicxml::datatypes::StartStop::Start,
               number: glissando.attributes.number.as_ref().map(|number| **number),
-            });
+              for_voice: voice.clone(),
+            };
+            if item.is_start {
+              phrase_modifications_start.push(item);
+            } else {
+              phrase_modifications_end.push(item);
+            }
           }
-          musicxml::elements::NotationContentTypes::Slide(slide) => phrase_modifications.push(PhraseModDetails {
-            modification: PhraseModificationType::Portamento,
-            is_start: slide.attributes.r#type == musicxml::datatypes::StartStop::Start,
-            number: slide.attributes.number.as_ref().map(|number| **number),
-          }),
+          musicxml::elements::NotationContentTypes::Slide(slide) => {
+            let item = PhraseModDetails {
+              modification: PhraseModificationType::Portamento,
+              is_start: slide.attributes.r#type == musicxml::datatypes::StartStop::Start,
+              number: slide.attributes.number.as_ref().map(|number| **number),
+              for_voice: voice.clone(),
+            };
+            if item.is_start {
+              phrase_modifications_start.push(item);
+            } else {
+              phrase_modifications_end.push(item);
+            }
+          }
           musicxml::elements::NotationContentTypes::Ornaments(ornaments) => {
             note_modifications.extend(
               ornaments
@@ -986,18 +1097,20 @@ impl MusicXmlConverter {
                     if let Some(tremolo_type) = &tremolo.attributes.r#type {
                       match tremolo_type {
                         musicxml::datatypes::TremoloType::Start => {
-                          phrase_modifications.push(PhraseModDetails {
+                          phrase_modifications_start.push(PhraseModDetails {
                             modification: PhraseModificationType::Tremolo { relative_speed },
                             is_start: true,
                             number: None,
+                            for_voice: voice.clone(),
                           });
                           None
                         }
                         musicxml::datatypes::TremoloType::Stop => {
-                          phrase_modifications.push(PhraseModDetails {
+                          phrase_modifications_end.push(PhraseModDetails {
                             modification: PhraseModificationType::Tremolo { relative_speed },
                             is_start: false,
                             number: None,
+                            for_voice: voice.clone(),
                           });
                           None
                         }
@@ -1124,12 +1237,14 @@ impl MusicXmlConverter {
                   musicxml::elements::ArticulationsType::Falloff(_falloff) => Some(NoteModificationType::Falloff),
                   musicxml::elements::ArticulationsType::BreathMark(_breath_mark) => {
                     time_slices.get_mut(&staff_name).unwrap()[cursor]
-                      .push(TimeSliceContents::Direction(DirectionType::BreathMark));
+                      .direction
+                      .push(DirectionType::BreathMark);
                     None
                   }
                   musicxml::elements::ArticulationsType::Caesura(_caesura) => {
                     time_slices.get_mut(&staff_name).unwrap()[cursor]
-                      .push(TimeSliceContents::Direction(DirectionType::Caesura));
+                      .direction
+                      .push(DirectionType::Caesura);
                     None
                   }
                   musicxml::elements::ArticulationsType::Stress(_stress) => Some(NoteModificationType::Stress),
@@ -1212,24 +1327,80 @@ impl MusicXmlConverter {
         note_modifications.push(NoteModificationType::Pizzicato);
       }
     }
-    let item = TimeSliceContents::Note(NoteDetails {
+    if tied {
+      note_modifications.push(NoteModificationType::Tie);
+    }
+    let item = NoteDetails {
       pitch,
       duration,
       accidental: accidental.unwrap_or(Accidental::None),
-      tied,
       voice,
-      tuplet,
       arpeggiated: arpeggiate,
       non_arpeggiated: non_arpeggiate,
       note_modifications,
-      phrase_modifications,
-    });
+      phrase_modifications_start,
+      phrase_modifications_end,
+    };
     if chord {
-      time_slices.get_mut(&staff_name).unwrap()[previous_cursor].push(item);
+      time_slices.get_mut(&staff_name).unwrap()[previous_cursor]
+        .notes
+        .push(item);
       0
     } else {
-      time_slices.get_mut(&staff_name).unwrap()[cursor].push(item);
+      time_slices.get_mut(&staff_name).unwrap()[cursor].notes.push(item);
       divisions as isize
+    }
+  }
+
+  fn start_phrase(
+    phrases: &mut Vec<Rc<RefCell<Phrase>>>,
+    staff: &Rc<RefCell<Staff>>,
+    modification: PhraseModificationType,
+    phrase_ids: &mut BTreeMap<u8, usize>,
+    mod_id: Option<u8>,
+  ) {
+    let new_phrase = if let Some(phrase) = phrases.last() {
+      phrase.borrow_mut().add_phrase()
+    } else {
+      staff.borrow_mut().add_phrase()
+    };
+    new_phrase.borrow_mut().add_modification(modification);
+    if let Some(number) = mod_id {
+      phrase_ids.insert(number, new_phrase.borrow().get_id());
+    }
+    phrases.push(new_phrase);
+  }
+
+  fn end_phrase(phrases: &mut Vec<Rc<RefCell<Phrase>>>, phrase_ids: &mut BTreeMap<u8, usize>, mod_id: &Option<u8>) {
+    if let Some(number) = mod_id {
+      match phrase_ids.remove(number) {
+        Some(phrase_id) => {
+          let index = phrases
+            .iter()
+            .position(|phrase| phrase.borrow().get_id() == phrase_id)
+            .unwrap_or(phrases.len());
+          (index..phrases.len()).for_each(|_| {
+            match phrases.pop() {
+              Some(phrase) => {
+                let id = phrase.borrow().get_id();
+                if let Some(number) = phrase_ids.iter().find_map(|(key, phrase_id)| {
+                  if *phrase_id == id {
+                    Some(*key)
+                  } else {
+                    None
+                  }
+                }) {
+                  phrase_ids.remove(&number);
+                }
+              },
+              None => unsafe { core::hint::unreachable_unchecked() },
+            }
+          });
+        }
+        None => (),
+      }
+    } else {
+      phrases.pop();
     }
   }
 }
@@ -1256,16 +1427,14 @@ impl Convert for MusicXmlConverter {
 
     // Find and validate all musical parts in the score
     let parts_map = MusicXmlConverter::find_parts(&score.content.part_list.content.content);
+    if parts_map.is_empty() || score.content.part.is_empty() {
+      return Err(String::from("No parts found in the MusicXML score"));
+    } else if score.content.part.iter().all(|part| part.content.is_empty()) {
+      return Err(String::from("All parts in the MusicXML score are empty"));
+    }
     parts_map.values().for_each(|name| {
       composition.add_part(name);
     });
-    if score.content.part.is_empty() {
-      return Err(String::from("No parts found in the MusicXML score"));
-    } else if score.content.part[0].content.is_empty() {
-      return Err(String::from(
-        "No measures found in the first part of the MusicXML score",
-      ));
-    }
 
     // Parse the initial musical attributes of the score
     composition.set_starting_key(MusicXmlConverter::find_starting_key(&score.content.part));
@@ -1275,58 +1444,64 @@ impl Convert for MusicXmlConverter {
     // Create a data structure to hold all temporally parsed musical data
     let mut part_data = TemporalPartData { data: BTreeMap::new() };
     for part in &score.content.part {
-      let part_name = parts_map
-        .get(&*part.attributes.id)
-        .expect("Unknown Part ID encountered");
-      let max_divisions = MusicXmlConverter::find_divisions_per_quarter_note(&part.content)
-        * MusicXmlConverter::find_max_num_quarter_notes_per_measure(&part.content)
-        * MusicXmlConverter::find_num_measures(&part.content);
-      part_data.data.insert(part_name.clone(), BTreeMap::new());
-      let part_staves = part_data.data.get_mut(part_name).unwrap();
-      MusicXmlConverter::find_staves(&part.content).iter().for_each(|staff| {
-        part_staves.insert(staff.clone(), vec![Vec::new(); max_divisions]);
-      });
+      if !part.content.is_empty() {
+        let part_name = parts_map
+          .get(&*part.attributes.id)
+          .expect("Unknown Part ID encountered");
+        let max_divisions = MusicXmlConverter::find_divisions_per_quarter_note(&part.content)
+          * MusicXmlConverter::find_max_num_quarter_notes_per_measure(&part.content)
+          * MusicXmlConverter::find_num_measures(&part.content);
+        part_data.data.insert(part_name.clone(), BTreeMap::new());
+        let part_staves = part_data.data.get_mut(part_name).unwrap();
+        MusicXmlConverter::find_staves(&part.content).iter().for_each(|staff| {
+          part_staves.insert(staff.clone(), vec![TimeSliceContainer::default(); max_divisions]);
+        });
+      }
     }
 
     // Parse the actual musical contents of the score into discrete time slices
     for part in &score.content.part {
-      let (mut cursor, mut previous_cursor): (usize, usize) = (0, 0);
-      let divisions_per_quarter_note = MusicXmlConverter::find_divisions_per_quarter_note(&part.content);
-      let time_slices = part_data
-        .data
-        .get_mut(parts_map.get(&*part.attributes.id).unwrap())
-        .unwrap();
-      for element in &part.content {
-        if let musicxml::elements::PartElement::Measure(measure) = element {
-          for measure_element in &measure.content {
-            let cursor_change = match measure_element {
-              musicxml::elements::MeasureElement::Attributes(attributes) => {
-                MusicXmlConverter::parse_attributes_element(&attributes.content, time_slices, cursor)
+      if part.content.is_empty() {
+        composition.remove_part_by_name(parts_map.get(&*part.attributes.id).unwrap());
+      } else {
+        let (mut cursor, mut previous_cursor): (usize, usize) = (0, 0);
+        let divisions_per_quarter_note = MusicXmlConverter::find_divisions_per_quarter_note(&part.content);
+        let time_slices = part_data
+          .data
+          .get_mut(parts_map.get(&*part.attributes.id).unwrap())
+          .unwrap();
+        for element in &part.content {
+          if let musicxml::elements::PartElement::Measure(measure) = element {
+            for measure_element in &measure.content {
+              let cursor_change = match measure_element {
+                musicxml::elements::MeasureElement::Attributes(attributes) => {
+                  MusicXmlConverter::parse_attributes_element(&attributes.content, time_slices, cursor)
+                }
+                musicxml::elements::MeasureElement::Note(note) => MusicXmlConverter::parse_note_element(
+                  &note,
+                  time_slices,
+                  divisions_per_quarter_note,
+                  previous_cursor,
+                  cursor,
+                ),
+                musicxml::elements::MeasureElement::Backup(backup) => {
+                  MusicXmlConverter::parse_backup_element(&backup.content)
+                }
+                musicxml::elements::MeasureElement::Forward(forward) => {
+                  MusicXmlConverter::parse_forward_element(&forward.content)
+                }
+                musicxml::elements::MeasureElement::Direction(direction) => {
+                  MusicXmlConverter::parse_direction_element(&direction, time_slices, cursor)
+                }
+                musicxml::elements::MeasureElement::Barline(barline) => {
+                  MusicXmlConverter::parse_barline_element(&barline, time_slices, cursor)
+                }
+                _ => 0,
+              };
+              if cursor_change != 0 {
+                previous_cursor = cursor;
+                cursor = cursor.saturating_add_signed(cursor_change);
               }
-              musicxml::elements::MeasureElement::Note(note) => MusicXmlConverter::parse_note_element(
-                &note,
-                time_slices,
-                divisions_per_quarter_note,
-                previous_cursor,
-                cursor,
-              ),
-              musicxml::elements::MeasureElement::Backup(backup) => {
-                MusicXmlConverter::parse_backup_element(&backup.content)
-              }
-              musicxml::elements::MeasureElement::Forward(forward) => {
-                MusicXmlConverter::parse_forward_element(&forward.content)
-              }
-              musicxml::elements::MeasureElement::Direction(direction) => {
-                MusicXmlConverter::parse_direction_element(&direction, time_slices, cursor)
-              }
-              musicxml::elements::MeasureElement::Barline(barline) => {
-                MusicXmlConverter::parse_barline_element(&barline, time_slices, cursor)
-              }
-              _ => 0,
-            };
-            if cursor_change != 0 {
-              previous_cursor = cursor;
-              cursor = cursor.saturating_add_signed(cursor_change);
             }
           }
         }
@@ -1334,160 +1509,276 @@ impl Convert for MusicXmlConverter {
     }
 
     // Use the temporally ordered time slices to construct a final composition structure
-    for (part_name, staves) in &part_data.data {
+    // TODO: DELETE THIS: println!("{}", part_data);
+    for (part_name, staves) in part_data.data {
       let part = composition
         .get_part_by_name(&part_name)
         .expect("Unknown part name encountered");
       let section = part.add_default_section();
       for (staff_name, time_slices) in staves {
-        let staff = section.borrow_mut().add_staff(staff_name, None, None, None);
-        let mut phrases: Vec<Rc<RefCell<Phrase>>> = Vec::new();
-        let mut phrase_ids: BTreeMap<u8, usize> = BTreeMap::new();
-        let mut multivoices: Vec<Rc<RefCell<MultiVoice>>> = Vec::new();
-        for time_slice in time_slices.iter() {
-          if !time_slice.is_empty() {
-            let mut notes = Vec::new();
-            let mut chord: Option<Rc<RefCell<Chord>>> = None;
-            for item in time_slice {
-              match item {
-                TimeSliceContents::Direction(direction) => {
-                  staff.borrow_mut().add_direction(direction.clone());
-                }
-                TimeSliceContents::ChordModification(modification) => match &chord {
-                  Some(chord) => {
-                    chord.borrow_mut().add_modification(modification.clone());
-                  }
-                  None => {
-                    let new_chord = if phrases.is_empty() {
-                      staff.borrow_mut().add_chord()
-                    } else {
-                      phrases.last().unwrap().borrow_mut().add_chord()
-                    };
-                    new_chord.borrow_mut().add_modification(modification.clone());
-                    chord = Some(new_chord);
-                  }
-                },
-                TimeSliceContents::PhraseModification(details) => {
-                  if details.is_start {
-                    let new_phrase = if !phrases.is_empty() {
-                      phrases.last().unwrap().borrow_mut().add_phrase()
-                    } else if !multivoices.is_empty() {
-                      multivoices.last().unwrap().borrow_mut().add_phrase()
-                    } else {
-                      staff.borrow_mut().add_phrase()
-                    };
-                    new_phrase.borrow_mut().add_modification(details.modification.clone());
-                    if let Some(number) = details.number {
-                      phrase_ids.insert(number, new_phrase.borrow().get_id());
-                    }
-                    phrases.push(new_phrase);
-                  } else if let Some(number) = &details.number {
-                    match phrase_ids.remove(number) {
-                      Some(phrase_id) => {
-                        phrases.retain(|phrase| phrase.borrow().get_id() != phrase_id);
-                      }
-                      None => (),
-                    }
-                  } else {
-                    phrases.pop();
-                  }
-                }
-                TimeSliceContents::TempoChangeExplicit(tempo) => {}
-                TimeSliceContents::TempoChangeImplicit(tempo) => {}
-                TimeSliceContents::JumpTo(label) => (),
-                TimeSliceContents::SectionStart(label) => (),
-                TimeSliceContents::Ending { start, numbers } => (),
-                TimeSliceContents::Repeat { start, times } => (),
-                TimeSliceContents::Note(details) => notes.push(details.clone()),
-              }
-            }
-            if notes.len() == 1 {
-              let note = notes.first().unwrap();
-              let new_note = if let Some(chord) = &chord {
-                chord.borrow_mut().add_note(
-                  note.pitch,
-                  note.duration,
-                  if note.accidental == Accidental::None {
-                    None
-                  } else {
-                    Some(note.accidental)
-                  },
-                )
-              } else if !phrases.is_empty() {
-                phrases.last().unwrap().borrow_mut().add_note(
-                  note.pitch,
-                  note.duration,
-                  if note.accidental == Accidental::None {
-                    None
-                  } else {
-                    Some(note.accidental)
-                  },
-                )
-              } else {
-                staff.borrow_mut().add_note(
-                  note.pitch,
-                  note.duration,
-                  if note.accidental == Accidental::None {
-                    None
-                  } else {
-                    Some(note.accidental)
-                  },
-                )
-              };
-              for modification in &note.note_modifications {
-                new_note.borrow_mut().add_modification(modification.clone());
-              }
-            } else if notes.len() > 1 {
-              let chord = if let Some(chord) = chord {
-                chord
-              } else if !phrases.is_empty() {
-                phrases.last().unwrap().borrow_mut().add_chord()
-              } else {
-                staff.borrow_mut().add_chord()
-              };
-              let (mut arpeggiated, mut non_arpeggiated) = (false, false);
-              for note in &notes {
-                let new_note = chord.borrow_mut().add_note(
-                  note.pitch,
-                  note.duration,
-                  if note.accidental == Accidental::None {
-                    None
-                  } else {
-                    Some(note.accidental)
-                  },
-                );
-                for modification in &note.note_modifications {
-                  new_note.borrow_mut().add_modification(modification.clone());
-                }
-                if note.arpeggiated {
-                  arpeggiated = true;
-                } else if note.non_arpeggiated {
-                  non_arpeggiated = true;
-                }
-              }
-              if arpeggiated {
-                chord.borrow_mut().add_modification(ChordModificationType::Arpeggiate);
-              } else if non_arpeggiated {
-                chord
-                  .borrow_mut()
-                  .add_modification(ChordModificationType::NonArpeggiate);
-              }
-            }
+        let staff = section.borrow_mut().add_staff(&staff_name, None, None, None);
+        let mut phrase_ids = BTreeMap::new();
+        let mut multivoice_phrases: BTreeMap<String, Rc<RefCell<Phrase>>> = BTreeMap::new();
+        let (mut local_phrases, mut global_phrases) = (Vec::<Rc<RefCell<Phrase>>>::new(), Vec::new());
+        let (mut delayed_phrase_starts, mut delayed_phrase_ends) = (Vec::new(), Vec::new());
+        for time_slice in time_slices {
 
-            /*pub tied: bool, <- creates new Phrase, if only one tied note in chord, creates new multivoice
-            pub voice: Option<String>,
-            pub tuplet: Option<(u32, u32)>, <- creates new Phrase, if only one tuplet note in chord, creates new multivoice
-            pub phrase_modifications: Vec<PhraseModDetails>,*/
+          // Parse notes and separate them by voice
+          let (mut voicewide_mods, mut notes_by_voice) = (BTreeMap::new(), BTreeMap::<String, Vec<(Rc<RefCell<Note>>, NoteDetails)>>::new());
+          for item in time_slice.notes {
+            let voice = String::from(if let Some(voice) = &item.voice { voice } else { "-1" });
+            let voice_mods = if voicewide_mods.contains_key(&voice) {
+              voicewide_mods.get_mut(&voice).unwrap()
+            } else {
+              voicewide_mods.insert(voice.clone(), Vec::new());
+              voicewide_mods.get_mut(&voice).unwrap()
+            };
+            let note = Note::new(item.pitch, item.duration, Some(item.accidental));
+            for modification in &item.note_modifications {
+              match modification {
+                NoteModificationType::Accent | NoteModificationType::DownBow | NoteModificationType::Dynamic { dynamic: _ }
+                | NoteModificationType::Fermata | NoteModificationType::HalfMuted | NoteModificationType::Marcato | NoteModificationType::Open
+                | NoteModificationType::Pizzicato | NoteModificationType::Sforzando | NoteModificationType::SoftAccent | NoteModificationType::Spiccato
+                | NoteModificationType::Stress | NoteModificationType::Tenuto | NoteModificationType::Unstress
+                | NoteModificationType::UpBow => voice_mods.push(*ChordModification::from_note_modification(modification).borrow().get_modification()),
+                _ => { note.borrow_mut().add_modification(modification.clone()); }
+              }
+            }
+            if item.arpeggiated {
+              voice_mods.push(ChordModificationType::Arpeggiate);
+            } else if item.non_arpeggiated {
+              voice_mods.push(ChordModificationType::NonArpeggiate);
+            }
+            if let Some(notes) = notes_by_voice.get_mut(&voice) {
+              notes.push((note, item));
+            } else {
+              notes_by_voice.insert(String::from(voice), vec![(note, item)]);
+            }
           }
+
+          // Merge multiple notes into chords and apply voice-specific modifications
+          let mut items_by_voice = BTreeMap::new();
+          for (voice, notes) in notes_by_voice {
+            if notes.len() <= 1 {
+              for (note, details) in notes {
+                if let Some(mods) = voicewide_mods.get_mut(voice.as_str()) {
+                  mods.iter().for_each(|modification| {
+                    if let Some(note_mod) = NoteModification::from_chord_modification(modification) {
+                      note.borrow_mut().add_modification(*note_mod.borrow().get_modification());
+                    }
+                  });
+                }
+                for modification in &time_slice.chord_modification {
+                  if let Some(note_mod) = NoteModification::from_chord_modification(modification) {
+                    note.borrow_mut().add_modification(*note_mod.borrow().get_modification());
+                  }
+                }
+                items_by_voice.insert(voice.clone(), (Some(note), None, details.phrase_modifications_start, details.phrase_modifications_end));
+              }
+            } else {
+              let chord = Chord::new();
+              let (mut mods_start, mut mods_end) = (Vec::<PhraseModDetails>::new(), Vec::<PhraseModDetails>::new());
+              if let Some(mods) = voicewide_mods.get_mut(voice.as_str()) {
+                mods.iter().for_each(|modification| {
+                  chord.borrow_mut().add_modification(*modification);
+                });
+              }
+              for modification in &time_slice.chord_modification {
+                chord.borrow_mut().add_modification(*modification);
+              }
+              for (note, details) in notes {
+                for modification in details.phrase_modifications_start {
+                  if mods_start.iter().find(|&item| item.modification == modification.modification).is_none() {
+                    mods_start.push(modification);
+                  }
+                }
+                for modification in details.phrase_modifications_end {
+                  if mods_end.iter().find(|&item| item.modification == modification.modification).is_none() {
+                    mods_end.push(modification);
+                  }
+                }
+                chord.borrow_mut().content.push(ChordContent::Note(note));
+              }
+              items_by_voice.insert(voice.clone(), (None, Some(chord), mods_start, mods_end));
+            }
+          }
+
+          // Handle global phrase modification endings
+          for item in time_slice.phrase_modification_end {
+            if local_phrases.is_empty() {
+              // TODO: Ensure we are not in a local phrase
+              multivoice_phrases.clear();
+              MusicXmlConverter::end_phrase(&mut global_phrases, &mut phrase_ids, &item.number);
+            } else {
+              delayed_phrase_ends.push((item.number, item.modification));
+            }
+          }
+
+          // Handle directions, TODO: should end all multivoices
+          if !time_slice.direction.is_empty() {
+            if !local_phrases.is_empty() {
+              return Err(String::from("Staff-wide direction found inside a phrase...likely a malformed MusicXML file"));
+            }
+            // TODO: Ensure we are not in a local phrase
+            multivoice_phrases.clear();
+            while !global_phrases.is_empty() {
+              MusicXmlConverter::end_phrase(&mut global_phrases, &mut phrase_ids, &None);
+            }
+            phrase_ids.clear();
+            for item in time_slice.direction {
+              staff.borrow_mut().add_direction(item);
+            }
+          }
+
+          // Handle new global phrase modifications
+          for item in time_slice.phrase_modification_start {
+            if local_phrases.is_empty() {
+              // TODO: Ensure we are not in a local phrase
+              multivoice_phrases.clear();
+              MusicXmlConverter::start_phrase(&mut global_phrases, &staff, item.modification, &mut phrase_ids, item.number);
+            } else {
+              delayed_phrase_starts.push((item.number, item.modification));
+            }
+          }
+
+          // Handle adding notes, chords, multivoices, and local phrase modifications
+          if multivoice_phrases.is_empty() {
+            if items_by_voice.len() <= 1 {
+              for (_, voice_items) in items_by_voice {
+                if let Some(phrase) = global_phrases.last() {
+                  if let Some(note) = voice_items.0 {
+                    phrase.borrow_mut().content.push(PhraseContent::Note(note));
+                  } else if let Some(chord) = voice_items.1 {
+                    phrase.borrow_mut().content.push(PhraseContent::Chord(chord));
+                  }
+                } else {
+                  if let Some(note) = voice_items.0 {
+                    staff.borrow_mut().content.push(StaffContent::Note(note));
+                  } else if let Some(chord) = voice_items.1 {
+                    staff.borrow_mut().content.push(StaffContent::Chord(chord));
+                  }
+                }
+              }
+            } else {
+              let multivoice = if let Some(phrase) = global_phrases.last() {
+                phrase.borrow_mut().add_multivoice()
+              } else {
+                staff.borrow_mut().add_multivoice()
+              };
+              for (voice, voice_items) in items_by_voice {
+                let new_voice = multivoice.borrow_mut().add_phrase();
+                if let Some(note) = voice_items.0 {
+                  new_voice.borrow_mut().content.push(PhraseContent::Note(note));
+                } else if let Some(chord) = voice_items.1 {
+                  new_voice.borrow_mut().content.push(PhraseContent::Chord(chord));
+                }
+                multivoice_phrases.insert(voice.clone(), new_voice);
+              }
+            }
+          } else {
+            if items_by_voice.iter().all(|(voice, _)| multivoice_phrases.contains_key(voice)) {
+              for (voice, voice_items) in items_by_voice {
+                if let Some(phrase) = multivoice_phrases.get_mut(&voice) {
+                  if let Some(note) = voice_items.0 {
+                    phrase.borrow_mut().content.push(PhraseContent::Note(note));
+                  } else if let Some(chord) = voice_items.1 {
+                    phrase.borrow_mut().content.push(PhraseContent::Chord(chord));
+                  }
+                }
+              }
+            } else {
+              // TODO: Ensure we're not in a local phrase
+              multivoice_phrases.clear();
+              if items_by_voice.len() <= 1 {
+                for (_, voice_items) in items_by_voice {
+                  if let Some(phrase) = global_phrases.last() {
+                    if let Some(note) = voice_items.0 {
+                      phrase.borrow_mut().content.push(PhraseContent::Note(note));
+                    } else if let Some(chord) = voice_items.1 {
+                      phrase.borrow_mut().content.push(PhraseContent::Chord(chord));
+                    }
+                  } else {
+                    if let Some(note) = voice_items.0 {
+                      staff.borrow_mut().content.push(StaffContent::Note(note));
+                    } else if let Some(chord) = voice_items.1 {
+                      staff.borrow_mut().content.push(StaffContent::Chord(chord));
+                    }
+                  }
+                }
+              } else {
+                let multivoice = if let Some(phrase) = global_phrases.last() {
+                  phrase.borrow_mut().add_multivoice()
+                } else {
+                  staff.borrow_mut().add_multivoice()
+                };
+                for (voice, voice_items) in items_by_voice {
+                  let new_voice = multivoice.borrow_mut().add_phrase();
+                  if let Some(note) = voice_items.0 {
+                    new_voice.borrow_mut().content.push(PhraseContent::Note(note));
+                  } else if let Some(chord) = voice_items.1 {
+                    new_voice.borrow_mut().content.push(PhraseContent::Chord(chord));
+                  }
+                  multivoice_phrases.insert(voice.clone(), new_voice);
+                }
+              }
+            }
+          }
+
+
+          // Handle jump to
+          // Handle section start
+          // Handle ending
+          // Handle repeat
+          // Handle tempo change explicit
+          // Handle tempo change implicit
+
+
+
+
+
+
+
+           /*for note in &notes {
+              let mut note_added = false;
+              for phrase_modification in &note.3 {
+                if phrase_modification.is_start {
+                  MusicXmlConverter::start_phrase(&mut phrases, staff, phrase_modification.modification, &mut phrase_ids, phrase_modification.number);
+                  if !note_added {
+                    // TODO: Add note
+                    note_added = true;
+                  }
+                } else {
+                  if !note_added {
+                    // TODO: Add note
+                    note_added = true;
+                  }
+                  MusicXmlConverter::end_phrase(&mut phrases, &mut phrase_ids, &phrase_modification.number);
+                  if !in_local_modification {
+                    for (mod_id, modification) in delayed_mod_ends.drain(..) {
+                      MusicXmlConverter::end_phrase(&mut phrases, &mut phrase_ids, &mod_id);
+                    }
+                    for (mod_id, modification) in delayed_mod_starts.drain(..) {
+                      MusicXmlConverter::start_phrase(&mut phrases, staff, modification, &mut phrase_ids, mod_id);
+                    }
+                  }
+                }
+              }
+              if !note_added {
+                // TODO: Add note
+                note_added = true;
+              }
+            }*/
         }
       }
     }
+    // TODO: If any phrases contain other phrases of exactly the same length, combine them
+    // TODO: If only one voice in a multivoice, get rid of the multivoice
 
     // Return the composition
     Ok(composition)
   }
 
-  fn save(path: &str, composition: &Composition) -> Result<usize, String> {
+  fn save(_path: &str, _composition: &Composition) -> Result<usize, String> {
     // TODO: Implement saving to MusicXML (fs::write(path, contents)?;)
     Ok(0)
   }
