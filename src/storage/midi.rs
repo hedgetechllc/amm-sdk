@@ -10,11 +10,10 @@ use std::fs;
 
 pub struct MidiConverter;
 
-impl Convert for MidiConverter {
-  fn load(path: &str) -> Result<Composition, String> {
+impl MidiConverter {
+  fn load_from_midi(data: &[u8]) -> Result<Composition, String> {
     // Parse the MIDI representation
-    let file_contents = fs::read(path).map_err(|err| err.to_string())?;
-    let midi = Smf::parse(&file_contents).map_err(|err| err.to_string())?;
+    let midi = Smf::parse(data).map_err(|err| err.to_string())?;
 
     // Generate the initial composition structure and fill in known metadata
     let mut composition = Composition::new("Error", None, None, None);
@@ -24,6 +23,17 @@ impl Convert for MidiConverter {
 
     // Return the fully constructed composition
     Ok(composition)
+  }
+}
+
+impl Convert for MidiConverter {
+  fn load(path: &str) -> Result<Composition, String> {
+    let data = fs::read(path).map_err(|err| err.to_string())?;
+    MidiConverter::load_from_midi(&data)
+  }
+
+  fn load_data(data: &[u8]) -> Result<Composition, String> {
+    MidiConverter::load_from_midi(&data)
   }
 
   fn save(_path: &str, _composition: &Composition) -> Result<usize, String> {

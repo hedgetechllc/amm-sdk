@@ -18,8 +18,13 @@ midly = { version = "0.5", default-features = false, features = ["alloc"] }
 musicxml = { version = "1.0", default-features = false }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+serde = { version = "1.0", default-features = false, features = ["alloc", "derive", "rc"] }
+serde-wasm-bindgen = { version = "0.6" }
 wasm-bindgen = { version = "0.2", default-features = false }
 web-sys = { version = "0.3", default-features = false, features = ["console"] }
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+wasm-bindgen-test = { version = "0.3" }
 
 [features]
 default = ["std", "print"]

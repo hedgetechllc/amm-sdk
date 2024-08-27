@@ -1,7 +1,10 @@
 use crate::context::{generate_id, Tempo, TempoMarking};
 use alloc::{rc::Rc, vec::Vec};
 use core::cell::RefCell;
+#[cfg(target_arch = "wasm32")]
+use serde::{Deserialize, Serialize};
 
+#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Clone, Eq, PartialEq)]
 pub enum SectionModificationType {
   Accelerando, // Quick tempo acceleration over few notes or measures
@@ -15,6 +18,7 @@ pub enum SectionModificationType {
   TempoImplicit { tempo: TempoMarking },
 }
 
+#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Clone, Eq, PartialEq)]
 pub struct SectionModification {
   id: usize,

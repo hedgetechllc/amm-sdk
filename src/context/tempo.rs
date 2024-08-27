@@ -1,5 +1,8 @@
 use crate::note::Duration;
+#[cfg(target_arch = "wasm32")]
+use serde::{Deserialize, Serialize};
 
+#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct Tempo {
   pub base_note: Duration,

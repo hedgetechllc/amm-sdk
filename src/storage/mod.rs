@@ -11,6 +11,7 @@ mod musicxml;
 
 pub trait Convert {
   fn load(path: &str) -> Result<Composition, String>;
+  fn load_data(data: &[u8]) -> Result<Composition, String>;
   fn save(path: &str, composition: &Composition) -> Result<usize, String>;
 }
 
@@ -28,6 +29,14 @@ impl Storage {
       Self::AMM => AmmStorage::load(path),
       Self::MusicXML => MusicXmlConverter::load(path),
       Self::MIDI => MidiConverter::load(path),
+    }
+  }
+
+  pub fn load_data(&self, data: &[u8]) -> Result<Composition, String> {
+    match self {
+      Self::AMM => AmmStorage::load_data(data),
+      Self::MusicXML => MusicXmlConverter::load_data(data),
+      Self::MIDI => MidiConverter::load_data(data),
     }
   }
 

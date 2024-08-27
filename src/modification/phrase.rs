@@ -1,7 +1,10 @@
 use crate::context::{generate_id, DynamicMarking};
 use alloc::rc::Rc;
 use core::cell::RefCell;
+#[cfg(target_arch = "wasm32")]
+use serde::{Deserialize, Serialize};
 
+#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Clone, Copy, Default, Eq, PartialEq)]
 pub enum PedalType {
   #[default]
@@ -10,6 +13,7 @@ pub enum PedalType {
   Soft,
 }
 
+#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub enum PhraseModificationType {
   Crescendo { final_dynamic: DynamicMarking },
@@ -24,6 +28,7 @@ pub enum PhraseModificationType {
   Tuplet { num_beats: u8, into_beats: u8 },
 }
 
+#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Clone, Eq, PartialEq)]
 pub struct PhraseModification {
   id: usize,

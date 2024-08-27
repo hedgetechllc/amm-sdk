@@ -37,7 +37,7 @@ fn test_flattened_and_restructured_timeslices(composition: &mut Composition) {
 }
 
 fn main() {
-  let mut composition = Storage::MusicXML.load("./tests/Grande Valse Brillante.musicxml");
+  let mut composition = Storage::MusicXML.load("./examples/Grande Valse Brillante.musicxml");
   match composition {
     Ok(ref mut composition) => {
       test_iterating(composition);

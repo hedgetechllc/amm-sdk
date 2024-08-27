@@ -5,10 +5,20 @@ use std::fs;
 
 pub struct AmmStorage;
 
+impl AmmStorage {
+  fn load_from_amm(_data: &[u8]) -> Result<Composition, String> {
+    todo!() // TODO: Implement
+  }
+}
+
 impl Convert for AmmStorage {
   fn load(path: &str) -> Result<Composition, String> {
-    let _file_contents = fs::read_to_string(path).map_err(|err| err.to_string())?;
-    todo!() // TODO: Implement
+    let data = fs::read(path).map_err(|err| err.to_string())?;
+    AmmStorage::load_from_amm(&data)
+  }
+
+  fn load_data(data: &[u8]) -> Result<Composition, String> {
+    AmmStorage::load_from_amm(data)
   }
 
   fn save(_path: &str, _composition: &Composition) -> Result<usize, String> {

@@ -8,7 +8,10 @@ use alloc::{
   vec::Vec,
 };
 use core::{cell::RefCell, slice::Iter};
+#[cfg(target_arch = "wasm32")]
+use serde::{Deserialize, Serialize};
 
+#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Clone)]
 pub enum StaffContent {
   Note(Rc<RefCell<Note>>),
@@ -18,6 +21,7 @@ pub enum StaffContent {
   Direction(Rc<RefCell<Direction>>),
 }
 
+#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Clone)]
 pub struct Staff {
   pub(crate) id: usize,

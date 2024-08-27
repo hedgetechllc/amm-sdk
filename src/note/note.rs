@@ -7,10 +7,13 @@ use alloc::{
   vec::Vec,
 };
 use core::cell::RefCell;
+#[cfg(target_arch = "wasm32")]
+use serde::{Deserialize, Serialize};
 
 const A4_FREQUENCY_HZ: f32 = 440.0;
 const MIDI_NUMBER_A4: i16 = 69;
 
+#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Clone, Eq)]
 pub struct Note {
   pub id: usize,

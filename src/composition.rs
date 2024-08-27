@@ -3,7 +3,10 @@ use crate::note::{Duration, Note};
 use crate::structure::{Chord, MultiVoice, Part, PartTimeslice, Phrase, Section, Staff};
 use alloc::{collections::BTreeMap, rc::Rc, string::String, vec::Vec};
 use core::{cell::RefCell, slice::Iter};
+#[cfg(target_arch = "wasm32")]
+use serde::{Deserialize, Serialize};
 
+#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 pub struct Composition {
   title: String,
   copyright: Option<String>,

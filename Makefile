@@ -1,12 +1,16 @@
-.PHONY: all clean lib wasm publish format checknostd check test testunit testmidi
+.PHONY: all clean setup lib wasm publish format checknostd check test testunit testmidi testwasm testweb
 
 all:
-	$(error You must specify one of the following targets: clean lib wasm publish format checknostd test testunit testmidi)
+	$(error You must specify one of the following targets: clean setup lib wasm publish format checknostd test testunit testmidi testwasm testweb)
 
 clean:
 	cd ensure_no_std && cargo clean && rm -rf Cargo.lock
 	cargo clean
 	@rm -rf pkg target*
+
+setup:
+	rustup target add wasm32-unknown-unknown
+	cargo install wasm-pack
 
 lib:
 	cargo build --lib --release
@@ -35,3 +39,11 @@ testunit:
 
 testmidi:
 	cargo test -- --nocapture test_midi_
+
+testwasm:
+	wasm-pack test --node
+
+testweb:
+	wasm-pack build --target --web
+	cp tests/wasm_index.html pkg/index.html
+	npx live-server ./pkg

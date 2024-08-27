@@ -1,5 +1,8 @@
 use crate::note::Accidental;
+#[cfg(target_arch = "wasm32")]
+use serde::{Deserialize, Serialize};
 
+#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Copy, Clone, Default, Eq, PartialEq)]
 pub enum KeyMode {
   #[default]
@@ -7,6 +10,7 @@ pub enum KeyMode {
   Minor,
 }
 
+#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Copy, Clone, Default, Eq, PartialEq)]
 pub enum Key {
   AMajor,

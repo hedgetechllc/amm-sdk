@@ -3,7 +3,7 @@ use crate::{
   Accidental, Chord, ChordContent, ChordModification, ChordModificationType, Clef, ClefType, Composition, Direction,
   DirectionType, Duration, DynamicMarking, HandbellTechnique, Key, KeyMode, MultiVoice, Note, NoteModification,
   NoteModificationType, PedalType, Phrase, PhraseContent, PhraseModification, PhraseModificationType, Pitch, Section,
-  SectionModificationType, Staff, StaffContent, Tempo, TempoMarking, TimeSignature, Timeslice,
+  SectionModificationType, Staff, StaffContent, Tempo, TempoMarking, TimeSignature,
 };
 use alloc::{
   collections::BTreeMap,
@@ -11,8 +11,8 @@ use alloc::{
   string::{String, ToString},
   vec::Vec,
 };
-use core::cell::RefCell;
-use musicxml;
+use core::{cell::RefCell, str};
+use musicxml::{self, elements::ScorePartwise};
 
 pub struct MusicXmlConverter;
 
@@ -1394,10 +1394,9 @@ impl MusicXmlConverter {
           (index..phrases.len()).for_each(|_| match phrases.pop() {
             Some(phrase) => {
               let id = phrase.borrow().get_id();
-              if let Some(number) =
-                phrase_ids
-                  .iter()
-                  .find_map(|(key, phrase_id)| if *phrase_id == id { Some(*key) } else { None })
+              if let Some(number) = phrase_ids
+                .iter()
+                .find_map(|(key, phrase_id)| if *phrase_id == id { Some(*key) } else { None })
               {
                 phrase_ids.remove(&number);
               }
@@ -1411,13 +1410,8 @@ impl MusicXmlConverter {
       phrases.pop();
     }
   }
-}
 
-impl Convert for MusicXmlConverter {
-  fn load(path: &str) -> Result<Composition, String> {
-    // Parse the MusicXML score representation
-    let score = musicxml::read_score_partwise(path)?;
-
+  fn load_from_musicxml(score: ScorePartwise) -> Result<Composition, String> {
     // Generate the initial composition structure and search for known metadata
     let mut composition = Composition::new(
       match &score.content.work {
@@ -1927,8 +1921,21 @@ impl Convert for MusicXmlConverter {
     }
     // TODO: If any phrases contain other phrases of exactly the same length, combine them
 
-    // Return the composition
     Ok(composition)
+  }
+}
+
+impl Convert for MusicXmlConverter {
+  fn load(path: &str) -> Result<Composition, String> {
+    let score = musicxml::read_score_partwise(path)?;
+    MusicXmlConverter::load_from_musicxml(score)
+  }
+
+  fn load_data(data: &[u8]) -> Result<Composition, String> {
+    let data = str::from_utf8(data).map_err(|err| err.to_string())?;
+    let score = musicxml::parser::parse_from_xml_str(data).map_err(|err| err.to_string())?;
+    MusicXmlConverter::load_from_musicxml(score)
+    // TODO: "Update MusicXML parser library to parse from raw data so we can do the partwise conversion if necessary"
   }
 
   fn save(_path: &str, _composition: &Composition) -> Result<usize, String> {

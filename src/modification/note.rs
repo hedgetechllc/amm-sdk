@@ -2,7 +2,10 @@ use super::chord::ChordModificationType;
 use crate::context::{generate_id, DynamicMarking};
 use alloc::rc::Rc;
 use core::cell::RefCell;
+#[cfg(target_arch = "wasm32")]
+use serde::{Deserialize, Serialize};
 
+#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum HandbellTechnique {
   Belltree,
@@ -43,6 +46,7 @@ impl core::fmt::Display for HandbellTechnique {
   }
 }
 
+#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub enum NoteModificationType {
   Accent,
@@ -95,6 +99,7 @@ pub enum NoteModificationType {
   UpBow,
 }
 
+#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Clone, Eq, PartialEq)]
 pub struct NoteModification {
   id: usize,

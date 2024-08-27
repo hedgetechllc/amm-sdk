@@ -1,0 +1,10 @@
+<script type="module">
+  import init, { load_from_musicxml, send_clef } from './amm_sdk.js'
+
+  init().then(async () => {
+    let text_js_value = send_clef()//load_from_musicxml('world')
+    const p1 = document.createElement('p')
+    p1.innerText = text_js_value
+    document.body.appendChild(p1)
+  })
+</script>

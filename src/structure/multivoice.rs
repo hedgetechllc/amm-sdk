@@ -8,12 +8,16 @@ use crate::modification::{ChordModificationType, NoteModificationType, PhraseMod
 use crate::note::{Duration, Note};
 use alloc::{rc::Rc, string::ToString, vec::Vec};
 use core::{cell::RefCell, slice::Iter};
+#[cfg(target_arch = "wasm32")]
+use serde::{Deserialize, Serialize};
 
+#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Clone)]
 pub enum MultiVoiceContent {
   Phrase(Rc<RefCell<Phrase>>),
 }
 
+#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Clone)]
 pub struct MultiVoice {
   pub(crate) id: usize,

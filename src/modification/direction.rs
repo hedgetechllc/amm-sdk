@@ -1,7 +1,10 @@
 use crate::context::{generate_id, Clef, DynamicMarking, Key, TimeSignature};
 use alloc::{rc::Rc, string::String};
 use core::cell::RefCell;
+#[cfg(target_arch = "wasm32")]
+use serde::{Deserialize, Serialize};
 
+#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum DirectionType {
   AccordionRegistration { high: bool, middle: u8, low: bool },
@@ -14,6 +17,7 @@ pub enum DirectionType {
   TimeSignature { time_signature: TimeSignature },
 }
 
+#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Clone, Eq, PartialEq)]
 pub struct Direction {
   id: usize,

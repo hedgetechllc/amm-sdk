@@ -10,12 +10,16 @@ use alloc::{
   vec::Vec,
 };
 use core::{cell::RefCell, slice::Iter};
+#[cfg(target_arch = "wasm32")]
+use serde::{Deserialize, Serialize};
 
+#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Clone)]
 pub enum PartContent {
   Section(Rc<RefCell<Section>>),
 }
 
+#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Clone)]
 pub struct Part {
   pub(crate) id: usize,
