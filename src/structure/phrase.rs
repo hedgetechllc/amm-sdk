@@ -362,6 +362,7 @@ impl<'a> IntoIterator for &'a Phrase {
   }
 }
 
+#[cfg(feature = "print")]
 impl core::fmt::Display for Phrase {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     let mods = self

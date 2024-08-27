@@ -4,6 +4,8 @@ Abstract Music Manipulation (AMM) SDK
 
 ## Under Development
 
+* Create WASM build
+* Change `unwrap()` if possible to panic, otherwise replace with `unwrap_unchecked()`
 * Finish `iter_timeslices()` to work with playback
   * Make `get_slices_for_playback()`: Create implicit slices for things like glissandos and mordents
     * Determines that fastest possible timeslice and use that as the time quantization level
@@ -20,4 +22,5 @@ Abstract Music Manipulation (AMM) SDK
 * Finish AMM Reader Implementation
 * Finish AMM Writer Implementation
 * Make fully `no_std` compatible
-* Hide all `format!`, `write!`, and `to_string()` calls behind "print" feature
+
+ADD A TEST containing Glissandos and/or multi-note tremolos

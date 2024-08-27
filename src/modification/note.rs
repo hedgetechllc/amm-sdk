@@ -19,6 +19,7 @@ pub enum HandbellTechnique {
   Swing,
 }
 
+#[cfg(feature = "print")]
 impl core::fmt::Display for HandbellTechnique {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(
@@ -120,7 +121,7 @@ impl NoteModification {
       ChordModificationType::Fingernails => Some(NoteModificationType::Fingernails),
       ChordModificationType::HalfMuted => Some(NoteModificationType::HalfMuted),
       ChordModificationType::HarmonMute { open, half } => Some(NoteModificationType::HarmonMute { open, half }),
-      ChordModificationType::Heel =>Some( NoteModificationType::Heel),
+      ChordModificationType::Heel => Some(NoteModificationType::Heel),
       ChordModificationType::Marcato => Some(NoteModificationType::Marcato),
       ChordModificationType::Open => Some(NoteModificationType::Open),
       ChordModificationType::Pizzicato => Some(NoteModificationType::Pizzicato),
@@ -138,10 +139,13 @@ impl NoteModification {
       ChordModificationType::Unstress => Some(NoteModificationType::Unstress),
       ChordModificationType::UpBow => Some(NoteModificationType::UpBow),
       _ => None,
-    }.map(|modification| Rc::new(RefCell::new(Self {
-      id: generate_id(),
-      modification,
-    })))
+    }
+    .map(|modification| {
+      Rc::new(RefCell::new(Self {
+        id: generate_id(),
+        modification,
+      }))
+    })
   }
 
   #[must_use]
@@ -155,12 +159,14 @@ impl NoteModification {
   }
 }
 
+#[cfg(feature = "print")]
 impl core::fmt::Display for NoteModification {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(f, "{}", self.modification)
   }
 }
 
+#[cfg(feature = "print")]
 impl core::fmt::Display for NoteModificationType {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     match self {

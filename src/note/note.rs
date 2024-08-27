@@ -69,6 +69,7 @@ impl PartialEq for Note {
   }
 }
 
+#[cfg(feature = "print")]
 impl core::fmt::Display for Note {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     let mods = self

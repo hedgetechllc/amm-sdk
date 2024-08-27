@@ -25,6 +25,7 @@ impl Default for Tempo {
   }
 }
 
+#[cfg(feature = "print")]
 impl core::fmt::Display for Tempo {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(f, "{}={} bpm", self.base_note, self.beats_per_minute)

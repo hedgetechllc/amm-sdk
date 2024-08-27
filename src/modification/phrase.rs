@@ -50,6 +50,7 @@ impl PhraseModification {
   }
 }
 
+#[cfg(feature = "print")]
 impl core::fmt::Display for PedalType {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(
@@ -64,12 +65,14 @@ impl core::fmt::Display for PedalType {
   }
 }
 
+#[cfg(feature = "print")]
 impl core::fmt::Display for PhraseModification {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(f, "{}", self.modification)
   }
 }
 
+#[cfg(feature = "print")]
 impl core::fmt::Display for PhraseModificationType {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     match self {

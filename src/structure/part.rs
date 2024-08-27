@@ -268,6 +268,7 @@ impl<'a> IntoIterator for &'a Part {
   }
 }
 
+#[cfg(feature = "print")]
 impl core::fmt::Display for Part {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     let sections = self

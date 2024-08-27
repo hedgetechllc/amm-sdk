@@ -27,8 +27,7 @@ impl Convert for MidiConverter {
   }
 
   fn save(_path: &str, _composition: &Composition) -> Result<usize, String> {
-    // TODO: Implement
-    Ok(0)
+    todo!(); // TODO: Implement
   }
 }
 

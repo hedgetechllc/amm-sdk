@@ -40,6 +40,7 @@ impl Direction {
   }
 }
 
+#[cfg(feature = "print")]
 impl core::fmt::Display for DirectionType {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     match self {
@@ -65,6 +66,7 @@ impl core::fmt::Display for DirectionType {
   }
 }
 
+#[cfg(feature = "print")]
 impl core::fmt::Display for Direction {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(f, "{}", self.modification)

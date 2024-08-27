@@ -343,6 +343,7 @@ impl<'a> IntoIterator for &'a Composition {
   }
 }
 
+#[cfg(feature = "print")]
 impl core::fmt::Display for Composition {
   #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {

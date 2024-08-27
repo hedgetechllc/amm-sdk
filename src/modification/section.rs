@@ -41,12 +41,14 @@ impl SectionModification {
   }
 }
 
+#[cfg(feature = "print")]
 impl core::fmt::Display for SectionModification {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(f, "{}", self.modification)
   }
 }
 
+#[cfg(feature = "print")]
 impl core::fmt::Display for SectionModificationType {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     match self {

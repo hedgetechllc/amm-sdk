@@ -33,6 +33,7 @@ impl Pitch {
   }
 }
 
+#[cfg(feature = "print")]
 impl core::fmt::Display for Pitch {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(

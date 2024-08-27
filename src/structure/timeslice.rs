@@ -1,5 +1,5 @@
 use crate::context::{Key, Tempo, TimeSignature};
-use crate::modification::{Direction, NoteModificationType, PhraseModificationType};
+use crate::modification::{Direction, PhraseModificationType};
 use crate::note::{Accidental, Duration, Pitch};
 use crate::structure::note::Note;
 use alloc::{collections::BTreeMap, rc::Rc, vec::Vec};
@@ -21,6 +21,7 @@ pub struct TimeslicePhraseDetails {
   pub next_accidental: Accidental,
 }
 
+#[cfg(feature = "print")]
 impl core::fmt::Display for TimeslicePhraseDetails {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(
@@ -89,6 +90,7 @@ impl TimesliceContent {
   }
 }
 
+#[cfg(feature = "print")]
 impl core::fmt::Display for TimesliceContent {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     let phrase_context = self
@@ -162,6 +164,7 @@ impl Timeslice {
   }
 }
 
+#[cfg(feature = "print")]
 impl core::fmt::Display for Timeslice {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     let directions_string = self

@@ -21,6 +21,7 @@ impl DynamicMarking {
   }
 }
 
+#[cfg(feature = "print")]
 impl core::fmt::Display for DynamicMarking {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     match *self {

@@ -32,6 +32,7 @@ impl Clef {
   }
 }
 
+#[cfg(feature = "print")]
 impl core::fmt::Display for Clef {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(

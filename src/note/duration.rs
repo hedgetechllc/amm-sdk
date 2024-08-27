@@ -130,6 +130,7 @@ impl Duration {
   }
 }
 
+#[cfg(feature = "print")]
 #[must_use]
 fn dots_to_text(dots: u8) -> String {
   match dots {
@@ -140,6 +141,7 @@ fn dots_to_text(dots: u8) -> String {
   }
 }
 
+#[cfg(feature = "print")]
 impl core::fmt::Display for Duration {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(

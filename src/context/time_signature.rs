@@ -7,6 +7,7 @@ pub enum TimeSignature {
   None,
 }
 
+#[cfg(feature = "print")]
 impl core::fmt::Display for TimeSignature {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     match *self {

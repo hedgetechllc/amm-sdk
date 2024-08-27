@@ -22,6 +22,7 @@ impl Accidental {
   }
 }
 
+#[cfg(feature = "print")]
 impl core::fmt::Display for Accidental {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(

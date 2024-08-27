@@ -1,5 +1,5 @@
-use crate::context::{generate_id, DynamicMarking};
 use super::note::NoteModificationType;
+use crate::context::{generate_id, DynamicMarking};
 use alloc::rc::Rc;
 use core::cell::RefCell;
 
@@ -95,12 +95,14 @@ impl ChordModification {
   }
 }
 
+#[cfg(feature = "print")]
 impl core::fmt::Display for ChordModification {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(f, "{}", self.modification)
   }
 }
 
+#[cfg(feature = "print")]
 impl core::fmt::Display for ChordModificationType {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     match self {

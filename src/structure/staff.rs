@@ -304,6 +304,7 @@ impl<'a> IntoIterator for &'a Staff {
   }
 }
 
+#[cfg(feature = "print")]
 impl core::fmt::Display for Staff {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     let items = self

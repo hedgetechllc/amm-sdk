@@ -305,6 +305,7 @@ impl Key {
   }
 }
 
+#[cfg(feature = "print")]
 impl core::fmt::Display for Key {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(

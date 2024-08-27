@@ -117,9 +117,7 @@ impl Chord {
     let transferrable_modifications = self
       .modifications
       .iter()
-      .filter_map(|modification| {
-        NoteModification::from_chord_modification(modification.borrow().get_modification())
-      })
+      .filter_map(|modification| NoteModification::from_chord_modification(modification.borrow().get_modification()))
       .collect::<Vec<_>>();
     self.content.iter().for_each(|item| match item {
       ChordContent::Note(note) => {
@@ -153,6 +151,7 @@ impl<'a> IntoIterator for &'a Chord {
   }
 }
 
+#[cfg(feature = "print")]
 impl core::fmt::Display for Chord {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     let mods = self

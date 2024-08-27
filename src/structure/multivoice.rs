@@ -507,6 +507,7 @@ impl<'a> IntoIterator for &'a MultiVoice {
   }
 }
 
+#[cfg(feature = "print")]
 impl core::fmt::Display for MultiVoice {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     let voices = self
