@@ -2,35 +2,57 @@ use alloc::string::String;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Eq, PartialEq)]
-pub enum Pitch {
+pub enum PitchName {
   Rest,
-  A(u8),
-  B(u8),
-  C(u8),
-  D(u8),
-  E(u8),
-  F(u8),
-  G(u8),
+  A,
+  B,
+  C,
+  D,
+  E,
+  F,
+  G,
 }
 
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub struct Pitch {
+  pub r#type: PitchName,
+  pub octave: u8,
+}
+
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 impl Pitch {
   #[must_use]
-  pub fn is_rest(&self) -> bool {
-    core::mem::discriminant(self) == core::mem::discriminant(&Self::Rest)
+  pub fn new(r#type: PitchName, octave: u8) -> Self {
+    Self { r#type, octave }
   }
 
   #[must_use]
-  pub fn value(&self) -> (usize, i16) {
-    match self {
-      Self::Rest => (0, 0),
-      Self::A(octave) => (1, i16::from(12 * octave) - 48),
-      Self::B(octave) => (2, i16::from(2 + (12 * octave)) - 48),
-      Self::C(octave) => (3, i16::from(3 + (12 * octave)) - 60),
-      Self::D(octave) => (4, i16::from(5 + (12 * octave)) - 60),
-      Self::E(octave) => (5, i16::from(7 + (12 * octave)) - 60),
-      Self::F(octave) => (6, i16::from(8 + (12 * octave)) - 60),
-      Self::G(octave) => (7, i16::from(10 + (12 * octave)) - 60),
+  pub fn new_rest() -> Self {
+    Self {
+      r#type: PitchName::Rest,
+      octave: 0,
+    }
+  }
+
+  #[must_use]
+  pub fn is_rest(&self) -> bool {
+    self.r#type == PitchName::Rest
+  }
+
+  #[must_use]
+  pub(crate) fn value(&self) -> (usize, i16) {
+    match self.r#type {
+      PitchName::Rest => (0, 0),
+      PitchName::A => (1, i16::from(12 * self.octave) - 48),
+      PitchName::B => (2, i16::from(2 + (12 * self.octave)) - 48),
+      PitchName::C => (3, i16::from(3 + (12 * self.octave)) - 60),
+      PitchName::D => (4, i16::from(5 + (12 * self.octave)) - 60),
+      PitchName::E => (5, i16::from(7 + (12 * self.octave)) - 60),
+      PitchName::F => (6, i16::from(8 + (12 * self.octave)) - 60),
+      PitchName::G => (7, i16::from(10 + (12 * self.octave)) - 60),
     }
   }
 }
@@ -41,15 +63,15 @@ impl core::fmt::Display for Pitch {
     write!(
       f,
       "{}",
-      match self {
-        Self::Rest => String::new(),
-        Self::A(octave) => format!("A{octave}"),
-        Self::B(octave) => format!("B{octave}"),
-        Self::C(octave) => format!("C{octave}"),
-        Self::D(octave) => format!("D{octave}"),
-        Self::E(octave) => format!("E{octave}"),
-        Self::F(octave) => format!("F{octave}"),
-        Self::G(octave) => format!("G{octave}"),
+      match self.r#type {
+        PitchName::Rest => String::new(),
+        PitchName::A => format!("A{}", self.octave),
+        PitchName::B => format!("B{}", self.octave),
+        PitchName::C => format!("C{}", self.octave),
+        PitchName::D => format!("D{}", self.octave),
+        PitchName::E => format!("E{}", self.octave),
+        PitchName::F => format!("F{}", self.octave),
+        PitchName::G => format!("G{}", self.octave),
       }
     )
   }

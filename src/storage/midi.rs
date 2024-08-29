@@ -1,8 +1,10 @@
 use super::Convert;
 use crate::{
-  Accidental, Chord, ChordModificationType, Clef, ClefType, Composition, DirectionType, Duration, Dynamic, DynamicMarking, Key,
-  KeyMode, NoteModificationType, PedalType, Phrase, PhraseModificationType, Pitch, Section, SectionModificationType,
-  Tempo, TimeSignature,
+  Accidental, Chord, ChordContent, ChordModification, ChordModificationType, Clef, ClefSymbol, ClefType, Composition,
+  Direction, DirectionType, Duration, DurationType, Dynamic, DynamicMarking, HandbellTechnique, Key, KeyMode,
+  KeySignature, MultiVoice, Note, NoteModification, NoteModificationType, PedalType, Phrase, PhraseContent,
+  PhraseModification, PhraseModificationType, Pitch, PitchName, Section, SectionModificationType, Staff, StaffContent,
+  Tempo, TempoMarking, TempoSuggestion, TimeSignature, TimeSignatureType,
 };
 use alloc::{string::String, vec::Vec};
 use midly::Smf;

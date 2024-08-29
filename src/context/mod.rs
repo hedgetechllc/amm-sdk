@@ -6,7 +6,7 @@ mod tempo;
 mod tempo_suggestion;
 mod time_signature;
 
-pub use clef::{Clef, ClefType, ClefSymbol};
+pub use clef::{Clef, ClefSymbol, ClefType};
 pub use dynamic::{Dynamic, DynamicMarking};
 pub use id::generate_id;
 pub use key::{Key, KeyMode, KeySignature};

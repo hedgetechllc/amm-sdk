@@ -58,7 +58,7 @@ impl TimesliceContent {
       modifications: Vec::new(),
       index_in_phrase,
       phrase_length,
-      next_pitch: Pitch::Rest,
+      next_pitch: Pitch::new_rest(),
       next_accidental: Accidental::None,
     });
     unsafe { self.phrase_details.last_mut().unwrap_unchecked() }
@@ -85,7 +85,7 @@ impl TimesliceContent {
   }
 
   #[must_use]
-  pub fn get_pcm_samples(&self, context: &TimesliceContext) -> Vec<f32> {
+  pub fn get_pcm_samples(&self, _context: &TimesliceContext) -> Vec<f32> {
     todo!() // TODO: Implement
   }
 }

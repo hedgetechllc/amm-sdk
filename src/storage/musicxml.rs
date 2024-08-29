@@ -1,9 +1,10 @@
 use super::Convert;
 use crate::{
-  Accidental, Chord, ChordContent, ChordModification, ChordModificationType, Clef, ClefType, ClefSymbol, Composition, Direction,
-  DirectionType, Duration, DurationType, Dynamic, DynamicMarking, HandbellTechnique, Key, KeyMode, KeySignature, MultiVoice, Note, NoteModification,
-  NoteModificationType, PedalType, Phrase, PhraseContent, PhraseModification, PhraseModificationType, Pitch, Section,
-  SectionModificationType, Staff, StaffContent, Tempo, TempoMarking, TempoSuggestion, TimeSignature, TimeSignatureType
+  Accidental, Chord, ChordContent, ChordModification, ChordModificationType, Clef, ClefSymbol, ClefType, Composition,
+  Direction, DirectionType, Duration, DurationType, Dynamic, DynamicMarking, HandbellTechnique, Key, KeyMode,
+  KeySignature, MultiVoice, Note, NoteModification, NoteModificationType, PedalType, Phrase, PhraseContent,
+  PhraseModification, PhraseModificationType, Pitch, PitchName, Section, SectionModificationType, Staff, StaffContent,
+  Tempo, TempoMarking, TempoSuggestion, TimeSignature, TimeSignatureType,
 };
 use alloc::{
   collections::BTreeMap,
@@ -295,10 +296,18 @@ impl MusicXmlConverter {
         musicxml::datatypes::NoteTypeValue::Sixteenth => Duration::new(DurationType::Sixteenth, num_dots),
         musicxml::datatypes::NoteTypeValue::ThirtySecond => Duration::new(DurationType::ThirtySecond, num_dots),
         musicxml::datatypes::NoteTypeValue::SixtyFourth => Duration::new(DurationType::SixtyFourth, num_dots),
-        musicxml::datatypes::NoteTypeValue::OneHundredTwentyEighth => Duration::new(DurationType::OneHundredTwentyEighth, num_dots),
-        musicxml::datatypes::NoteTypeValue::TwoHundredFiftySixth => Duration::new(DurationType::TwoHundredFiftySixth, num_dots),
-        musicxml::datatypes::NoteTypeValue::FiveHundredTwelfth => Duration::new(DurationType::FiveHundredTwelfth, num_dots),
-        musicxml::datatypes::NoteTypeValue::OneThousandTwentyFourth => Duration::new(DurationType::OneThousandTwentyFourth, num_dots),
+        musicxml::datatypes::NoteTypeValue::OneHundredTwentyEighth => {
+          Duration::new(DurationType::OneHundredTwentyEighth, num_dots)
+        }
+        musicxml::datatypes::NoteTypeValue::TwoHundredFiftySixth => {
+          Duration::new(DurationType::TwoHundredFiftySixth, num_dots)
+        }
+        musicxml::datatypes::NoteTypeValue::FiveHundredTwelfth => {
+          Duration::new(DurationType::FiveHundredTwelfth, num_dots)
+        }
+        musicxml::datatypes::NoteTypeValue::OneThousandTwentyFourth => {
+          Duration::new(DurationType::OneThousandTwentyFourth, num_dots)
+        }
       };
       if let musicxml::elements::BeatEquation::BPM(per_minute) = &beat_data.equals {
         return Some(Tempo {
@@ -829,11 +838,14 @@ impl MusicXmlConverter {
     };
     let num_dots = note.content.dot.len() as u8;
     let (divisions, mut tied, chord, pitch) = match &note.content.info {
-      musicxml::elements::NoteType::Cue(cue) => {
-        (*cue.duration.content as usize, false, cue.chord.is_some(), Pitch::Rest)
-      }
+      musicxml::elements::NoteType::Cue(cue) => (
+        *cue.duration.content as usize,
+        false,
+        cue.chord.is_some(),
+        Pitch::new_rest(),
+      ),
       musicxml::elements::NoteType::Grace(grace) => match &grace.info {
-        musicxml::elements::GraceType::Cue(cue) => (0, false, cue.chord.is_some(), Pitch::Rest),
+        musicxml::elements::GraceType::Cue(cue) => (0, false, cue.chord.is_some(), Pitch::new_rest()),
         musicxml::elements::GraceType::Normal(normal) => (
           0,
           normal
@@ -845,16 +857,16 @@ impl MusicXmlConverter {
             musicxml::elements::AudibleType::Pitch(pitch) => {
               let octave = *pitch.content.octave.content;
               match &pitch.content.step.content {
-                musicxml::datatypes::Step::A => Pitch::A(octave),
-                musicxml::datatypes::Step::B => Pitch::B(octave),
-                musicxml::datatypes::Step::C => Pitch::C(octave),
-                musicxml::datatypes::Step::D => Pitch::D(octave),
-                musicxml::datatypes::Step::E => Pitch::E(octave),
-                musicxml::datatypes::Step::F => Pitch::F(octave),
-                musicxml::datatypes::Step::G => Pitch::G(octave),
+                musicxml::datatypes::Step::A => Pitch::new(PitchName::A, octave),
+                musicxml::datatypes::Step::B => Pitch::new(PitchName::B, octave),
+                musicxml::datatypes::Step::C => Pitch::new(PitchName::C, octave),
+                musicxml::datatypes::Step::D => Pitch::new(PitchName::D, octave),
+                musicxml::datatypes::Step::E => Pitch::new(PitchName::E, octave),
+                musicxml::datatypes::Step::F => Pitch::new(PitchName::F, octave),
+                musicxml::datatypes::Step::G => Pitch::new(PitchName::G, octave),
               }
             }
-            _ => Pitch::Rest,
+            _ => Pitch::new_rest(),
           },
         ),
       },
@@ -869,16 +881,16 @@ impl MusicXmlConverter {
           musicxml::elements::AudibleType::Pitch(pitch) => {
             let octave = *pitch.content.octave.content;
             match &pitch.content.step.content {
-              musicxml::datatypes::Step::A => Pitch::A(octave),
-              musicxml::datatypes::Step::B => Pitch::B(octave),
-              musicxml::datatypes::Step::C => Pitch::C(octave),
-              musicxml::datatypes::Step::D => Pitch::D(octave),
-              musicxml::datatypes::Step::E => Pitch::E(octave),
-              musicxml::datatypes::Step::F => Pitch::F(octave),
-              musicxml::datatypes::Step::G => Pitch::G(octave),
+              musicxml::datatypes::Step::A => Pitch::new(PitchName::A, octave),
+              musicxml::datatypes::Step::B => Pitch::new(PitchName::B, octave),
+              musicxml::datatypes::Step::C => Pitch::new(PitchName::C, octave),
+              musicxml::datatypes::Step::D => Pitch::new(PitchName::D, octave),
+              musicxml::datatypes::Step::E => Pitch::new(PitchName::E, octave),
+              musicxml::datatypes::Step::F => Pitch::new(PitchName::F, octave),
+              musicxml::datatypes::Step::G => Pitch::new(PitchName::G, octave),
             }
           }
-          _ => Pitch::Rest,
+          _ => Pitch::new_rest(),
         },
       ),
     };
@@ -893,62 +905,76 @@ impl MusicXmlConverter {
         musicxml::datatypes::NoteTypeValue::Sixteenth => Duration::new(DurationType::Sixteenth, num_dots),
         musicxml::datatypes::NoteTypeValue::ThirtySecond => Duration::new(DurationType::ThirtySecond, num_dots),
         musicxml::datatypes::NoteTypeValue::SixtyFourth => Duration::new(DurationType::SixtyFourth, num_dots),
-        musicxml::datatypes::NoteTypeValue::OneHundredTwentyEighth => Duration::new(DurationType::OneHundredTwentyEighth, num_dots),
-        musicxml::datatypes::NoteTypeValue::TwoHundredFiftySixth => Duration::new(DurationType::TwoHundredFiftySixth, num_dots),
-        musicxml::datatypes::NoteTypeValue::FiveHundredTwelfth => Duration::new(DurationType::FiveHundredTwelfth, num_dots),
-        musicxml::datatypes::NoteTypeValue::OneThousandTwentyFourth => Duration::new(DurationType::OneThousandTwentyFourth, num_dots),
+        musicxml::datatypes::NoteTypeValue::OneHundredTwentyEighth => {
+          Duration::new(DurationType::OneHundredTwentyEighth, num_dots)
+        }
+        musicxml::datatypes::NoteTypeValue::TwoHundredFiftySixth => {
+          Duration::new(DurationType::TwoHundredFiftySixth, num_dots)
+        }
+        musicxml::datatypes::NoteTypeValue::FiveHundredTwelfth => {
+          Duration::new(DurationType::FiveHundredTwelfth, num_dots)
+        }
+        musicxml::datatypes::NoteTypeValue::OneThousandTwentyFourth => {
+          Duration::new(DurationType::OneThousandTwentyFourth, num_dots)
+        }
         _ => Duration::new(DurationType::Quarter, num_dots),
       }
     } else {
       match divisions {
-        _ if divisions / divisions_per_quarter_note >= 32 => Duration::new(DurationType::Maxima, MusicXmlConverter::calculate_num_dots(
-          32 * divisions_per_quarter_note,
-          divisions,
-        )),
-        _ if divisions / divisions_per_quarter_note >= 16 => Duration::new(DurationType::Long, MusicXmlConverter::calculate_num_dots(
-          16 * divisions_per_quarter_note,
-          divisions,
-        )),
-        _ if divisions / divisions_per_quarter_note >= 8 => Duration::new(DurationType::Breve, MusicXmlConverter::calculate_num_dots(
-          8 * divisions_per_quarter_note,
-          divisions,
-        )),
-        _ if divisions / divisions_per_quarter_note >= 4 => Duration::new(DurationType::Whole, MusicXmlConverter::calculate_num_dots(
-          4 * divisions_per_quarter_note,
-          divisions,
-        )),
-        _ if divisions / divisions_per_quarter_note >= 2 => Duration::new(DurationType::Half, MusicXmlConverter::calculate_num_dots(
-          2 * divisions_per_quarter_note,
-          divisions,
-        )),
-        _ if divisions / divisions_per_quarter_note >= 1 => Duration::new(DurationType::Quarter, MusicXmlConverter::calculate_num_dots(
-          1 * divisions_per_quarter_note,
-          divisions,
-        )),
-        _ if divisions_per_quarter_note / divisions <= 2 => Duration::new(DurationType::Eighth, MusicXmlConverter::calculate_num_dots(
-          divisions_per_quarter_note / 2,
-          divisions,
-        )),
-        _ if divisions_per_quarter_note / divisions <= 4 => Duration::new(DurationType::Sixteenth, MusicXmlConverter::calculate_num_dots(
-          divisions_per_quarter_note / 4,
-          divisions,
-        )),
-        _ if divisions_per_quarter_note / divisions <= 8 => Duration::new(DurationType::ThirtySecond,
+        _ if divisions / divisions_per_quarter_note >= 32 => Duration::new(
+          DurationType::Maxima,
+          MusicXmlConverter::calculate_num_dots(32 * divisions_per_quarter_note, divisions),
+        ),
+        _ if divisions / divisions_per_quarter_note >= 16 => Duration::new(
+          DurationType::Long,
+          MusicXmlConverter::calculate_num_dots(16 * divisions_per_quarter_note, divisions),
+        ),
+        _ if divisions / divisions_per_quarter_note >= 8 => Duration::new(
+          DurationType::Breve,
+          MusicXmlConverter::calculate_num_dots(8 * divisions_per_quarter_note, divisions),
+        ),
+        _ if divisions / divisions_per_quarter_note >= 4 => Duration::new(
+          DurationType::Whole,
+          MusicXmlConverter::calculate_num_dots(4 * divisions_per_quarter_note, divisions),
+        ),
+        _ if divisions / divisions_per_quarter_note >= 2 => Duration::new(
+          DurationType::Half,
+          MusicXmlConverter::calculate_num_dots(2 * divisions_per_quarter_note, divisions),
+        ),
+        _ if divisions / divisions_per_quarter_note >= 1 => Duration::new(
+          DurationType::Quarter,
+          MusicXmlConverter::calculate_num_dots(1 * divisions_per_quarter_note, divisions),
+        ),
+        _ if divisions_per_quarter_note / divisions <= 2 => Duration::new(
+          DurationType::Eighth,
+          MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note / 2, divisions),
+        ),
+        _ if divisions_per_quarter_note / divisions <= 4 => Duration::new(
+          DurationType::Sixteenth,
+          MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note / 4, divisions),
+        ),
+        _ if divisions_per_quarter_note / divisions <= 8 => Duration::new(
+          DurationType::ThirtySecond,
           MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note / 8, divisions),
         ),
-        _ if divisions_per_quarter_note / divisions <= 16 => Duration::new(DurationType::SixtyFourth,
+        _ if divisions_per_quarter_note / divisions <= 16 => Duration::new(
+          DurationType::SixtyFourth,
           MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note / 16, divisions),
         ),
-        _ if divisions_per_quarter_note / divisions <= 32 => Duration::new(DurationType::OneHundredTwentyEighth,
+        _ if divisions_per_quarter_note / divisions <= 32 => Duration::new(
+          DurationType::OneHundredTwentyEighth,
           MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note / 32, divisions),
         ),
-        _ if divisions_per_quarter_note / divisions <= 64 => Duration::new(DurationType::TwoHundredFiftySixth,
+        _ if divisions_per_quarter_note / divisions <= 64 => Duration::new(
+          DurationType::TwoHundredFiftySixth,
           MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note / 64, divisions),
         ),
-        _ if divisions_per_quarter_note / divisions <= 128 => Duration::new(DurationType::FiveHundredTwelfth,
+        _ if divisions_per_quarter_note / divisions <= 128 => Duration::new(
+          DurationType::FiveHundredTwelfth,
           MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note / 128, divisions),
         ),
-        _ if divisions_per_quarter_note / divisions <= 256 => Duration::new(DurationType::OneThousandTwentyFourth,
+        _ if divisions_per_quarter_note / divisions <= 256 => Duration::new(
+          DurationType::OneThousandTwentyFourth,
           MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note / 256, divisions),
         ),
         _ => Duration::new(DurationType::TwoThousandFortyEighth, num_dots),

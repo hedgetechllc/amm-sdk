@@ -79,7 +79,9 @@ impl Section {
           let implicit_staff = section.borrow_mut().add_staff(retained_staff, None, None, None);
           let (note_type, num_notes) = Duration::get_minimum_divisible_notes(section_beats[idx]);
           for _ in 0..num_notes {
-            implicit_staff.borrow_mut().add_note(Pitch::Rest, Duration::new(note_type, 0), None);
+            implicit_staff
+              .borrow_mut()
+              .add_note(Pitch::new_rest(), Duration::new(note_type, 0), None);
           }
         }
         clone
@@ -317,7 +319,9 @@ impl Section {
       .iter()
       .find_map(|item| match item.borrow().get_modification() {
         SectionModificationType::TempoExplicit { tempo } => Some(*tempo),
-        SectionModificationType::TempoImplicit { tempo } => Some(Tempo::new(Duration::new(DurationType::Quarter, 0), tempo.value())),
+        SectionModificationType::TempoImplicit { tempo } => {
+          Some(Tempo::new(Duration::new(DurationType::Quarter, 0), tempo.value()))
+        }
         _ => None,
       })
   }

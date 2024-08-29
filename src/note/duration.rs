@@ -30,6 +30,7 @@ pub struct Duration {
   pub dots: u8,
 }
 
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 impl Duration {
   #[must_use]
   pub fn new(r#type: DurationType, dots: u8) -> Self {
@@ -60,11 +61,26 @@ impl Duration {
       v if v >= 0.062_5 => Duration::new(DurationType::Sixteenth, Self::dots_from_remainder(0.062_5, v)),
       v if v >= 0.031_25 => Duration::new(DurationType::ThirtySecond, Self::dots_from_remainder(0.031_25, v)),
       v if v >= 0.015_625 => Duration::new(DurationType::SixtyFourth, Self::dots_from_remainder(0.015_625, v)),
-      v if v >= 0.007_812_5 => Duration::new(DurationType::OneHundredTwentyEighth, Self::dots_from_remainder(0.007_812_5, v)),
-      v if v >= 0.003_906_25 => Duration::new(DurationType::TwoHundredFiftySixth, Self::dots_from_remainder(0.003_906_25, v)),
-      v if v >= 0.001_953_125 => Duration::new(DurationType::FiveHundredTwelfth, Self::dots_from_remainder(0.001_953_125, v)),
-      v if v >= 0.000_976_562_5 => Duration::new(DurationType::OneThousandTwentyFourth, Self::dots_from_remainder(0.000_976_562_5, v)),
-      v => Duration::new(DurationType::TwoThousandFortyEighth, Self::dots_from_remainder(0.000_488_281_25, v)),
+      v if v >= 0.007_812_5 => Duration::new(
+        DurationType::OneHundredTwentyEighth,
+        Self::dots_from_remainder(0.007_812_5, v),
+      ),
+      v if v >= 0.003_906_25 => Duration::new(
+        DurationType::TwoHundredFiftySixth,
+        Self::dots_from_remainder(0.003_906_25, v),
+      ),
+      v if v >= 0.001_953_125 => Duration::new(
+        DurationType::FiveHundredTwelfth,
+        Self::dots_from_remainder(0.001_953_125, v),
+      ),
+      v if v >= 0.000_976_562_5 => Duration::new(
+        DurationType::OneThousandTwentyFourth,
+        Self::dots_from_remainder(0.000_976_562_5, v),
+      ),
+      v => Duration::new(
+        DurationType::TwoThousandFortyEighth,
+        Self::dots_from_remainder(0.000_488_281_25, v),
+      ),
     }
   }
 
@@ -74,7 +90,7 @@ impl Duration {
   }
 
   #[must_use]
-  pub fn get_minimum_divisible_notes(beats: f64) -> (DurationType, u32) {
+  pub(crate) fn get_minimum_divisible_notes(beats: f64) -> (DurationType, u32) {
     match beats {
       beats if beats.fract() < 0.000_976_562_5 => (DurationType::Whole, beats as u32),
       beats if beats.fract() >= 0.5 => (DurationType::Half, (2.0 * beats) as u32),
@@ -110,7 +126,9 @@ impl Duration {
       DurationType::OneThousandTwentyFourth => 0.000_976_562_5,
       DurationType::TwoThousandFortyEighth => 0.000_488_281_25,
     };
-    (0..=self.dots).map(|i| base_duration / f64::powi(2.0, i32::from(i))).sum()
+    (0..=self.dots)
+      .map(|i| base_duration / f64::powi(2.0, i32::from(i)))
+      .sum()
   }
 
   #[must_use]
@@ -138,7 +156,9 @@ impl Duration {
         DurationType::OneHundredTwentyEighth => DurationType::TwoHundredFiftySixth,
         DurationType::TwoHundredFiftySixth => DurationType::FiveHundredTwelfth,
         DurationType::FiveHundredTwelfth => DurationType::OneThousandTwentyFourth,
-        DurationType::OneThousandTwentyFourth | DurationType::TwoThousandFortyEighth => DurationType::TwoThousandFortyEighth,
+        DurationType::OneThousandTwentyFourth | DurationType::TwoThousandFortyEighth => {
+          DurationType::TwoThousandFortyEighth
+        }
       };
     }
     Self::new(duration, self.dots)

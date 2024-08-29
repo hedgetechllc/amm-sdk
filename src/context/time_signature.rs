@@ -23,12 +23,20 @@ pub struct TimeSignature {
 impl TimeSignature {
   #[must_use]
   pub fn new(r#type: TimeSignatureType) -> Self {
-    Self { r#type, numerator: 4, denominator: 4 }
+    Self {
+      r#type,
+      numerator: 4,
+      denominator: 4,
+    }
   }
 
   #[must_use]
   pub fn new_explicit(numerator: u8, denominator: u8) -> Self {
-    Self { r#type: TimeSignatureType::Explicit, numerator, denominator }
+    Self {
+      r#type: TimeSignatureType::Explicit,
+      numerator,
+      denominator,
+    }
   }
 }
 
