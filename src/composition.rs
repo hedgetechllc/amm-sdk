@@ -1,12 +1,11 @@
 use crate::context::{Key, Tempo, TimeSignature};
-use crate::note::{Duration, Note};
+use crate::note::{Duration, DurationType, Note};
 use crate::structure::{Chord, MultiVoice, Part, PartTimeslice, Phrase, Section, Staff};
 use alloc::{collections::BTreeMap, rc::Rc, string::String, vec::Vec};
 use core::{cell::RefCell, slice::Iter};
 #[cfg(target_arch = "wasm32")]
-use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
 
-#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 pub struct Composition {
   title: String,
   copyright: Option<String>,
@@ -293,7 +292,7 @@ impl Composition {
   pub fn iter_timeslices(&self) -> impl IntoIterator<Item = PartTimeslice> {
     // Return PartTimeslices where each slice contains a map of parts and their current timeslice
     // Note: If you want timeslices for a single part, call iter_timeslices on the part
-    let beat_base_note = Duration::SixtyFourth(0);
+    let beat_base_note = Duration::new(DurationType::SixtyFourth, 0);
     let mut timeslices: Vec<(f64, PartTimeslice)> = Vec::new();
     for part in &self.parts {
       let part_name = part.get_name();

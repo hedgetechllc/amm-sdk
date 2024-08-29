@@ -1,8 +1,7 @@
 use alloc::string::String;
 #[cfg(target_arch = "wasm32")]
-use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
 
-#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum Pitch {
   Rest,

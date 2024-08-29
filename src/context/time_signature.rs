@@ -1,24 +1,45 @@
 #[cfg(target_arch = "wasm32")]
-use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
 
-#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Default, Eq, PartialEq)]
-pub enum TimeSignature {
+pub enum TimeSignatureType {
   #[default]
   CommonTime,
   CutTime,
-  Explicit(u8, u8),
+  Explicit,
   None,
+}
+
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[derive(Copy, Clone, Default, Eq, PartialEq)]
+pub struct TimeSignature {
+  pub r#type: TimeSignatureType,
+  pub numerator: u8,
+  pub denominator: u8,
+}
+
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+impl TimeSignature {
+  #[must_use]
+  pub fn new(r#type: TimeSignatureType) -> Self {
+    Self { r#type, numerator: 4, denominator: 4 }
+  }
+
+  #[must_use]
+  pub fn new_explicit(numerator: u8, denominator: u8) -> Self {
+    Self { r#type: TimeSignatureType::Explicit, numerator, denominator }
+  }
 }
 
 #[cfg(feature = "print")]
 impl core::fmt::Display for TimeSignature {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-    match *self {
-      Self::CommonTime => write!(f, "Common Time"),
-      Self::CutTime => write!(f, "Cut Time"),
-      Self::Explicit(numerator, denominator) => write!(f, "{numerator}/{denominator}"),
-      Self::None => write!(f, "Senza Misura"),
+    match self.r#type {
+      TimeSignatureType::CommonTime => write!(f, "Common Time"),
+      TimeSignatureType::CutTime => write!(f, "Cut Time"),
+      TimeSignatureType::Explicit => write!(f, "{}/{}", self.numerator, self.denominator),
+      TimeSignatureType::None => write!(f, "Senza Misura"),
     }
   }
 }

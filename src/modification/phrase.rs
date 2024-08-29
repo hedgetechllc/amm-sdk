@@ -1,10 +1,9 @@
-use crate::context::{generate_id, DynamicMarking};
+use crate::context::{generate_id, Dynamic, DynamicMarking};
 use alloc::rc::Rc;
 use core::cell::RefCell;
 #[cfg(target_arch = "wasm32")]
-use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
 
-#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Clone, Copy, Default, Eq, PartialEq)]
 pub enum PedalType {
   #[default]
@@ -13,13 +12,12 @@ pub enum PedalType {
   Soft,
 }
 
-#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub enum PhraseModificationType {
-  Crescendo { final_dynamic: DynamicMarking },
-  Decrescendo { final_dynamic: DynamicMarking },
+  Crescendo { final_dynamic: Dynamic },
+  Decrescendo { final_dynamic: Dynamic },
   Glissando,
-  Hairpin { maximum_dynamic: DynamicMarking },
+  Hairpin { maximum_dynamic: Dynamic },
   Legato,
   OctaveShift { num_octaves: i8 },
   Pedal { r#type: PedalType },
@@ -28,7 +26,6 @@ pub enum PhraseModificationType {
   Tuplet { num_beats: u8, into_beats: u8 },
 }
 
-#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Clone, Eq, PartialEq)]
 pub struct PhraseModification {
   id: usize,
@@ -84,7 +81,7 @@ impl core::fmt::Display for PhraseModificationType {
       Self::Crescendo { final_dynamic } => write!(
         f,
         "Crescendo{}{}",
-        if final_dynamic == &DynamicMarking::None {
+        if final_dynamic.r#type == DynamicMarking::None {
           ""
         } else {
           " to "
@@ -94,7 +91,7 @@ impl core::fmt::Display for PhraseModificationType {
       Self::Decrescendo { final_dynamic } => write!(
         f,
         "Decrescendo{}{}",
-        if final_dynamic == &DynamicMarking::None {
+        if final_dynamic.r#type == DynamicMarking::None {
           ""
         } else {
           " to "
@@ -105,7 +102,7 @@ impl core::fmt::Display for PhraseModificationType {
       Self::Hairpin { maximum_dynamic } => write!(
         f,
         "Hairpin{}{}",
-        if maximum_dynamic == &DynamicMarking::None {
+        if maximum_dynamic.r#type == DynamicMarking::None {
           ""
         } else {
           " to "

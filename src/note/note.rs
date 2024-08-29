@@ -1,5 +1,5 @@
-use super::{Accidental, Duration, Pitch};
-use crate::context::Key;
+use super::{Accidental, Duration, DurationType, Pitch};
+use crate::context::{Key, KeySignature};
 use crate::modification::NoteModification;
 use alloc::{
   rc::Rc,
@@ -8,12 +8,11 @@ use alloc::{
 };
 use core::cell::RefCell;
 #[cfg(target_arch = "wasm32")]
-use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
 
 const A4_FREQUENCY_HZ: f32 = 440.0;
 const MIDI_NUMBER_A4: i16 = 69;
 
-#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Clone, Eq)]
 pub struct Note {
   pub id: usize,
@@ -46,14 +45,16 @@ impl Note {
   }
 
   #[must_use]
-  pub fn pitch_hz(&self, key_accidentals: [Accidental; 8], a4_frequency_hz: Option<f32>) -> f32 {
-    a4_frequency_hz.unwrap_or(A4_FREQUENCY_HZ) * 2f32.powf(f32::from(self.semitone_distance(key_accidentals)) / 12.0)
+  pub fn pitch_hz(&self, key: Option<Key>, a4_frequency_hz: Option<f32>) -> f32 {
+    let accidentals = key.unwrap_or(Key::new(KeySignature::CMajor)).accidentals();
+    a4_frequency_hz.unwrap_or(A4_FREQUENCY_HZ) * 2f32.powf(f32::from(self.semitone_distance(accidentals)) / 12.0)
   }
 
   #[must_use]
   #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-  pub fn midi_number(&self, key_accidentals: [Accidental; 8]) -> u8 {
-    (MIDI_NUMBER_A4 + self.semitone_distance(key_accidentals)) as u8
+  pub fn midi_number(&self, key: Option<Key>) -> u8 {
+    let accidentals = key.unwrap_or(Key::new(KeySignature::CMajor)).accidentals();
+    (MIDI_NUMBER_A4 + self.semitone_distance(accidentals)) as u8
   }
 
   #[must_use]
@@ -64,8 +65,8 @@ impl Note {
 
 impl PartialEq for Note {
   fn eq(&self, other: &Self) -> bool {
-    let c_major_accidentals = Key::CMajor.accidentals();
-    let quarter_duration = Duration::Quarter(0).value();
+    let c_major_accidentals = Key::new(KeySignature::CMajor).accidentals();
+    let quarter_duration = Duration::new(DurationType::Quarter, 0).value();
     (self.semitone_distance(c_major_accidentals) == other.semitone_distance(c_major_accidentals))
       && (self.beats(quarter_duration) == other.beats(quarter_duration))
       && (self.is_rest() == other.is_rest())

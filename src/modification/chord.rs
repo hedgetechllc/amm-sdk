@@ -1,18 +1,17 @@
 use super::note::NoteModificationType;
-use crate::context::{generate_id, DynamicMarking};
+use crate::context::{generate_id, Dynamic};
 use alloc::rc::Rc;
 use core::cell::RefCell;
 #[cfg(target_arch = "wasm32")]
-use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
 
-#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub enum ChordModificationType {
   Accent,
   Arpeggiate,
   DetachedLegato,
   DownBow,
-  Dynamic { dynamic: DynamicMarking },
+  Dynamic { dynamic: Dynamic },
   Fermata,
   Fingernails,
   HalfMuted,
@@ -37,7 +36,6 @@ pub enum ChordModificationType {
   UpBow,
 }
 
-#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Clone, Eq, PartialEq)]
 pub struct ChordModification {
   id: usize,

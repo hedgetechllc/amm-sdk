@@ -1,18 +1,18 @@
 #[cfg(target_arch = "wasm32")]
-use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
 
-#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Default, Eq, PartialEq)]
-pub enum ClefType {
+pub enum ClefSymbol {
   #[default]
   GClef,
   CClef,
   FClef,
 }
 
-#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Default, Eq, PartialEq)]
-pub enum Clef {
+pub enum ClefType {
   #[default]
   Treble,
   Bass,
@@ -22,17 +22,30 @@ pub enum Clef {
   Alto,
   Soprano,
   MezzoSoprano,
-  Baritone(ClefType),
+  BaritoneC,
+  BaritoneF,
 }
 
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[derive(Copy, Clone, Default, Eq, PartialEq)]
+pub struct Clef {
+  pub symbol: ClefSymbol,
+  pub r#type: ClefType,
+}
+
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 impl Clef {
   #[must_use]
-  pub fn clef_type(&self) -> ClefType {
-    match self {
-      Self::Treble | Self::FrenchViolin => ClefType::GClef,
-      Self::Bass | Self::Subbass => ClefType::FClef,
-      Self::Tenor | Self::Alto | Self::Soprano | Self::MezzoSoprano => ClefType::CClef,
-      Self::Baritone(clef_type) => *clef_type,
+  pub fn new(r#type: ClefType) -> Self {
+    Self {
+      symbol: match r#type {
+        ClefType::Treble | ClefType::FrenchViolin => ClefSymbol::GClef,
+        ClefType::Bass | ClefType::Subbass => ClefSymbol::FClef,
+        ClefType::Tenor | ClefType::Alto | ClefType::Soprano | ClefType::MezzoSoprano => ClefSymbol::CClef,
+        ClefType::BaritoneC => ClefSymbol::CClef,
+        ClefType::BaritoneF => ClefSymbol::FClef,
+      },
+      r#type,
     }
   }
 }
@@ -43,20 +56,17 @@ impl core::fmt::Display for Clef {
     write!(
       f,
       "{}",
-      match self {
-        Self::Treble => "Treble",
-        Self::Bass => "Bass",
-        Self::FrenchViolin => "French Violin",
-        Self::Subbass => "Subbass",
-        Self::Tenor => "Tenor",
-        Self::Alto => "Alto",
-        Self::Soprano => "Soprano",
-        Self::MezzoSoprano => "Mezzo Soprano",
-        Self::Baritone(clef_type) => match clef_type {
-          ClefType::GClef => "Baritone (G-Clef)",
-          ClefType::CClef => "Baritone (C-Clef)",
-          ClefType::FClef => "Baritone (F-Clef)",
-        },
+      match self.r#type {
+        ClefType::Treble => "Treble",
+        ClefType::Bass => "Bass",
+        ClefType::FrenchViolin => "French Violin",
+        ClefType::Subbass => "Subbass",
+        ClefType::Tenor => "Tenor",
+        ClefType::Alto => "Alto",
+        ClefType::Soprano => "Soprano",
+        ClefType::MezzoSoprano => "Mezzo Soprano",
+        ClefType::BaritoneC => "Baritone (C-Clef)",
+        ClefType::BaritoneF => "Baritone (F-Clef)",
       }
     )
   }

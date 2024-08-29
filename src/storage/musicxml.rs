@@ -1,9 +1,9 @@
 use super::Convert;
 use crate::{
-  Accidental, Chord, ChordContent, ChordModification, ChordModificationType, Clef, ClefType, Composition, Direction,
-  DirectionType, Duration, DynamicMarking, HandbellTechnique, Key, KeyMode, MultiVoice, Note, NoteModification,
+  Accidental, Chord, ChordContent, ChordModification, ChordModificationType, Clef, ClefType, ClefSymbol, Composition, Direction,
+  DirectionType, Duration, DurationType, Dynamic, DynamicMarking, HandbellTechnique, Key, KeyMode, KeySignature, MultiVoice, Note, NoteModification,
   NoteModificationType, PedalType, Phrase, PhraseContent, PhraseModification, PhraseModificationType, Pitch, Section,
-  SectionModificationType, Staff, StaffContent, Tempo, TempoMarking, TimeSignature,
+  SectionModificationType, Staff, StaffContent, Tempo, TempoMarking, TempoSuggestion, TimeSignature, TimeSignatureType
 };
 use alloc::{
   collections::BTreeMap,
@@ -116,7 +116,7 @@ struct TimeSliceContainer {
   pub ending: Vec<(bool, Vec<u8>)>,
   pub repeat: Vec<(bool, u32)>,
   pub tempo_change_explicit: Vec<Tempo>,
-  pub tempo_change_implicit: Vec<TempoMarking>,
+  pub tempo_change_implicit: Vec<TempoSuggestion>,
   pub notes: Vec<NoteDetails>,
 }
 
@@ -267,7 +267,7 @@ impl MusicXmlConverter {
           if let musicxml::elements::MeasureElement::Attributes(attributes) = measure_element {
             for time_element in &attributes.content.time {
               for beat_element in &time_element.content.beats {
-                return TimeSignature::Explicit(
+                return TimeSignature::new_explicit(
                   (*beat_element.beats.content).parse().unwrap(),
                   (*beat_element.beat_type.content).parse().unwrap(),
                 );
@@ -285,20 +285,20 @@ impl MusicXmlConverter {
     if let musicxml::elements::MetronomeContents::BeatBased(beat_data) = &metronome.content {
       let num_dots: u8 = beat_data.beat_unit_dot.len() as u8;
       let base_note = match beat_data.beat_unit.content {
-        musicxml::datatypes::NoteTypeValue::Maxima => Duration::Maxima(num_dots),
-        musicxml::datatypes::NoteTypeValue::Long => Duration::Long(num_dots),
-        musicxml::datatypes::NoteTypeValue::Breve => Duration::Breve(num_dots),
-        musicxml::datatypes::NoteTypeValue::Whole => Duration::Whole(num_dots),
-        musicxml::datatypes::NoteTypeValue::Half => Duration::Half(num_dots),
-        musicxml::datatypes::NoteTypeValue::Quarter => Duration::Quarter(num_dots),
-        musicxml::datatypes::NoteTypeValue::Eighth => Duration::Eighth(num_dots),
-        musicxml::datatypes::NoteTypeValue::Sixteenth => Duration::Sixteenth(num_dots),
-        musicxml::datatypes::NoteTypeValue::ThirtySecond => Duration::ThirtySecond(num_dots),
-        musicxml::datatypes::NoteTypeValue::SixtyFourth => Duration::SixtyFourth(num_dots),
-        musicxml::datatypes::NoteTypeValue::OneHundredTwentyEighth => Duration::OneHundredTwentyEighth(num_dots),
-        musicxml::datatypes::NoteTypeValue::TwoHundredFiftySixth => Duration::TwoHundredFiftySixth(num_dots),
-        musicxml::datatypes::NoteTypeValue::FiveHundredTwelfth => Duration::FiveHundredTwelfth(num_dots),
-        musicxml::datatypes::NoteTypeValue::OneThousandTwentyFourth => Duration::OneThousandTwentyFourth(num_dots),
+        musicxml::datatypes::NoteTypeValue::Maxima => Duration::new(DurationType::Maxima, num_dots),
+        musicxml::datatypes::NoteTypeValue::Long => Duration::new(DurationType::Long, num_dots),
+        musicxml::datatypes::NoteTypeValue::Breve => Duration::new(DurationType::Breve, num_dots),
+        musicxml::datatypes::NoteTypeValue::Whole => Duration::new(DurationType::Whole, num_dots),
+        musicxml::datatypes::NoteTypeValue::Half => Duration::new(DurationType::Half, num_dots),
+        musicxml::datatypes::NoteTypeValue::Quarter => Duration::new(DurationType::Quarter, num_dots),
+        musicxml::datatypes::NoteTypeValue::Eighth => Duration::new(DurationType::Eighth, num_dots),
+        musicxml::datatypes::NoteTypeValue::Sixteenth => Duration::new(DurationType::Sixteenth, num_dots),
+        musicxml::datatypes::NoteTypeValue::ThirtySecond => Duration::new(DurationType::ThirtySecond, num_dots),
+        musicxml::datatypes::NoteTypeValue::SixtyFourth => Duration::new(DurationType::SixtyFourth, num_dots),
+        musicxml::datatypes::NoteTypeValue::OneHundredTwentyEighth => Duration::new(DurationType::OneHundredTwentyEighth, num_dots),
+        musicxml::datatypes::NoteTypeValue::TwoHundredFiftySixth => Duration::new(DurationType::TwoHundredFiftySixth, num_dots),
+        musicxml::datatypes::NoteTypeValue::FiveHundredTwelfth => Duration::new(DurationType::FiveHundredTwelfth, num_dots),
+        musicxml::datatypes::NoteTypeValue::OneThousandTwentyFourth => Duration::new(DurationType::OneThousandTwentyFourth, num_dots),
       };
       if let musicxml::elements::BeatEquation::BPM(per_minute) = &beat_data.equals {
         return Some(Tempo {
@@ -315,7 +315,7 @@ impl MusicXmlConverter {
       let bpm = **tempo as u16;
       if bpm > 0 {
         return Some(Tempo {
-          base_note: Duration::Quarter(0),
+          base_note: Duration::new(DurationType::Quarter, 0),
           beats_per_minute: bpm,
         });
       }
@@ -472,30 +472,30 @@ impl MusicXmlConverter {
         clef: match &item.content.sign.content {
           musicxml::datatypes::ClefSign::G => match &item.content.line {
             Some(line) => match *line.content {
-              1 => Clef::FrenchViolin,
-              _ => Clef::Treble,
+              1 => Clef::new(ClefType::FrenchViolin),
+              _ => Clef::new(ClefType::Treble),
             },
-            None => Clef::Treble,
+            None => Clef::new(ClefType::Treble),
           },
           musicxml::datatypes::ClefSign::F => match &item.content.line {
             Some(line) => match *line.content {
-              3 => Clef::Baritone(ClefType::FClef),
-              5 => Clef::Subbass,
-              _ => Clef::Bass,
+              3 => Clef::new(ClefType::BaritoneF),
+              5 => Clef::new(ClefType::Subbass),
+              _ => Clef::new(ClefType::Bass),
             },
-            None => Clef::Bass,
+            None => Clef::new(ClefType::Bass),
           },
           musicxml::datatypes::ClefSign::C => match &item.content.line {
             Some(line) => match *line.content {
-              1 => Clef::Soprano,
-              2 => Clef::MezzoSoprano,
-              4 => Clef::Tenor,
-              5 => Clef::Baritone(ClefType::CClef),
-              _ => Clef::Alto,
+              1 => Clef::new(ClefType::Soprano),
+              2 => Clef::new(ClefType::MezzoSoprano),
+              4 => Clef::new(ClefType::Tenor),
+              5 => Clef::new(ClefType::BaritoneC),
+              _ => Clef::new(ClefType::Alto),
             },
-            None => Clef::Alto,
+            None => Clef::new(ClefType::Alto),
           },
-          _ => Clef::Treble,
+          _ => Clef::new(ClefType::Treble),
         },
       };
       time_slices.get_mut(&staff_name).unwrap()[cursor].direction.push(item);
@@ -528,12 +528,12 @@ impl MusicXmlConverter {
       };
       let item = if item.content.senza_misura.is_some() {
         DirectionType::TimeSignature {
-          time_signature: TimeSignature::None,
+          time_signature: TimeSignature::new(TimeSignatureType::None),
         }
       } else {
         let beat_element = &item.content.beats[0];
         DirectionType::TimeSignature {
-          time_signature: TimeSignature::Explicit(
+          time_signature: TimeSignature::new_explicit(
             (*beat_element.beats.content).parse().unwrap(),
             (*beat_element.beat_type.content).parse().unwrap(),
           ),
@@ -587,10 +587,10 @@ impl MusicXmlConverter {
             let item = PhraseModDetails {
               modification: match wedge.attributes.r#type {
                 musicxml::datatypes::WedgeType::Diminuendo => PhraseModificationType::Decrescendo {
-                  final_dynamic: DynamicMarking::None,
+                  final_dynamic: Dynamic::new(DynamicMarking::None, 0),
                 },
                 _ => PhraseModificationType::Crescendo {
-                  final_dynamic: DynamicMarking::None,
+                  final_dynamic: Dynamic::new(DynamicMarking::None, 0),
                 },
               },
               is_start: wedge.attributes.r#type != musicxml::datatypes::WedgeType::Stop,
@@ -610,25 +610,25 @@ impl MusicXmlConverter {
         }
         musicxml::elements::DirectionTypeContents::Dynamics(dynamics) => {
           let dynamic_type = match &dynamics[0].content[0] {
-            musicxml::elements::DynamicsType::P(_) => Some(DynamicMarking::Piano(1)),
-            musicxml::elements::DynamicsType::Pp(_) => Some(DynamicMarking::Piano(2)),
-            musicxml::elements::DynamicsType::Ppp(_) => Some(DynamicMarking::Piano(3)),
-            musicxml::elements::DynamicsType::Pppp(_) => Some(DynamicMarking::Piano(4)),
-            musicxml::elements::DynamicsType::Ppppp(_) => Some(DynamicMarking::Piano(5)),
-            musicxml::elements::DynamicsType::Pppppp(_) => Some(DynamicMarking::Piano(6)),
-            musicxml::elements::DynamicsType::F(_) => Some(DynamicMarking::Forte(1)),
-            musicxml::elements::DynamicsType::Ff(_) => Some(DynamicMarking::Forte(2)),
-            musicxml::elements::DynamicsType::Fff(_) => Some(DynamicMarking::Forte(3)),
-            musicxml::elements::DynamicsType::Ffff(_) => Some(DynamicMarking::Forte(4)),
-            musicxml::elements::DynamicsType::Fffff(_) => Some(DynamicMarking::Forte(5)),
-            musicxml::elements::DynamicsType::Ffffff(_) => Some(DynamicMarking::Forte(6)),
-            musicxml::elements::DynamicsType::Mp(_) => Some(DynamicMarking::MezzoPiano),
-            musicxml::elements::DynamicsType::Mf(_) => Some(DynamicMarking::MezzoForte),
+            musicxml::elements::DynamicsType::P(_) => Some(Dynamic::new(DynamicMarking::Piano, 1)),
+            musicxml::elements::DynamicsType::Pp(_) => Some(Dynamic::new(DynamicMarking::Piano, 2)),
+            musicxml::elements::DynamicsType::Ppp(_) => Some(Dynamic::new(DynamicMarking::Piano, 3)),
+            musicxml::elements::DynamicsType::Pppp(_) => Some(Dynamic::new(DynamicMarking::Piano, 4)),
+            musicxml::elements::DynamicsType::Ppppp(_) => Some(Dynamic::new(DynamicMarking::Piano, 5)),
+            musicxml::elements::DynamicsType::Pppppp(_) => Some(Dynamic::new(DynamicMarking::Piano, 6)),
+            musicxml::elements::DynamicsType::F(_) => Some(Dynamic::new(DynamicMarking::Forte, 1)),
+            musicxml::elements::DynamicsType::Ff(_) => Some(Dynamic::new(DynamicMarking::Forte, 2)),
+            musicxml::elements::DynamicsType::Fff(_) => Some(Dynamic::new(DynamicMarking::Forte, 3)),
+            musicxml::elements::DynamicsType::Ffff(_) => Some(Dynamic::new(DynamicMarking::Forte, 4)),
+            musicxml::elements::DynamicsType::Fffff(_) => Some(Dynamic::new(DynamicMarking::Forte, 5)),
+            musicxml::elements::DynamicsType::Ffffff(_) => Some(Dynamic::new(DynamicMarking::Forte, 6)),
+            musicxml::elements::DynamicsType::Mp(_) => Some(Dynamic::new(DynamicMarking::MezzoPiano, 0)),
+            musicxml::elements::DynamicsType::Mf(_) => Some(Dynamic::new(DynamicMarking::MezzoForte, 0)),
             musicxml::elements::DynamicsType::N(_) | musicxml::elements::DynamicsType::OtherDynamics(_) => None,
-            _ => Some(DynamicMarking::None),
+            _ => Some(Dynamic::new(DynamicMarking::None, 0)),
           };
           if let Some(dynamic_type) = dynamic_type {
-            if dynamic_type == DynamicMarking::None {
+            if dynamic_type == Dynamic::new(DynamicMarking::None, 0) {
               time_slice.get_mut(&staff_name).unwrap()[cursor]
                 .chord_modification
                 .push(ChordModificationType::Accent);
@@ -884,74 +884,74 @@ impl MusicXmlConverter {
     };
     let duration = if let Some(note_type) = &note.content.r#type {
       match &note_type.content {
-        musicxml::datatypes::NoteTypeValue::Maxima => Duration::Maxima(num_dots),
-        musicxml::datatypes::NoteTypeValue::Long => Duration::Long(num_dots),
-        musicxml::datatypes::NoteTypeValue::Breve => Duration::Breve(num_dots),
-        musicxml::datatypes::NoteTypeValue::Whole => Duration::Whole(num_dots),
-        musicxml::datatypes::NoteTypeValue::Half => Duration::Half(num_dots),
-        musicxml::datatypes::NoteTypeValue::Eighth => Duration::Eighth(num_dots),
-        musicxml::datatypes::NoteTypeValue::Sixteenth => Duration::Sixteenth(num_dots),
-        musicxml::datatypes::NoteTypeValue::ThirtySecond => Duration::ThirtySecond(num_dots),
-        musicxml::datatypes::NoteTypeValue::SixtyFourth => Duration::SixtyFourth(num_dots),
-        musicxml::datatypes::NoteTypeValue::OneHundredTwentyEighth => Duration::OneHundredTwentyEighth(num_dots),
-        musicxml::datatypes::NoteTypeValue::TwoHundredFiftySixth => Duration::TwoHundredFiftySixth(num_dots),
-        musicxml::datatypes::NoteTypeValue::FiveHundredTwelfth => Duration::FiveHundredTwelfth(num_dots),
-        musicxml::datatypes::NoteTypeValue::OneThousandTwentyFourth => Duration::OneThousandTwentyFourth(num_dots),
-        _ => Duration::Quarter(num_dots),
+        musicxml::datatypes::NoteTypeValue::Maxima => Duration::new(DurationType::Maxima, num_dots),
+        musicxml::datatypes::NoteTypeValue::Long => Duration::new(DurationType::Long, num_dots),
+        musicxml::datatypes::NoteTypeValue::Breve => Duration::new(DurationType::Breve, num_dots),
+        musicxml::datatypes::NoteTypeValue::Whole => Duration::new(DurationType::Whole, num_dots),
+        musicxml::datatypes::NoteTypeValue::Half => Duration::new(DurationType::Half, num_dots),
+        musicxml::datatypes::NoteTypeValue::Eighth => Duration::new(DurationType::Eighth, num_dots),
+        musicxml::datatypes::NoteTypeValue::Sixteenth => Duration::new(DurationType::Sixteenth, num_dots),
+        musicxml::datatypes::NoteTypeValue::ThirtySecond => Duration::new(DurationType::ThirtySecond, num_dots),
+        musicxml::datatypes::NoteTypeValue::SixtyFourth => Duration::new(DurationType::SixtyFourth, num_dots),
+        musicxml::datatypes::NoteTypeValue::OneHundredTwentyEighth => Duration::new(DurationType::OneHundredTwentyEighth, num_dots),
+        musicxml::datatypes::NoteTypeValue::TwoHundredFiftySixth => Duration::new(DurationType::TwoHundredFiftySixth, num_dots),
+        musicxml::datatypes::NoteTypeValue::FiveHundredTwelfth => Duration::new(DurationType::FiveHundredTwelfth, num_dots),
+        musicxml::datatypes::NoteTypeValue::OneThousandTwentyFourth => Duration::new(DurationType::OneThousandTwentyFourth, num_dots),
+        _ => Duration::new(DurationType::Quarter, num_dots),
       }
     } else {
       match divisions {
-        _ if divisions / divisions_per_quarter_note >= 32 => Duration::Maxima(MusicXmlConverter::calculate_num_dots(
+        _ if divisions / divisions_per_quarter_note >= 32 => Duration::new(DurationType::Maxima, MusicXmlConverter::calculate_num_dots(
           32 * divisions_per_quarter_note,
           divisions,
         )),
-        _ if divisions / divisions_per_quarter_note >= 16 => Duration::Long(MusicXmlConverter::calculate_num_dots(
+        _ if divisions / divisions_per_quarter_note >= 16 => Duration::new(DurationType::Long, MusicXmlConverter::calculate_num_dots(
           16 * divisions_per_quarter_note,
           divisions,
         )),
-        _ if divisions / divisions_per_quarter_note >= 8 => Duration::Breve(MusicXmlConverter::calculate_num_dots(
+        _ if divisions / divisions_per_quarter_note >= 8 => Duration::new(DurationType::Breve, MusicXmlConverter::calculate_num_dots(
           8 * divisions_per_quarter_note,
           divisions,
         )),
-        _ if divisions / divisions_per_quarter_note >= 4 => Duration::Whole(MusicXmlConverter::calculate_num_dots(
+        _ if divisions / divisions_per_quarter_note >= 4 => Duration::new(DurationType::Whole, MusicXmlConverter::calculate_num_dots(
           4 * divisions_per_quarter_note,
           divisions,
         )),
-        _ if divisions / divisions_per_quarter_note >= 2 => Duration::Half(MusicXmlConverter::calculate_num_dots(
+        _ if divisions / divisions_per_quarter_note >= 2 => Duration::new(DurationType::Half, MusicXmlConverter::calculate_num_dots(
           2 * divisions_per_quarter_note,
           divisions,
         )),
-        _ if divisions / divisions_per_quarter_note >= 1 => Duration::Quarter(MusicXmlConverter::calculate_num_dots(
+        _ if divisions / divisions_per_quarter_note >= 1 => Duration::new(DurationType::Quarter, MusicXmlConverter::calculate_num_dots(
           1 * divisions_per_quarter_note,
           divisions,
         )),
-        _ if divisions_per_quarter_note / divisions <= 2 => Duration::Eighth(MusicXmlConverter::calculate_num_dots(
+        _ if divisions_per_quarter_note / divisions <= 2 => Duration::new(DurationType::Eighth, MusicXmlConverter::calculate_num_dots(
           divisions_per_quarter_note / 2,
           divisions,
         )),
-        _ if divisions_per_quarter_note / divisions <= 4 => Duration::Sixteenth(MusicXmlConverter::calculate_num_dots(
+        _ if divisions_per_quarter_note / divisions <= 4 => Duration::new(DurationType::Sixteenth, MusicXmlConverter::calculate_num_dots(
           divisions_per_quarter_note / 4,
           divisions,
         )),
-        _ if divisions_per_quarter_note / divisions <= 8 => Duration::ThirtySecond(
+        _ if divisions_per_quarter_note / divisions <= 8 => Duration::new(DurationType::ThirtySecond,
           MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note / 8, divisions),
         ),
-        _ if divisions_per_quarter_note / divisions <= 16 => Duration::SixtyFourth(
+        _ if divisions_per_quarter_note / divisions <= 16 => Duration::new(DurationType::SixtyFourth,
           MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note / 16, divisions),
         ),
-        _ if divisions_per_quarter_note / divisions <= 32 => Duration::OneHundredTwentyEighth(
+        _ if divisions_per_quarter_note / divisions <= 32 => Duration::new(DurationType::OneHundredTwentyEighth,
           MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note / 32, divisions),
         ),
-        _ if divisions_per_quarter_note / divisions <= 64 => Duration::TwoHundredFiftySixth(
+        _ if divisions_per_quarter_note / divisions <= 64 => Duration::new(DurationType::TwoHundredFiftySixth,
           MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note / 64, divisions),
         ),
-        _ if divisions_per_quarter_note / divisions <= 128 => Duration::FiveHundredTwelfth(
+        _ if divisions_per_quarter_note / divisions <= 128 => Duration::new(DurationType::FiveHundredTwelfth,
           MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note / 128, divisions),
         ),
-        _ if divisions_per_quarter_note / divisions <= 256 => Duration::OneThousandTwentyFourth(
+        _ if divisions_per_quarter_note / divisions <= 256 => Duration::new(DurationType::OneThousandTwentyFourth,
           MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note / 256, divisions),
         ),
-        _ => Duration::TwoThousandFortyEighth(num_dots),
+        _ => Duration::new(DurationType::TwoThousandFortyEighth, num_dots),
       }
     };
     let voice = note.content.voice.as_ref().map(|voice| voice.content.clone());
@@ -1270,54 +1270,54 @@ impl MusicXmlConverter {
           }
           musicxml::elements::NotationContentTypes::Dynamics(dynamics) => match &dynamics.content[0] {
             musicxml::elements::DynamicsType::P(_p) => note_modifications.push(NoteModificationType::Dynamic {
-              dynamic: DynamicMarking::Piano(1),
+              dynamic: Dynamic::new(DynamicMarking::Piano, 1),
             }),
             musicxml::elements::DynamicsType::Pp(_pp) => note_modifications.push(NoteModificationType::Dynamic {
-              dynamic: DynamicMarking::Piano(2),
+              dynamic: Dynamic::new(DynamicMarking::Piano, 2),
             }),
             musicxml::elements::DynamicsType::Ppp(_ppp) => note_modifications.push(NoteModificationType::Dynamic {
-              dynamic: DynamicMarking::Piano(3),
+              dynamic: Dynamic::new(DynamicMarking::Piano, 3),
             }),
             musicxml::elements::DynamicsType::Pppp(_pppp) => note_modifications.push(NoteModificationType::Dynamic {
-              dynamic: DynamicMarking::Piano(4),
+              dynamic: Dynamic::new(DynamicMarking::Piano, 4),
             }),
             musicxml::elements::DynamicsType::Ppppp(_pppp_it) => {
               note_modifications.push(NoteModificationType::Dynamic {
-                dynamic: DynamicMarking::Piano(5),
+                dynamic: Dynamic::new(DynamicMarking::Piano, 5),
               });
             }
             musicxml::elements::DynamicsType::Pppppp(_ppp_it) => {
               note_modifications.push(NoteModificationType::Dynamic {
-                dynamic: DynamicMarking::Piano(6),
+                dynamic: Dynamic::new(DynamicMarking::Piano, 6),
               });
             }
             musicxml::elements::DynamicsType::F(_f) => note_modifications.push(NoteModificationType::Dynamic {
-              dynamic: DynamicMarking::Forte(1),
+              dynamic: Dynamic::new(DynamicMarking::Forte, 1),
             }),
             musicxml::elements::DynamicsType::Ff(_ff) => note_modifications.push(NoteModificationType::Dynamic {
-              dynamic: DynamicMarking::Forte(2),
+              dynamic: Dynamic::new(DynamicMarking::Forte, 2),
             }),
             musicxml::elements::DynamicsType::Fff(_fff) => note_modifications.push(NoteModificationType::Dynamic {
-              dynamic: DynamicMarking::Forte(3),
+              dynamic: Dynamic::new(DynamicMarking::Forte, 3),
             }),
             musicxml::elements::DynamicsType::Ffff(_ffff) => note_modifications.push(NoteModificationType::Dynamic {
-              dynamic: DynamicMarking::Forte(4),
+              dynamic: Dynamic::new(DynamicMarking::Forte, 4),
             }),
             musicxml::elements::DynamicsType::Fffff(_ffff_it) => {
               note_modifications.push(NoteModificationType::Dynamic {
-                dynamic: DynamicMarking::Forte(5),
+                dynamic: Dynamic::new(DynamicMarking::Forte, 5),
               });
             }
             musicxml::elements::DynamicsType::Ffffff(_fff_it) => {
               note_modifications.push(NoteModificationType::Dynamic {
-                dynamic: DynamicMarking::Forte(6),
+                dynamic: Dynamic::new(DynamicMarking::Forte, 6),
               });
             }
             musicxml::elements::DynamicsType::Mp(_mp) => note_modifications.push(NoteModificationType::Dynamic {
-              dynamic: DynamicMarking::MezzoPiano,
+              dynamic: Dynamic::new(DynamicMarking::MezzoPiano, 0),
             }),
             musicxml::elements::DynamicsType::Mf(_mf) => note_modifications.push(NoteModificationType::Dynamic {
-              dynamic: DynamicMarking::MezzoForte,
+              dynamic: Dynamic::new(DynamicMarking::MezzoForte, 0),
             }),
             musicxml::elements::DynamicsType::N(_) | musicxml::elements::DynamicsType::OtherDynamics(_) => (),
             _ => note_modifications.push(NoteModificationType::Accent),

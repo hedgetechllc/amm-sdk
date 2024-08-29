@@ -1,6 +1,6 @@
 use super::Convert;
 use crate::{
-  Accidental, Chord, ChordModificationType, Clef, ClefType, Composition, DirectionType, Duration, DynamicMarking, Key,
+  Accidental, Chord, ChordModificationType, Clef, ClefType, Composition, DirectionType, Duration, Dynamic, DynamicMarking, Key,
   KeyMode, NoteModificationType, PedalType, Phrase, PhraseModificationType, Pitch, Section, SectionModificationType,
   Tempo, TimeSignature,
 };
@@ -20,6 +20,11 @@ impl MidiConverter {
     // TODO: Fill in metadata from MIDI, set correct title, etc.
 
     // TODO: Implement construction of Composition from MIDI
+    let mut part = composition.add_part("todo_part_name");
+    let section = part.add_default_section();
+    let staff_rc = section.borrow_mut().add_staff("todo_staff_name", None, None, None);
+    let mut staff = staff_rc.borrow_mut();
+    staff.add_chord();
 
     // Return the fully constructed composition
     Ok(composition)

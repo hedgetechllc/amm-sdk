@@ -13,13 +13,13 @@ mod structure;
 pub mod wasm;
 
 pub use composition::Composition;
-pub use context::{Clef, ClefType, DynamicMarking, Key, KeyMode, Tempo, TempoMarking, TimeSignature};
+pub use context::{Clef, ClefType, ClefSymbol, Dynamic, DynamicMarking, Key, KeyMode, KeySignature, Tempo, TempoMarking, TempoSuggestion, TimeSignature, TimeSignatureType};
 pub use modification::{
   ChordModification, ChordModificationType, Direction, DirectionType, HandbellTechnique, NoteModification,
   NoteModificationType, PedalType, PhraseModification, PhraseModificationType, SectionModification,
   SectionModificationType,
 };
-pub use note::{Accidental, Duration, Note, Pitch};
+pub use note::{Accidental, Duration, DurationType, Note, Pitch};
 pub use storage::Storage;
 pub use structure::{
   Chord, ChordContent, MultiVoice, MultiVoiceContent, Part, PartContent, PartTimeslice, Phrase, PhraseContent, Section,

@@ -1,23 +1,21 @@
-use crate::context::{generate_id, Clef, DynamicMarking, Key, TimeSignature};
+use crate::context::{generate_id, Clef, Dynamic, Key, TimeSignature};
 use alloc::{rc::Rc, string::String};
 use core::cell::RefCell;
 #[cfg(target_arch = "wasm32")]
-use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
 
-#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum DirectionType {
   AccordionRegistration { high: bool, middle: u8, low: bool },
   BreathMark,
   Caesura,
   Clef { clef: Clef },
-  Dynamic { dynamic: DynamicMarking },
+  Dynamic { dynamic: Dynamic },
   Key { key: Key },
   StringMute { on: bool },
   TimeSignature { time_signature: TimeSignature },
 }
 
-#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Clone, Eq, PartialEq)]
 pub struct Direction {
   id: usize,

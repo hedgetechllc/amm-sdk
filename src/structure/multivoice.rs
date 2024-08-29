@@ -5,19 +5,17 @@ use super::{
 };
 use crate::context::{generate_id, Tempo};
 use crate::modification::{ChordModificationType, NoteModificationType, PhraseModification, PhraseModificationType};
-use crate::note::{Duration, Note};
+use crate::note::{Duration, DurationType, Note};
 use alloc::{rc::Rc, string::ToString, vec::Vec};
 use core::{cell::RefCell, slice::Iter};
 #[cfg(target_arch = "wasm32")]
-use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
 
-#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Clone)]
 pub enum MultiVoiceContent {
   Phrase(Rc<RefCell<Phrase>>),
 }
 
-#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Clone)]
 pub struct MultiVoice {
   pub(crate) id: usize,
@@ -38,7 +36,7 @@ impl MultiVoice {
   pub fn flatten(&self) -> Rc<RefCell<Phrase>> {
     // Note: Loses any modifications on contained phrases
     // Flatten all multi-voice content into individual phrases containing only notes and chords
-    let beat_base_note = Duration::SixtyFourth(0);
+    let beat_base_note = Duration::new(DurationType::SixtyFourth, 0);
     let phrases: Vec<Rc<RefCell<Phrase>>> = self
       .content
       .iter()
@@ -117,7 +115,7 @@ impl MultiVoice {
                         ChordContent::Note(note) => note.borrow().duration.split(into_beats),
                       })
                       .reduce(|min, duration| if min.value() < duration.value() { min } else { duration })
-                      .unwrap_or(Duration::Eighth(0));
+                      .unwrap_or(Duration::new(DurationType::Eighth, 0));
                     updated_chord.borrow_mut().add_modification(ChordModificationType::Tie);
                     updated_phrase
                       .content
@@ -457,7 +455,7 @@ impl MultiVoice {
 
   #[must_use]
   pub fn iter_timeslices(&self) -> Vec<Timeslice> {
-    let beat_base_note = Duration::SixtyFourth(0);
+    let beat_base_note = Duration::new(DurationType::SixtyFourth, 0);
     let mut timeslices: Vec<(f64, Timeslice)> = Vec::new();
     self.content.iter().for_each(|item| {
       let (mut index, mut curr_time) = (0, 0.0);
@@ -540,12 +538,12 @@ mod test {
       num_beats: 3,
       into_beats: 2,
     });
-    phrase1.borrow_mut().add_note(Pitch::C(4), Duration::Eighth(0), None);
+    phrase1.borrow_mut().add_note(Pitch::C(4), Duration::new(DurationType::Eighth, 0), None);
     phrase1
       .borrow_mut()
-      .add_note(Pitch::C(4), Duration::Eighth(0), Some(Accidental::Sharp));
-    phrase1.borrow_mut().add_note(Pitch::C(4), Duration::Eighth(0), None);
-    phrase2.borrow_mut().add_note(Pitch::E(4), Duration::Quarter(0), None);
+      .add_note(Pitch::C(4), Duration::new(DurationType::Eighth, 0), Some(Accidental::Sharp));
+    phrase1.borrow_mut().add_note(Pitch::C(4), Duration::new(DurationType::Eighth, 0), None);
+    phrase2.borrow_mut().add_note(Pitch::E(4), Duration::new(DurationType::Quarter, 0), None);
     /*println!(
       "MultiVoice Normal to Tuplet: {}",
       multivoice.borrow().flatten().borrow()
@@ -561,13 +559,13 @@ mod test {
       num_beats: 3,
       into_beats: 2,
     });
-    phrase1.borrow_mut().add_note(Pitch::C(4), Duration::Eighth(0), None);
+    phrase1.borrow_mut().add_note(Pitch::C(4), Duration::new(DurationType::Eighth, 0), None);
     phrase1
       .borrow_mut()
-      .add_note(Pitch::C(4), Duration::Eighth(0), Some(Accidental::Sharp));
-    phrase1.borrow_mut().add_note(Pitch::C(4), Duration::Eighth(0), None);
-    phrase2.borrow_mut().add_note(Pitch::E(4), Duration::Eighth(0), None);
-    phrase2.borrow_mut().add_note(Pitch::E(4), Duration::Eighth(0), None);
+      .add_note(Pitch::C(4), Duration::new(DurationType::Eighth, 0), Some(Accidental::Sharp));
+    phrase1.borrow_mut().add_note(Pitch::C(4), Duration::new(DurationType::Eighth, 0), None);
+    phrase2.borrow_mut().add_note(Pitch::E(4), Duration::new(DurationType::Eighth, 0), None);
+    phrase2.borrow_mut().add_note(Pitch::E(4), Duration::new(DurationType::Eighth, 0), None);
     /*println!(
       "MultiVoice Tuplet to Normal: {}",
       multivoice.borrow().flatten().borrow()
@@ -583,18 +581,18 @@ mod test {
       num_beats: 3,
       into_beats: 2,
     });
-    phrase1.borrow_mut().add_note(Pitch::C(4), Duration::Eighth(0), None);
+    phrase1.borrow_mut().add_note(Pitch::C(4), Duration::new(DurationType::Eighth, 0), None);
     phrase1
       .borrow_mut()
-      .add_note(Pitch::C(4), Duration::Eighth(0), Some(Accidental::Sharp));
-    phrase1.borrow_mut().add_note(Pitch::C(4), Duration::Eighth(0), None);
+      .add_note(Pitch::C(4), Duration::new(DurationType::Eighth, 0), Some(Accidental::Sharp));
+    phrase1.borrow_mut().add_note(Pitch::C(4), Duration::new(DurationType::Eighth, 0), None);
     phrase2.borrow_mut().add_modification(PhraseModificationType::Tuplet {
       num_beats: 3,
       into_beats: 2,
     });
-    phrase2.borrow_mut().add_note(Pitch::E(4), Duration::Eighth(0), None);
-    phrase2.borrow_mut().add_note(Pitch::F(4), Duration::Eighth(0), None);
-    phrase2.borrow_mut().add_note(Pitch::E(4), Duration::Eighth(0), None);
+    phrase2.borrow_mut().add_note(Pitch::E(4), Duration::new(DurationType::Eighth, 0), None);
+    phrase2.borrow_mut().add_note(Pitch::F(4), Duration::new(DurationType::Eighth, 0), None);
+    phrase2.borrow_mut().add_note(Pitch::E(4), Duration::new(DurationType::Eighth, 0), None);
     /*println!(
       "MultiVoice Tuplet to Tuplet: {}",
       multivoice.borrow().flatten().borrow()
@@ -614,17 +612,17 @@ mod test {
       num_beats: 3,
       into_beats: 2,
     });
-    phrase1.borrow_mut().add_note(Pitch::C(4), Duration::Eighth(0), None);
+    phrase1.borrow_mut().add_note(Pitch::C(4), Duration::new(DurationType::Eighth, 0), None);
     phrase1
       .borrow_mut()
-      .add_note(Pitch::C(4), Duration::Eighth(0), Some(Accidental::Sharp));
-    phrase1.borrow_mut().add_note(Pitch::C(4), Duration::Eighth(0), None);
-    phrase2.borrow_mut().add_note(Pitch::E(4), Duration::Whole(1), None);
-    phrase3.borrow_mut().add_note(Pitch::A(4), Duration::Sixteenth(0), None);
-    phrase4.borrow_mut().add_note(Pitch::B(4), Duration::Half(0), None);
+      .add_note(Pitch::C(4), Duration::new(DurationType::Eighth, 0), Some(Accidental::Sharp));
+    phrase1.borrow_mut().add_note(Pitch::C(4), Duration::new(DurationType::Eighth, 0), None);
+    phrase2.borrow_mut().add_note(Pitch::E(4), Duration::new(DurationType::Whole, 1), None);
+    phrase3.borrow_mut().add_note(Pitch::A(4), Duration::new(DurationType::Sixteenth, 0), None);
+    phrase4.borrow_mut().add_note(Pitch::B(4), Duration::new(DurationType::Half, 0), None);
     phrase4
       .borrow_mut()
-      .add_note(Pitch::B(4), Duration::Half(0), Some(Accidental::Flat));
+      .add_note(Pitch::B(4), Duration::new(DurationType::Half, 0), Some(Accidental::Flat));
     //println!("MultiVoice Flatten: {}", multivoice.borrow().flatten().borrow());
   }
 }

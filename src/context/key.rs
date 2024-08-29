@@ -1,8 +1,40 @@
 use crate::note::Accidental;
 #[cfg(target_arch = "wasm32")]
-use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
 
-#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
+const FIFTHS_A_MAJOR: i8 = 3;
+const FIFTHS_A_FLAT_MAJOR: i8 = -4;
+const FIFTHS_B_MAJOR: i8 = 5;
+const FIFTHS_B_FLAT_MAJOR: i8 = -2;
+const FIFTHS_C_MAJOR: i8 = 0;
+const FIFTHS_C_SHARP_MAJOR: i8 = 7;
+const FIFTHS_C_FLAT_MAJOR: i8 = -7;
+const FIFTHS_D_MAJOR: i8 = 2;
+const FIFTHS_D_FLAT_MAJOR: i8 = -5;
+const FIFTHS_E_MAJOR: i8 = 4;
+const FIFTHS_E_FLAT_MAJOR: i8 = -3;
+const FIFTHS_F_MAJOR: i8 = -1;
+const FIFTHS_F_SHARP_MAJOR: i8 = 6;
+const FIFTHS_G_MAJOR: i8 = 1;
+const FIFTHS_G_FLAT_MAJOR: i8 = -6;
+
+const FIFTHS_F_SHARP_MINOR: i8 = 3;
+const FIFTHS_F_MINOR: i8 = -4;
+const FIFTHS_G_SHARP_MINOR: i8 = 5;
+const FIFTHS_G_MINOR: i8 = -2;
+const FIFTHS_A_MINOR: i8 = 0;
+const FIFTHS_A_SHARP_MINOR: i8 = 7;
+const FIFTHS_A_FLAT_MINOR: i8 = -7;
+const FIFTHS_B_MINOR: i8 = 2;
+const FIFTHS_B_FLAT_MINOR: i8 = -5;
+const FIFTHS_C_SHARP_MINOR: i8 = 4;
+const FIFTHS_C_MINOR: i8 = -3;
+const FIFTHS_D_MINOR: i8 = -1;
+const FIFTHS_D_SHARP_MINOR: i8 = 6;
+const FIFTHS_E_MINOR: i8 = 1;
+const FIFTHS_E_FLAT_MINOR: i8 = -6;
+
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Default, Eq, PartialEq)]
 pub enum KeyMode {
   #[default]
@@ -10,9 +42,9 @@ pub enum KeyMode {
   Minor,
 }
 
-#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Default, Eq, PartialEq)]
-pub enum Key {
+pub enum KeySignature {
   AMajor,
   AMinor,
   ASharpMinor,
@@ -46,116 +78,133 @@ pub enum Key {
   GFlatMajor,
 }
 
-impl Key {
-  const FIFTHS_A_MAJOR: i8 = 3;
-  const FIFTHS_A_FLAT_MAJOR: i8 = -4;
-  const FIFTHS_B_MAJOR: i8 = 5;
-  const FIFTHS_B_FLAT_MAJOR: i8 = -2;
-  const FIFTHS_C_MAJOR: i8 = 0;
-  const FIFTHS_C_SHARP_MAJOR: i8 = 7;
-  const FIFTHS_C_FLAT_MAJOR: i8 = -7;
-  const FIFTHS_D_MAJOR: i8 = 2;
-  const FIFTHS_D_FLAT_MAJOR: i8 = -5;
-  const FIFTHS_E_MAJOR: i8 = 4;
-  const FIFTHS_E_FLAT_MAJOR: i8 = -3;
-  const FIFTHS_F_MAJOR: i8 = -1;
-  const FIFTHS_F_SHARP_MAJOR: i8 = 6;
-  const FIFTHS_G_MAJOR: i8 = 1;
-  const FIFTHS_G_FLAT_MAJOR: i8 = -6;
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[derive(Copy, Clone, Default, Eq, PartialEq)]
+pub struct Key {
+  pub mode: KeyMode,
+  pub r#type: KeySignature,
+}
 
-  const FIFTHS_F_SHARP_MINOR: i8 = 3;
-  const FIFTHS_F_MINOR: i8 = -4;
-  const FIFTHS_G_SHARP_MINOR: i8 = 5;
-  const FIFTHS_G_MINOR: i8 = -2;
-  const FIFTHS_A_MINOR: i8 = 0;
-  const FIFTHS_A_SHARP_MINOR: i8 = 7;
-  const FIFTHS_A_FLAT_MINOR: i8 = -7;
-  const FIFTHS_B_MINOR: i8 = 2;
-  const FIFTHS_B_FLAT_MINOR: i8 = -5;
-  const FIFTHS_C_SHARP_MINOR: i8 = 4;
-  const FIFTHS_C_MINOR: i8 = -3;
-  const FIFTHS_D_MINOR: i8 = -1;
-  const FIFTHS_D_SHARP_MINOR: i8 = 6;
-  const FIFTHS_E_MINOR: i8 = 1;
-  const FIFTHS_E_FLAT_MINOR: i8 = -6;
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+impl Key {
+  #[must_use]
+  pub fn new(r#type: KeySignature) -> Self {
+    Self {
+      r#type,
+      mode: match r#type {
+        KeySignature::AMajor
+        | KeySignature::AFlatMajor
+        | KeySignature::BMajor
+        | KeySignature::BFlatMajor
+        | KeySignature::CMajor
+        | KeySignature::CSharpMajor
+        | KeySignature::CFlatMajor
+        | KeySignature::DMajor
+        | KeySignature::DFlatMajor
+        | KeySignature::EMajor
+        | KeySignature::EFlatMajor
+        | KeySignature::FMajor
+        | KeySignature::FSharpMajor
+        | KeySignature::GMajor
+        | KeySignature::GFlatMajor => KeyMode::Major,
+        KeySignature::AMinor
+        | KeySignature::ASharpMinor
+        | KeySignature::AFlatMinor
+        | KeySignature::BMinor
+        | KeySignature::BFlatMinor
+        | KeySignature::CMinor
+        | KeySignature::CSharpMinor
+        | KeySignature::DMinor
+        | KeySignature::DSharpMinor
+        | KeySignature::EMinor
+        | KeySignature::EFlatMinor
+        | KeySignature::FMinor
+        | KeySignature::FSharpMinor
+        | KeySignature::GMinor
+        | KeySignature::GSharpMinor => KeyMode::Minor,
+      },
+    }
+  }
 
   #[must_use]
   pub fn from_fifths(fifths: i8, mode: Option<KeyMode>) -> Self {
-    match (fifths, mode.unwrap_or(KeyMode::Major)) {
-      (Self::FIFTHS_A_MAJOR, KeyMode::Major) => Self::AMajor,
-      (Self::FIFTHS_A_FLAT_MAJOR, KeyMode::Major) => Self::AFlatMajor,
-      (Self::FIFTHS_B_MAJOR, KeyMode::Major) => Self::BMajor,
-      (Self::FIFTHS_B_FLAT_MAJOR, KeyMode::Major) => Self::BFlatMajor,
-      (Self::FIFTHS_C_SHARP_MAJOR, KeyMode::Major) => Self::CSharpMajor,
-      (Self::FIFTHS_C_FLAT_MAJOR, KeyMode::Major) => Self::CFlatMajor,
-      (Self::FIFTHS_D_MAJOR, KeyMode::Major) => Self::DMajor,
-      (Self::FIFTHS_D_FLAT_MAJOR, KeyMode::Major) => Self::DFlatMajor,
-      (Self::FIFTHS_E_MAJOR, KeyMode::Major) => Self::EMajor,
-      (Self::FIFTHS_E_FLAT_MAJOR, KeyMode::Major) => Self::EFlatMajor,
-      (Self::FIFTHS_F_MAJOR, KeyMode::Major) => Self::FMajor,
-      (Self::FIFTHS_F_SHARP_MAJOR, KeyMode::Major) => Self::FSharpMajor,
-      (Self::FIFTHS_G_MAJOR, KeyMode::Major) => Self::GMajor,
-      (Self::FIFTHS_G_FLAT_MAJOR, KeyMode::Major) => Self::GFlatMajor,
-      (Self::FIFTHS_F_SHARP_MINOR, KeyMode::Minor) => Self::FSharpMinor,
-      (Self::FIFTHS_F_MINOR, KeyMode::Minor) => Self::FMinor,
-      (Self::FIFTHS_G_SHARP_MINOR, KeyMode::Minor) => Self::GSharpMinor,
-      (Self::FIFTHS_G_MINOR, KeyMode::Minor) => Self::GMinor,
-      (Self::FIFTHS_A_MINOR, KeyMode::Minor) => Self::AMinor,
-      (Self::FIFTHS_A_SHARP_MINOR, KeyMode::Minor) => Self::ASharpMinor,
-      (Self::FIFTHS_A_FLAT_MINOR, KeyMode::Minor) => Self::AFlatMinor,
-      (Self::FIFTHS_B_MINOR, KeyMode::Minor) => Self::BMinor,
-      (Self::FIFTHS_B_FLAT_MINOR, KeyMode::Minor) => Self::BFlatMinor,
-      (Self::FIFTHS_C_SHARP_MINOR, KeyMode::Minor) => Self::CSharpMinor,
-      (Self::FIFTHS_C_MINOR, KeyMode::Minor) => Self::CMinor,
-      (Self::FIFTHS_D_MINOR, KeyMode::Minor) => Self::DMinor,
-      (Self::FIFTHS_D_SHARP_MINOR, KeyMode::Minor) => Self::DSharpMinor,
-      (Self::FIFTHS_E_MINOR, KeyMode::Minor) => Self::EMinor,
-      (Self::FIFTHS_E_FLAT_MINOR, KeyMode::Minor) => Self::EFlatMinor,
-      _ => Self::CMajor,
-    }
+    Key::new(match (fifths, mode.unwrap_or(KeyMode::Major)) {
+      (FIFTHS_A_MAJOR, KeyMode::Major) => KeySignature::AMajor,
+      (FIFTHS_A_FLAT_MAJOR, KeyMode::Major) => KeySignature::AFlatMajor,
+      (FIFTHS_B_MAJOR, KeyMode::Major) => KeySignature::BMajor,
+      (FIFTHS_B_FLAT_MAJOR, KeyMode::Major) => KeySignature::BFlatMajor,
+      (FIFTHS_C_SHARP_MAJOR, KeyMode::Major) => KeySignature::CSharpMajor,
+      (FIFTHS_C_FLAT_MAJOR, KeyMode::Major) => KeySignature::CFlatMajor,
+      (FIFTHS_D_MAJOR, KeyMode::Major) => KeySignature::DMajor,
+      (FIFTHS_D_FLAT_MAJOR, KeyMode::Major) => KeySignature::DFlatMajor,
+      (FIFTHS_E_MAJOR, KeyMode::Major) => KeySignature::EMajor,
+      (FIFTHS_E_FLAT_MAJOR, KeyMode::Major) => KeySignature::EFlatMajor,
+      (FIFTHS_F_MAJOR, KeyMode::Major) => KeySignature::FMajor,
+      (FIFTHS_F_SHARP_MAJOR, KeyMode::Major) => KeySignature::FSharpMajor,
+      (FIFTHS_G_MAJOR, KeyMode::Major) => KeySignature::GMajor,
+      (FIFTHS_G_FLAT_MAJOR, KeyMode::Major) => KeySignature::GFlatMajor,
+      (FIFTHS_F_SHARP_MINOR, KeyMode::Minor) => KeySignature::FSharpMinor,
+      (FIFTHS_F_MINOR, KeyMode::Minor) => KeySignature::FMinor,
+      (FIFTHS_G_SHARP_MINOR, KeyMode::Minor) => KeySignature::GSharpMinor,
+      (FIFTHS_G_MINOR, KeyMode::Minor) => KeySignature::GMinor,
+      (FIFTHS_A_MINOR, KeyMode::Minor) => KeySignature::AMinor,
+      (FIFTHS_A_SHARP_MINOR, KeyMode::Minor) => KeySignature::ASharpMinor,
+      (FIFTHS_A_FLAT_MINOR, KeyMode::Minor) => KeySignature::AFlatMinor,
+      (FIFTHS_B_MINOR, KeyMode::Minor) => KeySignature::BMinor,
+      (FIFTHS_B_FLAT_MINOR, KeyMode::Minor) => KeySignature::BFlatMinor,
+      (FIFTHS_C_SHARP_MINOR, KeyMode::Minor) => KeySignature::CSharpMinor,
+      (FIFTHS_C_MINOR, KeyMode::Minor) => KeySignature::CMinor,
+      (FIFTHS_D_MINOR, KeyMode::Minor) => KeySignature::DMinor,
+      (FIFTHS_D_SHARP_MINOR, KeyMode::Minor) => KeySignature::DSharpMinor,
+      (FIFTHS_E_MINOR, KeyMode::Minor) => KeySignature::EMinor,
+      (FIFTHS_E_FLAT_MINOR, KeyMode::Minor) => KeySignature::EFlatMinor,
+      _ => KeySignature::CMajor,
+    })
   }
 
   #[must_use]
   pub fn fifths(&self) -> i8 {
-    match self {
-      Self::AMajor => Self::FIFTHS_A_MAJOR,
-      Self::AMinor => Self::FIFTHS_A_MINOR,
-      Self::ASharpMinor => Self::FIFTHS_A_SHARP_MINOR,
-      Self::AFlatMajor => Self::FIFTHS_A_FLAT_MAJOR,
-      Self::AFlatMinor => Self::FIFTHS_A_FLAT_MINOR,
-      Self::BMajor => Self::FIFTHS_B_MAJOR,
-      Self::BMinor => Self::FIFTHS_B_MINOR,
-      Self::BFlatMajor => Self::FIFTHS_B_FLAT_MAJOR,
-      Self::BFlatMinor => Self::FIFTHS_B_FLAT_MINOR,
-      Self::CMajor => Self::FIFTHS_C_MAJOR,
-      Self::CMinor => Self::FIFTHS_C_MINOR,
-      Self::CSharpMajor => Self::FIFTHS_C_SHARP_MAJOR,
-      Self::CSharpMinor => Self::FIFTHS_C_SHARP_MINOR,
-      Self::CFlatMajor => Self::FIFTHS_C_FLAT_MAJOR,
-      Self::DMajor => Self::FIFTHS_D_MAJOR,
-      Self::DMinor => Self::FIFTHS_D_MINOR,
-      Self::DSharpMinor => Self::FIFTHS_D_SHARP_MINOR,
-      Self::DFlatMajor => Self::FIFTHS_D_FLAT_MAJOR,
-      Self::EMajor => Self::FIFTHS_E_MAJOR,
-      Self::EMinor => Self::FIFTHS_E_MINOR,
-      Self::EFlatMajor => Self::FIFTHS_E_FLAT_MAJOR,
-      Self::EFlatMinor => Self::FIFTHS_E_FLAT_MINOR,
-      Self::FMajor => Self::FIFTHS_F_MAJOR,
-      Self::FMinor => Self::FIFTHS_F_MINOR,
-      Self::FSharpMajor => Self::FIFTHS_F_SHARP_MAJOR,
-      Self::FSharpMinor => Self::FIFTHS_F_SHARP_MINOR,
-      Self::GMajor => Self::FIFTHS_G_MAJOR,
-      Self::GMinor => Self::FIFTHS_G_MINOR,
-      Self::GSharpMinor => Self::FIFTHS_G_SHARP_MINOR,
-      Self::GFlatMajor => Self::FIFTHS_G_FLAT_MAJOR,
+    match self.r#type {
+      KeySignature::AMajor => FIFTHS_A_MAJOR,
+      KeySignature::AMinor => FIFTHS_A_MINOR,
+      KeySignature::ASharpMinor => FIFTHS_A_SHARP_MINOR,
+      KeySignature::AFlatMajor => FIFTHS_A_FLAT_MAJOR,
+      KeySignature::AFlatMinor => FIFTHS_A_FLAT_MINOR,
+      KeySignature::BMajor => FIFTHS_B_MAJOR,
+      KeySignature::BMinor => FIFTHS_B_MINOR,
+      KeySignature::BFlatMajor => FIFTHS_B_FLAT_MAJOR,
+      KeySignature::BFlatMinor => FIFTHS_B_FLAT_MINOR,
+      KeySignature::CMajor => FIFTHS_C_MAJOR,
+      KeySignature::CMinor => FIFTHS_C_MINOR,
+      KeySignature::CSharpMajor => FIFTHS_C_SHARP_MAJOR,
+      KeySignature::CSharpMinor => FIFTHS_C_SHARP_MINOR,
+      KeySignature::CFlatMajor => FIFTHS_C_FLAT_MAJOR,
+      KeySignature::DMajor => FIFTHS_D_MAJOR,
+      KeySignature::DMinor => FIFTHS_D_MINOR,
+      KeySignature::DSharpMinor => FIFTHS_D_SHARP_MINOR,
+      KeySignature::DFlatMajor => FIFTHS_D_FLAT_MAJOR,
+      KeySignature::EMajor => FIFTHS_E_MAJOR,
+      KeySignature::EMinor => FIFTHS_E_MINOR,
+      KeySignature::EFlatMajor => FIFTHS_E_FLAT_MAJOR,
+      KeySignature::EFlatMinor => FIFTHS_E_FLAT_MINOR,
+      KeySignature::FMajor => FIFTHS_F_MAJOR,
+      KeySignature::FMinor => FIFTHS_F_MINOR,
+      KeySignature::FSharpMajor => FIFTHS_F_SHARP_MAJOR,
+      KeySignature::FSharpMinor => FIFTHS_F_SHARP_MINOR,
+      KeySignature::GMajor => FIFTHS_G_MAJOR,
+      KeySignature::GMinor => FIFTHS_G_MINOR,
+      KeySignature::GSharpMinor => FIFTHS_G_SHARP_MINOR,
+      KeySignature::GFlatMajor => FIFTHS_G_FLAT_MAJOR,
     }
   }
+}
 
+impl Key {
   #[must_use]
   #[allow(clippy::too_many_lines)]
-  pub fn accidentals(&self) -> [Accidental; 8] {
-    match self {
-      Self::AMajor | Self::FSharpMinor => [
+  pub(crate) fn accidentals(&self) -> [Accidental; 8] {
+    match self.r#type {
+      KeySignature::AMajor | KeySignature::FSharpMinor => [
         Accidental::None,
         Accidental::None,
         Accidental::None,
@@ -165,7 +214,7 @@ impl Key {
         Accidental::Sharp,
         Accidental::Sharp,
       ],
-      Self::AMinor | Self::CMajor => [
+      KeySignature::AMinor | KeySignature::CMajor => [
         Accidental::None,
         Accidental::None,
         Accidental::None,
@@ -175,7 +224,7 @@ impl Key {
         Accidental::None,
         Accidental::None,
       ],
-      Self::ASharpMinor | Self::CSharpMajor => [
+      KeySignature::ASharpMinor | KeySignature::CSharpMajor => [
         Accidental::None,
         Accidental::Sharp,
         Accidental::Sharp,
@@ -185,7 +234,7 @@ impl Key {
         Accidental::Sharp,
         Accidental::Sharp,
       ],
-      Self::AFlatMajor | Self::FMinor => [
+      KeySignature::AFlatMajor | KeySignature::FMinor => [
         Accidental::None,
         Accidental::Flat,
         Accidental::Flat,
@@ -195,7 +244,7 @@ impl Key {
         Accidental::None,
         Accidental::None,
       ],
-      Self::AFlatMinor | Self::CFlatMajor => [
+      KeySignature::AFlatMinor | KeySignature::CFlatMajor => [
         Accidental::None,
         Accidental::Flat,
         Accidental::Flat,
@@ -205,7 +254,7 @@ impl Key {
         Accidental::Flat,
         Accidental::Flat,
       ],
-      Self::BMajor | Self::GSharpMinor => [
+      KeySignature::BMajor | KeySignature::GSharpMinor => [
         Accidental::None,
         Accidental::Sharp,
         Accidental::None,
@@ -215,7 +264,7 @@ impl Key {
         Accidental::Sharp,
         Accidental::Sharp,
       ],
-      Self::BMinor | Self::DMajor => [
+      KeySignature::BMinor | KeySignature::DMajor => [
         Accidental::None,
         Accidental::None,
         Accidental::None,
@@ -225,7 +274,7 @@ impl Key {
         Accidental::Sharp,
         Accidental::None,
       ],
-      Self::BFlatMajor | Self::GMinor => [
+      KeySignature::BFlatMajor | KeySignature::GMinor => [
         Accidental::None,
         Accidental::None,
         Accidental::Flat,
@@ -235,7 +284,7 @@ impl Key {
         Accidental::None,
         Accidental::None,
       ],
-      Self::BFlatMinor | Self::DFlatMajor => [
+      KeySignature::BFlatMinor | KeySignature::DFlatMajor => [
         Accidental::None,
         Accidental::Flat,
         Accidental::Flat,
@@ -245,7 +294,7 @@ impl Key {
         Accidental::None,
         Accidental::Flat,
       ],
-      Self::CMinor | Self::EFlatMajor => [
+      KeySignature::CMinor | KeySignature::EFlatMajor => [
         Accidental::None,
         Accidental::Flat,
         Accidental::Flat,
@@ -255,7 +304,7 @@ impl Key {
         Accidental::None,
         Accidental::None,
       ],
-      Self::CSharpMinor | Self::EMajor => [
+      KeySignature::CSharpMinor | KeySignature::EMajor => [
         Accidental::None,
         Accidental::None,
         Accidental::None,
@@ -265,7 +314,7 @@ impl Key {
         Accidental::Sharp,
         Accidental::Sharp,
       ],
-      Self::DMinor | Self::FMajor => [
+      KeySignature::DMinor | KeySignature::FMajor => [
         Accidental::None,
         Accidental::None,
         Accidental::Flat,
@@ -275,7 +324,7 @@ impl Key {
         Accidental::None,
         Accidental::None,
       ],
-      Self::DSharpMinor | Self::FSharpMajor => [
+      KeySignature::DSharpMinor | KeySignature::FSharpMajor => [
         Accidental::None,
         Accidental::Sharp,
         Accidental::None,
@@ -285,7 +334,7 @@ impl Key {
         Accidental::Sharp,
         Accidental::Sharp,
       ],
-      Self::EMinor | Self::GMajor => [
+      KeySignature::EMinor | KeySignature::GMajor => [
         Accidental::None,
         Accidental::None,
         Accidental::None,
@@ -295,7 +344,7 @@ impl Key {
         Accidental::Sharp,
         Accidental::None,
       ],
-      Self::EFlatMinor | Self::GFlatMajor => [
+      KeySignature::EFlatMinor | KeySignature::GFlatMajor => [
         Accidental::None,
         Accidental::Flat,
         Accidental::Flat,
@@ -315,37 +364,37 @@ impl core::fmt::Display for Key {
     write!(
       f,
       "{}",
-      match self {
-        Key::AMajor => "A",
-        Key::AMinor => "Am",
-        Key::ASharpMinor => "A♯m",
-        Key::AFlatMajor => "A♭",
-        Key::AFlatMinor => "A♭m",
-        Key::BMajor => "B",
-        Key::BMinor => "Bm",
-        Key::BFlatMajor => "B♭",
-        Key::BFlatMinor => "B♭m",
-        Key::CMajor => "C",
-        Key::CMinor => "Cm",
-        Key::CSharpMajor => "C♯",
-        Key::CSharpMinor => "C♯m",
-        Key::CFlatMajor => "C♭",
-        Key::DMajor => "D",
-        Key::DMinor => "Dm",
-        Key::DSharpMinor => "D♯m",
-        Key::DFlatMajor => "D♭",
-        Key::EMajor => "E",
-        Key::EMinor => "Em",
-        Key::EFlatMajor => "E♭",
-        Key::EFlatMinor => "E♭m",
-        Key::FMajor => "F",
-        Key::FMinor => "Fm",
-        Key::FSharpMajor => "F♯",
-        Key::FSharpMinor => "F♯m",
-        Key::GMajor => "G",
-        Key::GMinor => "Gm",
-        Key::GSharpMinor => "G♯m",
-        Key::GFlatMajor => "G♭",
+      match self.r#type {
+        KeySignature::AMajor => "A",
+        KeySignature::AMinor => "Am",
+        KeySignature::ASharpMinor => "A♯m",
+        KeySignature::AFlatMajor => "A♭",
+        KeySignature::AFlatMinor => "A♭m",
+        KeySignature::BMajor => "B",
+        KeySignature::BMinor => "Bm",
+        KeySignature::BFlatMajor => "B♭",
+        KeySignature::BFlatMinor => "B♭m",
+        KeySignature::CMajor => "C",
+        KeySignature::CMinor => "Cm",
+        KeySignature::CSharpMajor => "C♯",
+        KeySignature::CSharpMinor => "C♯m",
+        KeySignature::CFlatMajor => "C♭",
+        KeySignature::DMajor => "D",
+        KeySignature::DMinor => "Dm",
+        KeySignature::DSharpMinor => "D♯m",
+        KeySignature::DFlatMajor => "D♭",
+        KeySignature::EMajor => "E",
+        KeySignature::EMinor => "Em",
+        KeySignature::EFlatMajor => "E♭",
+        KeySignature::EFlatMinor => "E♭m",
+        KeySignature::FMajor => "F",
+        KeySignature::FMinor => "Fm",
+        KeySignature::FSharpMajor => "F♯",
+        KeySignature::FSharpMinor => "F♯m",
+        KeySignature::GMajor => "G",
+        KeySignature::GMinor => "Gm",
+        KeySignature::GSharpMinor => "G♯m",
+        KeySignature::GFlatMajor => "G♭",
       }
     )
   }

@@ -9,9 +9,8 @@ use alloc::{
 };
 use core::{cell::RefCell, slice::Iter};
 #[cfg(target_arch = "wasm32")]
-use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
 
-#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Clone)]
 pub enum PhraseContent {
   Note(Rc<RefCell<Note>>),
@@ -20,7 +19,6 @@ pub enum PhraseContent {
   MultiVoice(Rc<RefCell<MultiVoice>>),
 }
 
-#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Clone)]
 pub struct Phrase {
   pub(crate) id: usize,
@@ -400,6 +398,7 @@ impl core::fmt::Display for Phrase {
 
 #[cfg(test)]
 mod test {
+  use crate::DurationType;
   use super::*;
 
   fn create_phrase() -> Rc<RefCell<Phrase>> {
@@ -408,51 +407,51 @@ mod test {
     let phrase2 = phrase1.borrow_mut().add_phrase();
     phrase2
       .borrow_mut()
-      .add_note(Pitch::C(4), Duration::Quarter(0), Some(Accidental::Sharp));
+      .add_note(Pitch::C(4), Duration::new(DurationType::Quarter, 0), Some(Accidental::Sharp));
     phrase2
       .borrow_mut()
-      .add_note(Pitch::D(4), Duration::Quarter(0), Some(Accidental::Flat));
+      .add_note(Pitch::D(4), Duration::new(DurationType::Quarter, 0), Some(Accidental::Flat));
     let multivoice = phrase2.borrow_mut().add_multivoice();
     let mphrase1 = multivoice.borrow_mut().add_phrase();
     let mphrase2 = multivoice.borrow_mut().add_phrase();
     mphrase1
       .borrow_mut()
-      .add_note(Pitch::E(4), Duration::Quarter(0), Some(Accidental::Natural));
+      .add_note(Pitch::E(4), Duration::new(DurationType::Quarter, 0), Some(Accidental::Natural));
     mphrase1
       .borrow_mut()
-      .add_note(Pitch::F(4), Duration::Quarter(0), Some(Accidental::Sharp));
-    mphrase1.borrow_mut().add_note(Pitch::Rest, Duration::Half(0), None);
+      .add_note(Pitch::F(4), Duration::new(DurationType::Quarter, 0), Some(Accidental::Sharp));
+    mphrase1.borrow_mut().add_note(Pitch::Rest, Duration::new(DurationType::Half, 0), None);
     mphrase2
       .borrow_mut()
-      .add_note(Pitch::G(4), Duration::Half(0), Some(Accidental::Flat));
+      .add_note(Pitch::G(4), Duration::new(DurationType::Half, 0), Some(Accidental::Flat));
     mphrase2
       .borrow_mut()
-      .add_note(Pitch::A(4), Duration::Half(0), Some(Accidental::Natural));
+      .add_note(Pitch::A(4), Duration::new(DurationType::Half, 0), Some(Accidental::Natural));
     let phrase3 = phrase2.borrow_mut().add_phrase();
     let phrase4 = phrase3.borrow_mut().add_phrase();
     phrase4
       .borrow_mut()
-      .add_note(Pitch::C(4), Duration::Quarter(0), Some(Accidental::Sharp));
+      .add_note(Pitch::C(4), Duration::new(DurationType::Quarter, 0), Some(Accidental::Sharp));
     let chord = phrase4.borrow_mut().add_chord();
     chord
       .borrow_mut()
-      .add_note(Pitch::D(4), Duration::Quarter(0), Some(Accidental::Flat));
+      .add_note(Pitch::D(4), Duration::new(DurationType::Quarter, 0), Some(Accidental::Flat));
     chord
       .borrow_mut()
-      .add_note(Pitch::E(4), Duration::Quarter(0), Some(Accidental::Natural));
+      .add_note(Pitch::E(4), Duration::new(DurationType::Quarter, 0), Some(Accidental::Natural));
     chord
       .borrow_mut()
-      .add_note(Pitch::F(4), Duration::Quarter(0), Some(Accidental::Sharp));
+      .add_note(Pitch::F(4), Duration::new(DurationType::Quarter, 0), Some(Accidental::Sharp));
     phrase
   }
 
   #[test]
   fn test_triplet() {
-    let tempo = Tempo::new(Duration::Quarter(0), 120);
+    let tempo = Tempo::new(Duration::new(DurationType::Quarter, 0), 120);
     let phrase = Phrase::new();
-    phrase.borrow_mut().add_note(Pitch::C(4), Duration::Quarter(0), None);
-    phrase.borrow_mut().add_note(Pitch::C(4), Duration::Quarter(0), None);
-    phrase.borrow_mut().add_note(Pitch::C(4), Duration::Quarter(0), None);
+    phrase.borrow_mut().add_note(Pitch::C(4), Duration::new(DurationType::Quarter, 0), None);
+    phrase.borrow_mut().add_note(Pitch::C(4), Duration::new(DurationType::Quarter, 0), None);
+    phrase.borrow_mut().add_note(Pitch::C(4), Duration::new(DurationType::Quarter, 0), None);
     assert_eq!(phrase.borrow().get_duration(&tempo, None), 1.5);
     phrase.borrow_mut().add_modification(PhraseModificationType::Tuplet {
       num_beats: 3,
@@ -463,14 +462,14 @@ mod test {
 
   #[test]
   fn test_flatten_light() {
-    let tempo = Tempo::new(Duration::Quarter(0), 120);
+    let tempo = Tempo::new(Duration::new(DurationType::Quarter, 0), 120);
     let phrase = create_phrase().borrow().flatten(false);
     assert_eq!(phrase.borrow().get_duration(&tempo, None), 4.0);
   }
 
   #[test]
   fn test_flatten_full() {
-    let tempo = Tempo::new(Duration::Quarter(0), 120);
+    let tempo = Tempo::new(Duration::new(DurationType::Quarter, 0), 120);
     let phrase = create_phrase().borrow().flatten(true);
     assert_eq!(phrase.borrow().get_duration(&tempo, None), 4.0);
   }

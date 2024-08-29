@@ -1,20 +1,18 @@
 use super::{chord::Chord, multivoice::MultiVoice, phrase::Phrase, staff::Staff, timeslice::Timeslice};
 use crate::context::{generate_id, Clef, Key, Tempo, TimeSignature};
 use crate::modification::{SectionModification, SectionModificationType};
-use crate::note::{Duration, Note, Pitch};
+use crate::note::{Duration, DurationType, Note, Pitch};
 use alloc::{collections::BTreeSet, rc::Rc, string::String, vec::Vec};
 use core::{cell::RefCell, slice::Iter};
 #[cfg(target_arch = "wasm32")]
-use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
 
-#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Clone)]
 pub enum SectionContent {
   Staff(Rc<RefCell<Staff>>),
   Section(Rc<RefCell<Section>>),
 }
 
-#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
 #[derive(Clone)]
 pub struct Section {
   pub(crate) id: usize,
@@ -47,7 +45,7 @@ impl Section {
     // Create an implicit section for all naked staff groupings
     let mut sections: Vec<Rc<RefCell<Section>>> = Vec::new();
     let mut implicit_section = None;
-    let (mut section_beats, beat_base_note) = (Vec::new(), Duration::Whole(0));
+    let (mut section_beats, beat_base_note) = (Vec::new(), Duration::new(DurationType::Whole, 0));
     for item in &self.content {
       unsafe {
         match item {
@@ -81,7 +79,7 @@ impl Section {
           let implicit_staff = section.borrow_mut().add_staff(retained_staff, None, None, None);
           let (note_type, num_notes) = Duration::get_minimum_divisible_notes(section_beats[idx]);
           for _ in 0..num_notes {
-            implicit_staff.borrow_mut().add_note(Pitch::Rest, note_type, None);
+            implicit_staff.borrow_mut().add_note(Pitch::Rest, Duration::new(note_type, 0), None);
           }
         }
         clone
@@ -319,7 +317,7 @@ impl Section {
       .iter()
       .find_map(|item| match item.borrow().get_modification() {
         SectionModificationType::TempoExplicit { tempo } => Some(*tempo),
-        SectionModificationType::TempoImplicit { tempo } => Some(Tempo::new(Duration::Quarter(0), tempo.value())),
+        SectionModificationType::TempoImplicit { tempo } => Some(Tempo::new(Duration::new(DurationType::Quarter, 0), tempo.value())),
         _ => None,
       })
   }
@@ -448,7 +446,7 @@ impl Section {
       timeslices
     } else {
       // Iterate over all staves the correct number of times
-      let beat_base_note = Duration::SixtyFourth(0);
+      let beat_base_note = Duration::new(DurationType::SixtyFourth, 0);
       let mut timeslices: Vec<(f64, Timeslice)> = Vec::new();
       for _ in 1..=self.get_total_iterations() {
         for item in &self.content {

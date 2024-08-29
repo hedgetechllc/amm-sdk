@@ -1,14 +1,15 @@
-use crate::note::Duration;
+use crate::note::{Duration, DurationType};
 #[cfg(target_arch = "wasm32")]
-use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
 
-#[cfg_attr(target_arch = "wasm32", derive(Deserialize, Serialize))]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct Tempo {
   pub base_note: Duration,
   pub beats_per_minute: u16,
 }
 
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 impl Tempo {
   #[must_use]
   pub fn new(base_note: Duration, beats_per_minute: u16) -> Self {
@@ -22,7 +23,7 @@ impl Tempo {
 impl Default for Tempo {
   fn default() -> Self {
     Self {
-      base_note: Duration::Quarter(0),
+      base_note: Duration::new(DurationType::Quarter, 0),
       beats_per_minute: 120,
     }
   }
