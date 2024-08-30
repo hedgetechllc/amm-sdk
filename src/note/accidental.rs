@@ -1,3 +1,5 @@
+use crate::storage::{Serialize, SerializedItem};
+use alloc::collections::BTreeMap;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
@@ -41,5 +43,19 @@ impl core::fmt::Display for Accidental {
         Self::None => "",
       }
     )
+  }
+}
+
+#[cfg(feature = "print")]
+impl Serialize for Accidental {
+  fn serialize(&self) -> SerializedItem {
+    SerializedItem {
+      attributes: match self {
+        Self::None => BTreeMap::new(),
+        _ => BTreeMap::from([(String::from("type"), self.to_string())]),
+      },
+      contents: BTreeMap::new(),
+      elements: BTreeMap::new(),
+    }
   }
 }

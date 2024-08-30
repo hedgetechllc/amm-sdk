@@ -1,10 +1,9 @@
 use crate::context::{Key, Tempo, TimeSignature};
 use crate::note::{Duration, DurationType, Note};
+use crate::storage::{Serialize, SerializedItem};
 use crate::structure::{Chord, MultiVoice, Part, PartTimeslice, Phrase, Section, Staff};
 use alloc::{collections::BTreeMap, rc::Rc, string::String, vec::Vec};
 use core::{cell::RefCell, slice::Iter};
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
 
 pub struct Composition {
   title: String,
@@ -364,5 +363,59 @@ impl core::fmt::Display for Composition {
       duration as u32 / 60,
       duration as u32 % 60
     )
+  }
+}
+
+#[cfg(feature = "print")]
+impl Serialize for Composition {
+  fn serialize(&self) -> SerializedItem {
+    let mut attributes = BTreeMap::from([(String::from("title"), self.title.to_string())]);
+    if let Some(content) = &self.copyright {
+      attributes.insert(String::from("copyright"), content.clone());
+    }
+    if let Some(content) = &self.publisher {
+      attributes.insert(String::from("publisher"), content.clone());
+    }
+    if !self.composers.is_empty() {
+      attributes.insert(String::from("composers"), self.composers.join(", "));
+    }
+    if !self.lyricists.is_empty() {
+      attributes.insert(String::from("lyricists"), self.lyricists.join(", "));
+    }
+    if !self.arrangers.is_empty() {
+      attributes.insert(String::from("arrangers"), self.arrangers.join(", "));
+    }
+    let mut contents = BTreeMap::new();
+    if !self.metadata.is_empty() {
+      contents.insert(
+        String::from("metadata"),
+        SerializedItem {
+          attributes: BTreeMap::new(),
+          contents: BTreeMap::new(),
+          elements: BTreeMap::new(),
+        },
+      );
+      self.metadata.iter().for_each(|(key, value)| {
+        contents
+          .get_mut("metadata")
+          .unwrap()
+          .attributes
+          .insert(key.clone(), value.clone());
+      });
+    }
+    contents.insert(String::from("tempo"), self.tempo.serialize());
+    contents.insert(String::from("starting_key"), self.starting_key.serialize());
+    contents.insert(
+      String::from("starting_time_signature"),
+      self.starting_time_signature.serialize(),
+    );
+    SerializedItem {
+      attributes,
+      contents,
+      elements: BTreeMap::from([(
+        String::from("parts"),
+        self.parts.iter().map(Serialize::serialize).collect(),
+      )]),
+    }
   }
 }

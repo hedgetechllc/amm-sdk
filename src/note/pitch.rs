@@ -1,4 +1,5 @@
-use alloc::string::String;
+use crate::storage::{Serialize, SerializedItem};
+use alloc::{collections::BTreeMap, string::String};
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
@@ -43,7 +44,7 @@ impl Pitch {
   }
 
   #[must_use]
-  pub(crate) fn value(&self) -> (usize, i16) {
+  pub(crate) fn value(self) -> (usize, i16) {
     match self.r#type {
       PitchName::Rest => (0, 0),
       PitchName::A => (1, i16::from(12 * self.octave) - 48),
@@ -58,21 +59,50 @@ impl Pitch {
 }
 
 #[cfg(feature = "print")]
+impl core::fmt::Display for PitchName {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+    write!(
+      f,
+      "{}",
+      match self {
+        Self::Rest => "Rest",
+        Self::A => "A",
+        Self::B => "B",
+        Self::C => "C",
+        Self::D => "D",
+        Self::E => "E",
+        Self::F => "F",
+        Self::G => "G",
+      }
+    )
+  }
+}
+
+#[cfg(feature = "print")]
 impl core::fmt::Display for Pitch {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(
       f,
       "{}",
-      match self.r#type {
-        PitchName::Rest => String::new(),
-        PitchName::A => format!("A{}", self.octave),
-        PitchName::B => format!("B{}", self.octave),
-        PitchName::C => format!("C{}", self.octave),
-        PitchName::D => format!("D{}", self.octave),
-        PitchName::E => format!("E{}", self.octave),
-        PitchName::F => format!("F{}", self.octave),
-        PitchName::G => format!("G{}", self.octave),
+      if self.r#type == PitchName::Rest {
+        String::new()
+      } else {
+        format!("{}{}", self.r#type, self.octave)
       }
     )
+  }
+}
+
+#[cfg(feature = "print")]
+impl Serialize for Pitch {
+  fn serialize(&self) -> SerializedItem {
+    SerializedItem {
+      attributes: BTreeMap::from([
+        (String::from("name"), self.r#type.to_string()),
+        (String::from("octave"), self.octave.to_string()),
+      ]),
+      contents: BTreeMap::new(),
+      elements: BTreeMap::new(),
+    }
   }
 }

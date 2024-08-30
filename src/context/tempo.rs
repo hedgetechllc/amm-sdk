@@ -1,4 +1,6 @@
 use crate::note::{Duration, DurationType};
+use crate::storage::{Serialize, SerializedItem};
+use alloc::collections::BTreeMap;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
@@ -33,5 +35,16 @@ impl Default for Tempo {
 impl core::fmt::Display for Tempo {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(f, "{}={} bpm", self.base_note, self.beats_per_minute)
+  }
+}
+
+#[cfg(feature = "print")]
+impl Serialize for Tempo {
+  fn serialize(&self) -> SerializedItem {
+    SerializedItem {
+      attributes: BTreeMap::from([(String::from("beats_per_minutes"), self.beats_per_minute.to_string())]),
+      contents: BTreeMap::from([(String::from("base_note"), self.base_note.serialize())]),
+      elements: BTreeMap::new(),
+    }
   }
 }

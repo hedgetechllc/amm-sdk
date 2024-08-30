@@ -3,6 +3,7 @@ use super::{
 };
 use crate::context::{generate_id, Tempo};
 use crate::note::{Duration, Note};
+use crate::storage::{Serialize, SerializedItem};
 use alloc::{
   collections::{BTreeMap, BTreeSet},
   rc::Rc,
@@ -10,8 +11,6 @@ use alloc::{
   vec::Vec,
 };
 use core::{cell::RefCell, slice::Iter};
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
 
 #[derive(Clone)]
 pub enum PartContent {
@@ -64,14 +63,14 @@ impl Part {
       .collect();
     self.content.iter().for_each(|item| match item {
       PartContent::Section(section) => {
-        staff_parts.iter_mut().for_each(|(staff_name, part)| {
+        for (staff_name, part) in &mut staff_parts {
           part
             .content
-            .push(PartContent::Section(section.borrow().single_staff_clone(staff_name)))
-        });
+            .push(PartContent::Section(section.borrow().single_staff_clone(staff_name)));
+        }
       }
     });
-    staff_parts.into_iter().map(|(_, part)| part).collect()
+    staff_parts.into_values().collect()
   }
 
   #[must_use]
@@ -282,5 +281,28 @@ impl core::fmt::Display for Part {
       .collect::<Vec<_>>()
       .join(", ");
     write!(f, "Part {}: [{sections}]", self.name)
+  }
+}
+
+#[cfg(feature = "print")]
+impl Serialize for Part {
+  fn serialize(&self) -> SerializedItem {
+    SerializedItem {
+      attributes: BTreeMap::from([
+        (String::from("id"), self.id.to_string()),
+        (String::from("name"), self.name.clone()),
+      ]),
+      contents: BTreeMap::new(),
+      elements: BTreeMap::from([(
+        String::from("sections"),
+        self
+          .content
+          .iter()
+          .map(|content| match content {
+            PartContent::Section(section) => section.borrow().serialize(),
+          })
+          .collect(),
+      )]),
+    }
   }
 }

@@ -1,3 +1,5 @@
+use crate::storage::{Serialize, SerializedItem};
+use alloc::collections::BTreeMap;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
@@ -40,13 +42,49 @@ impl Clef {
     Self {
       symbol: match r#type {
         ClefType::Treble | ClefType::FrenchViolin => ClefSymbol::GClef,
-        ClefType::Bass | ClefType::Subbass => ClefSymbol::FClef,
-        ClefType::Tenor | ClefType::Alto | ClefType::Soprano | ClefType::MezzoSoprano => ClefSymbol::CClef,
-        ClefType::BaritoneC => ClefSymbol::CClef,
-        ClefType::BaritoneF => ClefSymbol::FClef,
+        ClefType::Bass | ClefType::Subbass | ClefType::BaritoneF => ClefSymbol::FClef,
+        ClefType::Tenor | ClefType::Alto | ClefType::Soprano | ClefType::MezzoSoprano | ClefType::BaritoneC => {
+          ClefSymbol::CClef
+        }
       },
       r#type,
     }
+  }
+}
+
+#[cfg(feature = "print")]
+impl core::fmt::Display for ClefSymbol {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+    write!(
+      f,
+      "{}",
+      match self {
+        Self::GClef => "G-Clef",
+        Self::CClef => "C-Clef",
+        Self::FClef => "F-Clef",
+      }
+    )
+  }
+}
+
+#[cfg(feature = "print")]
+impl core::fmt::Display for ClefType {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+    write!(
+      f,
+      "{}",
+      match self {
+        Self::Treble => "Treble",
+        Self::Bass => "Bass",
+        Self::FrenchViolin => "French Violin",
+        Self::Subbass => "Subbass",
+        Self::Tenor => "Tenor",
+        Self::Alto => "Alto",
+        Self::Soprano => "Soprano",
+        Self::MezzoSoprano => "Mezzo Soprano",
+        Self::BaritoneC | Self::BaritoneF => "Baritone",
+      }
+    )
   }
 }
 
@@ -57,17 +95,24 @@ impl core::fmt::Display for Clef {
       f,
       "{}",
       match self.r#type {
-        ClefType::Treble => "Treble",
-        ClefType::Bass => "Bass",
-        ClefType::FrenchViolin => "French Violin",
-        ClefType::Subbass => "Subbass",
-        ClefType::Tenor => "Tenor",
-        ClefType::Alto => "Alto",
-        ClefType::Soprano => "Soprano",
-        ClefType::MezzoSoprano => "Mezzo Soprano",
-        ClefType::BaritoneC => "Baritone (C-Clef)",
-        ClefType::BaritoneF => "Baritone (F-Clef)",
+        ClefType::BaritoneC => String::from("Baritone (C-Clef)"),
+        ClefType::BaritoneF => String::from("Baritone (F-Clef)"),
+        _ => format!("{}", self.r#type),
       }
     )
+  }
+}
+
+#[cfg(feature = "print")]
+impl Serialize for Clef {
+  fn serialize(&self) -> SerializedItem {
+    SerializedItem {
+      attributes: BTreeMap::from([
+        (String::from("type"), self.r#type.to_string()),
+        (String::from("symbol"), self.symbol.to_string()),
+      ]),
+      contents: BTreeMap::new(),
+      elements: BTreeMap::new(),
+    }
   }
 }

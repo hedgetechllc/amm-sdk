@@ -2,14 +2,14 @@ use super::timeslice::Timeslice;
 use crate::context::{generate_id, Tempo};
 use crate::modification::{ChordModification, ChordModificationType, NoteModification};
 use crate::note::{Accidental, Duration, Note, Pitch};
+use crate::storage::{Serialize, SerializedItem};
 use alloc::{
+  collections::BTreeMap,
   rc::Rc,
   string::{String, ToString},
   vec::Vec,
 };
 use core::{cell::RefCell, slice::Iter};
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
 
 #[derive(Clone)]
 pub enum ChordContent {
@@ -179,5 +179,39 @@ impl core::fmt::Display for Chord {
         format!(" ({mods})")
       }
     )
+  }
+}
+
+#[cfg(feature = "print")]
+impl Serialize for Chord {
+  fn serialize(&self) -> SerializedItem {
+    let mut elements = BTreeMap::from([(
+      String::from("content"),
+      self
+        .content
+        .iter()
+        .map(|content| match content {
+          ChordContent::Note(note) => note.borrow().serialize(),
+        })
+        .collect(),
+    )]);
+    if !self.modifications.is_empty() {
+      elements.insert(
+        String::from("modifications"),
+        self
+          .modifications
+          .iter()
+          .map(|modification| modification.borrow().serialize())
+          .collect(),
+      );
+    }
+    SerializedItem {
+      attributes: BTreeMap::from([
+        (String::from("id"), self.id.to_string()),
+        (String::from("type"), String::from("Chord")),
+      ]),
+      contents: BTreeMap::new(),
+      elements,
+    }
   }
 }

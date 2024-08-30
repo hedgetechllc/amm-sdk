@@ -1,8 +1,12 @@
+#[cfg(target_arch = "wasm32")]
 use amm_sdk::wasm::*;
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen_test::*;
 
+#[cfg(target_arch = "wasm32")]
 wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen_test]
 fn pass() {
   let data = include_str!("../examples/Grande Valse Brillante.musicxml");

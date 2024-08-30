@@ -32,7 +32,7 @@ impl core::fmt::Display for TimeslicePhraseDetails {
       self
         .modifications
         .iter()
-        .map(|modification| modification.to_string())
+        .map(ToString::to_string)
         .collect::<Vec<String>>()
         .join(", ")
     )
@@ -96,13 +96,13 @@ impl core::fmt::Display for TimesliceContent {
     let phrase_context = self
       .phrase_details
       .iter()
-      .map(|detail| detail.to_string())
+      .map(ToString::to_string)
       .collect::<Vec<String>>()
       .join(", ");
     write!(
       f,
       "{}{}{}{}",
-      self.note.borrow().to_string(),
+      self.note.borrow(),
       if self.phrase_details.is_empty() {
         ""
       } else {
@@ -187,7 +187,7 @@ impl core::fmt::Display for Timeslice {
       self
         .content
         .iter()
-        .map(|content| content.to_string())
+        .map(ToString::to_string)
         .collect::<Vec<String>>()
         .join(", "),
       if self.content.is_empty() { "" } else { "]" },

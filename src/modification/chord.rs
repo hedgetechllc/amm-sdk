@@ -1,9 +1,8 @@
 use super::note::NoteModificationType;
 use crate::context::{generate_id, Dynamic};
-use alloc::rc::Rc;
+use crate::storage::{Serialize, SerializedItem};
+use alloc::{collections::BTreeMap, rc::Rc};
 use core::cell::RefCell;
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub enum ChordModificationType {
@@ -140,6 +139,48 @@ impl core::fmt::Display for ChordModificationType {
       Self::Tremolo { relative_speed } => write!(f, "Tremolo at {relative_speed}x speed"),
       Self::Unstress => write!(f, "Unstress"),
       Self::UpBow => write!(f, "Up Bow"),
+    }
+  }
+}
+
+#[cfg(feature = "print")]
+impl Serialize for ChordModification {
+  fn serialize(&self) -> SerializedItem {
+    let (name, serialized) = match &self.modification {
+      ChordModificationType::Dynamic { dynamic } => (String::from("Dynamic"), dynamic.serialize()),
+      ChordModificationType::HarmonMute { open, half } => (
+        String::from("Harmon Mute"),
+        SerializedItem {
+          attributes: BTreeMap::from([
+            (String::from("open"), open.to_string()),
+            (String::from("half"), half.to_string()),
+          ]),
+          contents: BTreeMap::new(),
+          elements: BTreeMap::new(),
+        },
+      ),
+      ChordModificationType::Tremolo { relative_speed } => (
+        String::from("Tremolo"),
+        SerializedItem {
+          attributes: BTreeMap::from([(String::from("relative_speed"), relative_speed.to_string())]),
+          contents: BTreeMap::new(),
+          elements: BTreeMap::new(),
+        },
+      ),
+      other => (other.to_string(), SerializedItem::default()),
+    };
+    let contents = if serialized.attributes.is_empty() && serialized.contents.is_empty() {
+      BTreeMap::new()
+    } else {
+      BTreeMap::from([(String::from("details"), serialized)])
+    };
+    SerializedItem {
+      attributes: BTreeMap::from([
+        (String::from("id"), self.id.to_string()),
+        (String::from("type"), name.clone()),
+      ]),
+      contents,
+      elements: BTreeMap::new(),
     }
   }
 }

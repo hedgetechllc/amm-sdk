@@ -22,5 +22,4 @@ Abstract Music Manipulation (AMM) SDK
 * Finish AMM Reader Implementation
 * Finish AMM Writer Implementation
 * Make fully `no_std` compatible
-
-ADD A TEST containing Glissandos and/or multi-note tremolos
+* Add a test containing Glissandos and/or multi-note tremolos

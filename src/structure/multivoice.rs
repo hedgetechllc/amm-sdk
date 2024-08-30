@@ -6,10 +6,9 @@ use super::{
 use crate::context::{generate_id, Tempo};
 use crate::modification::{ChordModificationType, NoteModificationType, PhraseModification, PhraseModificationType};
 use crate::note::{Duration, DurationType, Note};
-use alloc::{rc::Rc, string::ToString, vec::Vec};
+use crate::storage::{Serialize, SerializedItem};
+use alloc::{collections::BTreeMap, rc::Rc, string::ToString, vec::Vec};
 use core::{cell::RefCell, slice::Iter};
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
 
 #[derive(Clone)]
 pub enum MultiVoiceContent {
@@ -521,6 +520,29 @@ impl core::fmt::Display for MultiVoice {
       .collect::<Vec<_>>()
       .join(", ");
     write!(f, "MultiVoice: [{voices}]")
+  }
+}
+
+#[cfg(feature = "print")]
+impl Serialize for MultiVoice {
+  fn serialize(&self) -> SerializedItem {
+    SerializedItem {
+      attributes: BTreeMap::from([
+        (String::from("id"), self.id.to_string()),
+        (String::from("type"), String::from("Multivoice")),
+      ]),
+      contents: BTreeMap::new(),
+      elements: BTreeMap::from([(
+        String::from("content"),
+        self
+          .content
+          .iter()
+          .map(|content| match content {
+            MultiVoiceContent::Phrase(phrase) => phrase.borrow().serialize(),
+          })
+          .collect(),
+      )]),
+    }
   }
 }
 

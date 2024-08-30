@@ -1,5 +1,6 @@
 use crate::context::Tempo;
-use alloc::string::String;
+use crate::storage::{Serialize, SerializedItem};
+use alloc::{collections::BTreeMap, string::String};
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
@@ -90,6 +91,7 @@ impl Duration {
   }
 
   #[must_use]
+  #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
   pub(crate) fn get_minimum_divisible_notes(beats: f64) -> (DurationType, u32) {
     match beats {
       beats if beats.fract() < 0.000_976_562_5 => (DurationType::Whole, beats as u32),
@@ -177,29 +179,50 @@ fn dots_to_text(dots: u8) -> String {
 }
 
 #[cfg(feature = "print")]
-impl core::fmt::Display for Duration {
+impl core::fmt::Display for DurationType {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(
       f,
       "{}",
-      match self.r#type {
-        DurationType::Maxima => format!("{}Maxima", dots_to_text(self.dots)),
-        DurationType::Long => format!("{}Long", dots_to_text(self.dots)),
-        DurationType::Breve => format!("{}Breve", dots_to_text(self.dots)),
-        DurationType::Whole => format!("{}Whole", dots_to_text(self.dots)),
-        DurationType::Half => format!("{}Half", dots_to_text(self.dots)),
-        DurationType::Quarter => format!("{}Quarter", dots_to_text(self.dots)),
-        DurationType::Eighth => format!("{}Eighth", dots_to_text(self.dots)),
-        DurationType::Sixteenth => format!("{}Sixteenth", dots_to_text(self.dots)),
-        DurationType::ThirtySecond => format!("{}Thirty-Second", dots_to_text(self.dots)),
-        DurationType::SixtyFourth => format!("{}Sixty-Fourth", dots_to_text(self.dots)),
-        DurationType::OneHundredTwentyEighth => format!("{}One-Hundred-Twenty-Eighth", dots_to_text(self.dots)),
-        DurationType::TwoHundredFiftySixth => format!("{}Two-Hundred-Fifty-Sixth", dots_to_text(self.dots)),
-        DurationType::FiveHundredTwelfth => format!("{}Five-Hundred-Twelfth", dots_to_text(self.dots)),
-        DurationType::OneThousandTwentyFourth => format!("{}One-Thousand-Twenty-Fourth", dots_to_text(self.dots)),
-        DurationType::TwoThousandFortyEighth => format!("{}Two-Thousand-Forty-Eighth", dots_to_text(self.dots)),
+      match self {
+        DurationType::Maxima => "Maxima",
+        DurationType::Long => "Long",
+        DurationType::Breve => "Breve",
+        DurationType::Whole => "Whole",
+        DurationType::Half => "Half",
+        DurationType::Quarter => "Quarter",
+        DurationType::Eighth => "Eighth",
+        DurationType::Sixteenth => "Sixteenth",
+        DurationType::ThirtySecond => "Thirty-Second",
+        DurationType::SixtyFourth => "Sixty-Fourth",
+        DurationType::OneHundredTwentyEighth => "One-Hundred-Twenty-Eighth",
+        DurationType::TwoHundredFiftySixth => "Two-Hundred-Fifty-Sixth",
+        DurationType::FiveHundredTwelfth => "Five-Hundred-Twelfth",
+        DurationType::OneThousandTwentyFourth => "One-Thousand-Twenty-Fourth",
+        DurationType::TwoThousandFortyEighth => "Two-Thousand-Forty-Eighth",
       }
     )
+  }
+}
+
+#[cfg(feature = "print")]
+impl core::fmt::Display for Duration {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+    write!(f, "{}{}", self.r#type, dots_to_text(self.dots))
+  }
+}
+
+#[cfg(feature = "print")]
+impl Serialize for Duration {
+  fn serialize(&self) -> SerializedItem {
+    SerializedItem {
+      attributes: BTreeMap::from([
+        (String::from("type"), self.r#type.to_string()),
+        (String::from("dots"), self.dots.to_string()),
+      ]),
+      contents: BTreeMap::new(),
+      elements: BTreeMap::new(),
+    }
   }
 }
 

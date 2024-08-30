@@ -1,9 +1,8 @@
 use super::chord::ChordModificationType;
 use crate::context::{generate_id, Dynamic};
-use alloc::rc::Rc;
+use crate::storage::{Serialize, SerializedItem};
+use alloc::{collections::BTreeMap, rc::Rc};
 use core::cell::RefCell;
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum HandbellTechnique {
@@ -257,6 +256,135 @@ impl core::fmt::Display for NoteModificationType {
       ),
       Self::Unstress => write!(f, "Unstress"),
       Self::UpBow => write!(f, "Up Bow"),
+    }
+  }
+}
+
+#[cfg(feature = "print")]
+impl Serialize for NoteModification {
+  fn serialize(&self) -> SerializedItem {
+    let (name, serialized) = match &self.modification {
+      NoteModificationType::Dynamic { dynamic } => (String::from("Dynamic"), dynamic.serialize()),
+      NoteModificationType::Glissando { from_current, going_up } => (
+        String::from("Glissando"),
+        SerializedItem {
+          attributes: BTreeMap::from([
+            (String::from("from_current"), from_current.to_string()),
+            (String::from("going_up"), going_up.to_string()),
+          ]),
+          contents: BTreeMap::new(),
+          elements: BTreeMap::new(),
+        },
+      ),
+      NoteModificationType::Grace {
+        acciaccatura,
+        note_value,
+      } => (
+        String::from("Grace"),
+        SerializedItem {
+          attributes: BTreeMap::from([
+            (String::from("acciaccatura"), acciaccatura.to_string()),
+            (String::from("note_value"), note_value.to_string()),
+          ]),
+          contents: BTreeMap::new(),
+          elements: BTreeMap::new(),
+        },
+      ),
+      NoteModificationType::Handbell { technique } => (
+        String::from("Handbell"),
+        SerializedItem {
+          attributes: BTreeMap::from([(String::from("technique"), technique.to_string())]),
+          contents: BTreeMap::new(),
+          elements: BTreeMap::new(),
+        },
+      ),
+      NoteModificationType::HarmonMute { open, half } => (
+        String::from("Harmon Mute"),
+        SerializedItem {
+          attributes: BTreeMap::from([
+            (String::from("open"), open.to_string()),
+            (String::from("half"), half.to_string()),
+          ]),
+          contents: BTreeMap::new(),
+          elements: BTreeMap::new(),
+        },
+      ),
+      NoteModificationType::Hole { open, half } => (
+        String::from("Hole"),
+        SerializedItem {
+          attributes: BTreeMap::from([
+            (String::from("open"), open.to_string()),
+            (String::from("half"), half.to_string()),
+          ]),
+          contents: BTreeMap::new(),
+          elements: BTreeMap::new(),
+        },
+      ),
+      NoteModificationType::Mordent { upper } => (
+        String::from("Mordent"),
+        SerializedItem {
+          attributes: BTreeMap::from([(String::from("upper"), upper.to_string())]),
+          contents: BTreeMap::new(),
+          elements: BTreeMap::new(),
+        },
+      ),
+      NoteModificationType::Portamento { from_current, going_up } => (
+        String::from("Portamento"),
+        SerializedItem {
+          attributes: BTreeMap::from([
+            (String::from("from_current"), from_current.to_string()),
+            (String::from("going_up"), going_up.to_string()),
+          ]),
+          contents: BTreeMap::new(),
+          elements: BTreeMap::new(),
+        },
+      ),
+      NoteModificationType::Tremolo { relative_speed } => (
+        String::from("Tremolo"),
+        SerializedItem {
+          attributes: BTreeMap::from([(String::from("relative_speed"), relative_speed.to_string())]),
+          contents: BTreeMap::new(),
+          elements: BTreeMap::new(),
+        },
+      ),
+      NoteModificationType::Trill { upper } => (
+        String::from("Trill"),
+        SerializedItem {
+          attributes: BTreeMap::from([(String::from("upper"), upper.to_string())]),
+          contents: BTreeMap::new(),
+          elements: BTreeMap::new(),
+        },
+      ),
+      NoteModificationType::Turn {
+        upper,
+        delayed,
+        vertical,
+      } => (
+        String::from("Turn"),
+        SerializedItem {
+          attributes: BTreeMap::from([
+            (String::from("upper"), upper.to_string()),
+            (String::from("delayed"), delayed.to_string()),
+            (String::from("vertical"), vertical.to_string()),
+          ]),
+          contents: BTreeMap::new(),
+          elements: BTreeMap::new(),
+        },
+      ),
+      other => (other.to_string(), SerializedItem::default()),
+    };
+    let contents = if serialized.attributes.is_empty() && serialized.contents.is_empty() {
+      BTreeMap::new()
+    } else {
+      BTreeMap::from([(String::from("details"), serialized)])
+    };
+    SerializedItem {
+      attributes: BTreeMap::from([
+        (String::from("id"), self.id.to_string()),
+        (String::from("type"), name.clone()),
+      ]),
+      contents,
+      elements: BTreeMap::new(),
     }
   }
 }

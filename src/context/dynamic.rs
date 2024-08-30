@@ -1,3 +1,5 @@
+use crate::storage::{Serialize, SerializedItem};
+use alloc::collections::BTreeMap;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
@@ -39,6 +41,23 @@ impl Dynamic {
 }
 
 #[cfg(feature = "print")]
+impl core::fmt::Display for DynamicMarking {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+    write!(
+      f,
+      "{}",
+      match self {
+        Self::Piano => "p",
+        Self::MezzoPiano => "mp",
+        Self::MezzoForte => "mf",
+        Self::Forte => "f",
+        Self::None => "",
+      }
+    )
+  }
+}
+
+#[cfg(feature = "print")]
 impl core::fmt::Display for Dynamic {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     match self.r#type {
@@ -47,6 +66,20 @@ impl core::fmt::Display for Dynamic {
       DynamicMarking::MezzoForte => write!(f, "mf"),
       DynamicMarking::Forte => write!(f, "{}", "f".repeat(usize::from(self.repetitions))),
       DynamicMarking::None => write!(f, ""),
+    }
+  }
+}
+
+#[cfg(feature = "print")]
+impl Serialize for Dynamic {
+  fn serialize(&self) -> SerializedItem {
+    SerializedItem {
+      attributes: match self.r#type {
+        DynamicMarking::None => BTreeMap::new(),
+        _ => BTreeMap::from([(String::from("marking"), self.r#type.to_string())]),
+      },
+      contents: BTreeMap::new(),
+      elements: BTreeMap::new(),
     }
   }
 }

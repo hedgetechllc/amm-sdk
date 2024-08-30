@@ -1,3 +1,5 @@
+use crate::storage::{Serialize, SerializedItem};
+use alloc::collections::BTreeMap;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
@@ -85,11 +87,9 @@ impl TempoSuggestion {
       TempoMarking::Allegretto => 112,
       TempoMarking::AllegroModerato => 116,
       TempoMarking::Allegro => 120,
-      TempoMarking::Vivace => 168,
-      TempoMarking::Vivacissimo => 172,
-      TempoMarking::Allegrissimo => 172,
+      TempoMarking::Vivace | TempoMarking::Presto => 168,
+      TempoMarking::Vivacissimo | TempoMarking::Allegrissimo => 172,
       TempoMarking::AllegroVivace => 174,
-      TempoMarking::Presto => 168,
       TempoMarking::Prestissimo => 200,
     }
   }
@@ -99,23 +99,16 @@ impl TempoSuggestion {
     match self.r#type {
       TempoMarking::Larghissimo => 24,
       TempoMarking::Grave => 45,
-      TempoMarking::Largo => 60,
-      TempoMarking::Lento => 60,
+      TempoMarking::Largo | TempoMarking::Lento => 60,
       TempoMarking::Larghetto => 66,
-      TempoMarking::Adagio => 76,
-      TempoMarking::Adagietto => 76,
-      TempoMarking::Andante => 108,
-      TempoMarking::Andantino => 108,
+      TempoMarking::Adagio | TempoMarking::Adagietto => 76,
+      TempoMarking::Andante | TempoMarking::Andantino => 108,
       TempoMarking::MarciaModerato => 85,
       TempoMarking::AndanteModerato => 112,
-      TempoMarking::Moderato => 120,
-      TempoMarking::Allegretto => 120,
-      TempoMarking::AllegroModerato => 120,
+      TempoMarking::Moderato | TempoMarking::Allegretto | TempoMarking::AllegroModerato => 120,
       TempoMarking::Allegro => 168,
-      TempoMarking::Vivace => 176,
-      TempoMarking::Vivacissimo => 176,
-      TempoMarking::Allegrissimo => 178,
-      TempoMarking::AllegroVivace => 178,
+      TempoMarking::Vivace | TempoMarking::Vivacissimo => 176,
+      TempoMarking::Allegrissimo | TempoMarking::AllegroVivace => 178,
       TempoMarking::Presto => 200,
       TempoMarking::Prestissimo => 240,
     }
@@ -150,34 +143,52 @@ impl TempoSuggestion {
 }
 
 #[cfg(feature = "print")]
-impl core::fmt::Display for TempoSuggestion {
+impl core::fmt::Display for TempoMarking {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(
       f,
       "{}",
-      match self.r#type {
-        TempoMarking::Larghissimo => "Larghissimo",
-        TempoMarking::Grave => "Grave",
-        TempoMarking::Largo => "Largo",
-        TempoMarking::Lento => "Lento",
-        TempoMarking::Larghetto => "Larghetto",
-        TempoMarking::Adagio => "Adagio",
-        TempoMarking::Adagietto => "Adagietto",
-        TempoMarking::Andante => "Andante",
-        TempoMarking::Andantino => "Andantino",
-        TempoMarking::MarciaModerato => "Marcia Moderato",
-        TempoMarking::AndanteModerato => "Andante Moderato",
-        TempoMarking::Moderato => "Moderato",
-        TempoMarking::Allegretto => "Allegretto",
-        TempoMarking::AllegroModerato => "Allegro Moderato",
-        TempoMarking::Allegro => "Allegro",
-        TempoMarking::Vivace => "Vivace",
-        TempoMarking::Vivacissimo => "Vivacissimo",
-        TempoMarking::Allegrissimo => "Allegrissimo",
-        TempoMarking::AllegroVivace => "Allegro Vivace",
-        TempoMarking::Presto => "Presto",
-        TempoMarking::Prestissimo => "Prestissimo",
+      match self {
+        Self::Larghissimo => "Larghissimo",
+        Self::Grave => "Grave",
+        Self::Largo => "Largo",
+        Self::Lento => "Lento",
+        Self::Larghetto => "Larghetto",
+        Self::Adagio => "Adagio",
+        Self::Adagietto => "Adagietto",
+        Self::Andante => "Andante",
+        Self::Andantino => "Andantino",
+        Self::MarciaModerato => "Marcia Moderato",
+        Self::AndanteModerato => "Andante Moderato",
+        Self::Moderato => "Moderato",
+        Self::Allegretto => "Allegretto",
+        Self::AllegroModerato => "Allegro Moderato",
+        Self::Allegro => "Allegro",
+        Self::Vivace => "Vivace",
+        Self::Vivacissimo => "Vivacissimo",
+        Self::Allegrissimo => "Allegrissimo",
+        Self::AllegroVivace => "Allegro Vivace",
+        Self::Presto => "Presto",
+        Self::Prestissimo => "Prestissimo",
       }
     )
+  }
+}
+
+#[cfg(feature = "print")]
+impl core::fmt::Display for TempoSuggestion {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+    write!(f, "{}", self.r#type)
+  }
+}
+
+#[cfg(feature = "print")]
+impl Serialize for TempoSuggestion {
+  fn serialize(&self) -> SerializedItem {
+    SerializedItem {
+      attributes: BTreeMap::from([(String::from("suggestion"), self.to_string())]),
+      contents: BTreeMap::new(),
+      elements: BTreeMap::new(),
+    }
   }
 }

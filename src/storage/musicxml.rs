@@ -35,7 +35,7 @@ impl core::fmt::Display for PhraseModDetails {
       self.modification,
       self.number.unwrap_or(0),
       match self.for_voice {
-        Some(ref voice) => format!(", Voice: {}", voice),
+        Some(ref voice) => format!(", Voice: {voice}"),
         None => String::new(),
       }
     )
@@ -1949,6 +1949,10 @@ impl MusicXmlConverter {
 
     Ok(composition)
   }
+
+  fn save_to_musicxml(_composition: &Composition) -> Result<String, String> {
+    todo!() // TODO: Implement
+  }
 }
 
 impl Convert for MusicXmlConverter {
@@ -1964,8 +1968,9 @@ impl Convert for MusicXmlConverter {
     // TODO: "Update MusicXML parser library to parse from raw data so we can do the partwise conversion if necessary"
   }
 
-  fn save(_path: &str, _composition: &Composition) -> Result<usize, String> {
-    // TODO: Implement saving to MusicXML (fs::write(path, contents)?;)
-    Ok(0)
+  fn save(path: &str, composition: &Composition) -> Result<usize, String> {
+    let musicxml = MusicXmlConverter::save_to_musicxml(composition).map_err(|err| err.to_string())?;
+    std::fs::write(path, musicxml.as_bytes()).map_err(|err| err.to_string())?;
+    Ok(musicxml.as_bytes().len())
   }
 }

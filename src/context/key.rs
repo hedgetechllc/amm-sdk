@@ -1,4 +1,6 @@
 use crate::note::Accidental;
+use crate::storage::{Serialize, SerializedItem};
+use alloc::collections::BTreeMap;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
@@ -202,7 +204,7 @@ impl Key {
 impl Key {
   #[must_use]
   #[allow(clippy::too_many_lines)]
-  pub(crate) fn accidentals(&self) -> [Accidental; 8] {
+  pub(crate) fn accidentals(self) -> [Accidental; 8] {
     match self.r#type {
       KeySignature::AMajor | KeySignature::FSharpMinor => [
         Accidental::None,
@@ -359,43 +361,78 @@ impl Key {
 }
 
 #[cfg(feature = "print")]
-impl core::fmt::Display for Key {
+impl core::fmt::Display for KeyMode {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     write!(
       f,
       "{}",
-      match self.r#type {
-        KeySignature::AMajor => "A",
-        KeySignature::AMinor => "Am",
-        KeySignature::ASharpMinor => "A♯m",
-        KeySignature::AFlatMajor => "A♭",
-        KeySignature::AFlatMinor => "A♭m",
-        KeySignature::BMajor => "B",
-        KeySignature::BMinor => "Bm",
-        KeySignature::BFlatMajor => "B♭",
-        KeySignature::BFlatMinor => "B♭m",
-        KeySignature::CMajor => "C",
-        KeySignature::CMinor => "Cm",
-        KeySignature::CSharpMajor => "C♯",
-        KeySignature::CSharpMinor => "C♯m",
-        KeySignature::CFlatMajor => "C♭",
-        KeySignature::DMajor => "D",
-        KeySignature::DMinor => "Dm",
-        KeySignature::DSharpMinor => "D♯m",
-        KeySignature::DFlatMajor => "D♭",
-        KeySignature::EMajor => "E",
-        KeySignature::EMinor => "Em",
-        KeySignature::EFlatMajor => "E♭",
-        KeySignature::EFlatMinor => "E♭m",
-        KeySignature::FMajor => "F",
-        KeySignature::FMinor => "Fm",
-        KeySignature::FSharpMajor => "F♯",
-        KeySignature::FSharpMinor => "F♯m",
-        KeySignature::GMajor => "G",
-        KeySignature::GMinor => "Gm",
-        KeySignature::GSharpMinor => "G♯m",
-        KeySignature::GFlatMajor => "G♭",
+      match self {
+        Self::Major => "Major",
+        Self::Minor => "Minor",
       }
     )
+  }
+}
+
+#[cfg(feature = "print")]
+impl core::fmt::Display for KeySignature {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+    write!(
+      f,
+      "{}",
+      match self {
+        Self::AMajor => "A",
+        Self::AMinor => "Am",
+        Self::ASharpMinor => "A♯m",
+        Self::AFlatMajor => "A♭",
+        Self::AFlatMinor => "A♭m",
+        Self::BMajor => "B",
+        Self::BMinor => "Bm",
+        Self::BFlatMajor => "B♭",
+        Self::BFlatMinor => "B♭m",
+        Self::CMajor => "C",
+        Self::CMinor => "Cm",
+        Self::CSharpMajor => "C♯",
+        Self::CSharpMinor => "C♯m",
+        Self::CFlatMajor => "C♭",
+        Self::DMajor => "D",
+        Self::DMinor => "Dm",
+        Self::DSharpMinor => "D♯m",
+        Self::DFlatMajor => "D♭",
+        Self::EMajor => "E",
+        Self::EMinor => "Em",
+        Self::EFlatMajor => "E♭",
+        Self::EFlatMinor => "E♭m",
+        Self::FMajor => "F",
+        Self::FMinor => "Fm",
+        Self::FSharpMajor => "F♯",
+        Self::FSharpMinor => "F♯m",
+        Self::GMajor => "G",
+        Self::GMinor => "Gm",
+        Self::GSharpMinor => "G♯m",
+        Self::GFlatMajor => "G♭",
+      }
+    )
+  }
+}
+
+#[cfg(feature = "print")]
+impl core::fmt::Display for Key {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+    write!(f, "{}", self.r#type)
+  }
+}
+
+#[cfg(feature = "print")]
+impl Serialize for Key {
+  fn serialize(&self) -> SerializedItem {
+    SerializedItem {
+      attributes: BTreeMap::from([
+        (String::from("signature"), self.r#type.to_string()),
+        (String::from("mode"), self.mode.to_string()),
+      ]),
+      contents: BTreeMap::new(),
+      elements: BTreeMap::new(),
+    }
   }
 }

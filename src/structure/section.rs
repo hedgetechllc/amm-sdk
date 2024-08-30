@@ -2,10 +2,14 @@ use super::{chord::Chord, multivoice::MultiVoice, phrase::Phrase, staff::Staff, 
 use crate::context::{generate_id, Clef, Key, Tempo, TimeSignature};
 use crate::modification::{SectionModification, SectionModificationType};
 use crate::note::{Duration, DurationType, Note, Pitch};
-use alloc::{collections::BTreeSet, rc::Rc, string::String, vec::Vec};
+use crate::storage::{Serialize, SerializedItem};
+use alloc::{
+  collections::{BTreeMap, BTreeSet},
+  rc::Rc,
+  string::String,
+  vec::Vec,
+};
 use core::{cell::RefCell, slice::Iter};
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
 
 #[derive(Clone)]
 pub enum SectionContent {
@@ -537,5 +541,41 @@ impl core::fmt::Display for Section {
         format!(" ({mods})")
       }
     )
+  }
+}
+
+#[cfg(feature = "print")]
+impl Serialize for Section {
+  fn serialize(&self) -> SerializedItem {
+    let mut elements = BTreeMap::from([(
+      String::from("content"),
+      self
+        .content
+        .iter()
+        .map(|content| match content {
+          SectionContent::Staff(staff) => staff.borrow().serialize(),
+          SectionContent::Section(section) => section.borrow().serialize(),
+        })
+        .collect(),
+    )]);
+    if !self.modifications.is_empty() {
+      elements.insert(
+        String::from("modifications"),
+        self
+          .modifications
+          .iter()
+          .map(|modification| modification.borrow().serialize())
+          .collect(),
+      );
+    }
+    SerializedItem {
+      attributes: BTreeMap::from([
+        (String::from("id"), self.id.to_string()),
+        (String::from("name"), self.name.clone()),
+        (String::from("type"), String::from("Section")),
+      ]),
+      contents: BTreeMap::new(),
+      elements,
+    }
   }
 }

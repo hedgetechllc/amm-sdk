@@ -9,6 +9,10 @@ impl AmmStorage {
   fn load_from_amm(_data: &[u8]) -> Result<Composition, String> {
     todo!() // TODO: Implement
   }
+
+  fn save_to_amm(_composition: &Composition) -> Result<String, String> {
+    todo!() // TODO: Implement
+  }
 }
 
 impl Convert for AmmStorage {
@@ -21,7 +25,9 @@ impl Convert for AmmStorage {
     AmmStorage::load_from_amm(data)
   }
 
-  fn save(_path: &str, _composition: &Composition) -> Result<usize, String> {
-    todo!() // TODO: Implement
+  fn save(path: &str, composition: &Composition) -> Result<usize, String> {
+    let amm = AmmStorage::save_to_amm(composition).map_err(|err| err.to_string())?;
+    fs::write(path, amm.as_bytes()).map_err(|err| err.to_string())?;
+    Ok(amm.as_bytes().len())
   }
 }
