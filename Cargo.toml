@@ -1,11 +1,13 @@
-[package]
+[workspace]
+members = ["amm_internal", "amm_macros", "amm"]
+resolver = "2"
+
+[workspace.package]
 edition = "2021"
-name = "amm_sdk"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Will Hedgecock <will.hedgecock@gmail.com>"]
 license = "MIT"
-description = "Abstract Music Manipulation SDK"
-documentation = "https://docs.rs/amm_sdk/latest/"
+documentation = "https://docs.rs/amm/latest/"
 readme = "README.md"
 homepage = "https://github.com/hedgetechllc/amm-sdk"
 repository = "https://github.com/hedgetechllc/amm-sdk"
@@ -13,26 +15,9 @@ keywords = ["music", "musicxml", "format", "parser", "parsing"]
 categories = ["api-bindings", "parsing", "data-structures", "encoding", "multimedia::audio"]
 publish = false
 
-[dependencies]
-midly = { version = "0.5", default-features = false, features = ["alloc"] }
-musicxml = { version = "1.0", default-features = false }
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-serde = { version = "1.0", default-features = false, features = ["alloc", "derive", "rc"] }
-serde-wasm-bindgen = { version = "0.6" }
-wasm-bindgen = { version = "0.2", default-features = false }
-web-sys = { version = "0.3", default-features = false, features = ["console"] }
-
-[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
-wasm-bindgen-test = { version = "0.3" }
-
-[features]
-default = ["std", "print"]
-print = []
-std = []
-
-[lib]
-crate-type = ["rlib", "cdylib"]
+[workspace.dependencies]
+amm_internal = { path = "amm_internal", version = "0.2.0" }
+amm_macros = { path = "amm_macros", version = "0.2.0" }
 
 [profile.release]
 codegen-units = 1

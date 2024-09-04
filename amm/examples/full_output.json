@@ -1,0 +1,1806 @@
+{
+  "type": "Composition",
+  "title": "Test Composition",
+  "copyright": "Copyright Vandy",
+  "publisher": "Publisher Example",
+  "composers": [
+    "Composer Name1"
+  ],
+  "lyricists": [
+    "Lyricist Name1",
+    "Lyricist Name2"
+  ],
+  "arrangers": [
+    "Arranger Name1",
+    "Arranger Name2"
+  ],
+  "metadata": {
+    "TestKey1": "TestValue1",
+    "TestKey2": "TestValue2"
+  },
+  "parts": [
+    {
+      "type": "Part",
+      "id": 1,
+      "name": "Guitar",
+      "content": [
+        {
+          "type": "Section",
+          "id": 2,
+          "name": "Intro",
+          "content": [
+            {
+              "type": "Section",
+              "id": 3,
+              "name": "Subsection",
+              "content": [
+                {
+                  "type": "Staff",
+                  "id": 4,
+                  "name": "Staff1",
+                  "content": [
+                    {
+                      "type": "Direction",
+                      "id": 5,
+                      "modification": {
+                        "type": "AccordionRegistration",
+                        "high": true,
+                        "middle": 2,
+                        "low": true
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 6,
+                      "modification": "BreathMark"
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 7,
+                      "modification": "Caesura"
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 8,
+                      "modification": {
+                        "type": "ClefChange",
+                        "clef": {
+                          "type": "Clef",
+                          "symbol": "CClef",
+                          "clef_type": "Alto"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 9,
+                      "modification": {
+                        "type": "ClefChange",
+                        "clef": {
+                          "type": "Clef",
+                          "symbol": "CClef",
+                          "clef_type": "Baritone"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 10,
+                      "modification": {
+                        "type": "ClefChange",
+                        "clef": {
+                          "type": "Clef",
+                          "symbol": "FClef",
+                          "clef_type": "Bass"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 11,
+                      "modification": {
+                        "type": "ClefChange",
+                        "clef": {
+                          "type": "Clef",
+                          "symbol": "GClef",
+                          "clef_type": "FrenchViolin"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 12,
+                      "modification": {
+                        "type": "ClefChange",
+                        "clef": {
+                          "type": "Clef",
+                          "symbol": "CClef",
+                          "clef_type": "MezzoSoprano"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 13,
+                      "modification": {
+                        "type": "ClefChange",
+                        "clef": {
+                          "type": "Clef",
+                          "symbol": "CClef",
+                          "clef_type": "Soprano"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 14,
+                      "modification": {
+                        "type": "ClefChange",
+                        "clef": {
+                          "type": "Clef",
+                          "symbol": "FClef",
+                          "clef_type": "Subbass"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 15,
+                      "modification": {
+                        "type": "ClefChange",
+                        "clef": {
+                          "type": "Clef",
+                          "symbol": "CClef",
+                          "clef_type": "Tenor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 16,
+                      "modification": {
+                        "type": "ClefChange",
+                        "clef": {
+                          "type": "Clef",
+                          "symbol": "GClef",
+                          "clef_type": "Treble"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 17,
+                      "modification": {
+                        "type": "Dynamic",
+                        "dynamic": {
+                          "type": "Dynamic",
+                          "marking": "None",
+                          "repetitions": 0
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 18,
+                      "modification": {
+                        "type": "Dynamic",
+                        "dynamic": {
+                          "type": "Dynamic",
+                          "marking": "Piano",
+                          "repetitions": 2
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 19,
+                      "modification": {
+                        "type": "Dynamic",
+                        "dynamic": {
+                          "type": "Dynamic",
+                          "marking": "Forte",
+                          "repetitions": 4
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 20,
+                      "modification": {
+                        "type": "Dynamic",
+                        "dynamic": {
+                          "type": "Dynamic",
+                          "marking": "MezzoPiano",
+                          "repetitions": 1
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 21,
+                      "modification": {
+                        "type": "Dynamic",
+                        "dynamic": {
+                          "type": "Dynamic",
+                          "marking": "MezzoForte",
+                          "repetitions": 1
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 22,
+                      "modification": {
+                        "type": "KeyChange",
+                        "key": {
+                          "type": "Key",
+                          "mode": "Major",
+                          "signature": "AFlatMajor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 23,
+                      "modification": {
+                        "type": "KeyChange",
+                        "key": {
+                          "type": "Key",
+                          "mode": "Minor",
+                          "signature": "AFlatMinor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 24,
+                      "modification": {
+                        "type": "KeyChange",
+                        "key": {
+                          "type": "Key",
+                          "mode": "Major",
+                          "signature": "AMajor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 25,
+                      "modification": {
+                        "type": "KeyChange",
+                        "key": {
+                          "type": "Key",
+                          "mode": "Minor",
+                          "signature": "AMinor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 26,
+                      "modification": {
+                        "type": "KeyChange",
+                        "key": {
+                          "type": "Key",
+                          "mode": "Minor",
+                          "signature": "ASharpMinor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 27,
+                      "modification": {
+                        "type": "KeyChange",
+                        "key": {
+                          "type": "Key",
+                          "mode": "Major",
+                          "signature": "BFlatMajor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 28,
+                      "modification": {
+                        "type": "KeyChange",
+                        "key": {
+                          "type": "Key",
+                          "mode": "Minor",
+                          "signature": "BFlatMinor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 29,
+                      "modification": {
+                        "type": "KeyChange",
+                        "key": {
+                          "type": "Key",
+                          "mode": "Major",
+                          "signature": "BMajor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 30,
+                      "modification": {
+                        "type": "KeyChange",
+                        "key": {
+                          "type": "Key",
+                          "mode": "Minor",
+                          "signature": "BMinor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 31,
+                      "modification": {
+                        "type": "KeyChange",
+                        "key": {
+                          "type": "Key",
+                          "mode": "Major",
+                          "signature": "CFlatMajor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 32,
+                      "modification": {
+                        "type": "KeyChange",
+                        "key": {
+                          "type": "Key",
+                          "mode": "Major",
+                          "signature": "CMajor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 33,
+                      "modification": {
+                        "type": "KeyChange",
+                        "key": {
+                          "type": "Key",
+                          "mode": "Minor",
+                          "signature": "CMinor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 34,
+                      "modification": {
+                        "type": "KeyChange",
+                        "key": {
+                          "type": "Key",
+                          "mode": "Major",
+                          "signature": "CSharpMajor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 35,
+                      "modification": {
+                        "type": "KeyChange",
+                        "key": {
+                          "type": "Key",
+                          "mode": "Minor",
+                          "signature": "CSharpMinor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 36,
+                      "modification": {
+                        "type": "KeyChange",
+                        "key": {
+                          "type": "Key",
+                          "mode": "Major",
+                          "signature": "DFlatMajor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 37,
+                      "modification": {
+                        "type": "KeyChange",
+                        "key": {
+                          "type": "Key",
+                          "mode": "Major",
+                          "signature": "DMajor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 38,
+                      "modification": {
+                        "type": "KeyChange",
+                        "key": {
+                          "type": "Key",
+                          "mode": "Minor",
+                          "signature": "DMinor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 39,
+                      "modification": {
+                        "type": "KeyChange",
+                        "key": {
+                          "type": "Key",
+                          "mode": "Minor",
+                          "signature": "DSharpMinor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 40,
+                      "modification": {
+                        "type": "KeyChange",
+                        "key": {
+                          "type": "Key",
+                          "mode": "Major",
+                          "signature": "EFlatMajor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 41,
+                      "modification": {
+                        "type": "KeyChange",
+                        "key": {
+                          "type": "Key",
+                          "mode": "Minor",
+                          "signature": "EFlatMinor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 42,
+                      "modification": {
+                        "type": "KeyChange",
+                        "key": {
+                          "type": "Key",
+                          "mode": "Major",
+                          "signature": "EMajor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 43,
+                      "modification": {
+                        "type": "KeyChange",
+                        "key": {
+                          "type": "Key",
+                          "mode": "Minor",
+                          "signature": "EMinor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 44,
+                      "modification": {
+                        "type": "KeyChange",
+                        "key": {
+                          "type": "Key",
+                          "mode": "Major",
+                          "signature": "FMajor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 45,
+                      "modification": {
+                        "type": "KeyChange",
+                        "key": {
+                          "type": "Key",
+                          "mode": "Minor",
+                          "signature": "FMinor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 46,
+                      "modification": {
+                        "type": "KeyChange",
+                        "key": {
+                          "type": "Key",
+                          "mode": "Major",
+                          "signature": "FSharpMajor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 47,
+                      "modification": {
+                        "type": "KeyChange",
+                        "key": {
+                          "type": "Key",
+                          "mode": "Minor",
+                          "signature": "FSharpMinor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 48,
+                      "modification": {
+                        "type": "KeyChange",
+                        "key": {
+                          "type": "Key",
+                          "mode": "Major",
+                          "signature": "GFlatMajor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 49,
+                      "modification": {
+                        "type": "KeyChange",
+                        "key": {
+                          "type": "Key",
+                          "mode": "Major",
+                          "signature": "GMajor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 50,
+                      "modification": {
+                        "type": "KeyChange",
+                        "key": {
+                          "type": "Key",
+                          "mode": "Minor",
+                          "signature": "GMinor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 51,
+                      "modification": {
+                        "type": "KeyChange",
+                        "key": {
+                          "type": "Key",
+                          "mode": "Minor",
+                          "signature": "GSharpMinor"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 52,
+                      "modification": {
+                        "type": "StringMute",
+                        "on": true
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 53,
+                      "modification": {
+                        "type": "TimeSignatureChange",
+                        "time_signature": {
+                          "type": "TimeSignature",
+                          "signature": "Explicit",
+                          "numerator": 3,
+                          "denominator": 8
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 54,
+                      "modification": {
+                        "type": "TimeSignatureChange",
+                        "time_signature": {
+                          "type": "TimeSignature",
+                          "signature": "CutTime",
+                          "numerator": 2,
+                          "denominator": 2
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 55,
+                      "modification": {
+                        "type": "TimeSignatureChange",
+                        "time_signature": {
+                          "type": "TimeSignature",
+                          "signature": "None",
+                          "numerator": 0,
+                          "denominator": 0
+                        }
+                      }
+                    },
+                    {
+                      "type": "Direction",
+                      "id": 56,
+                      "modification": {
+                        "type": "TimeSignatureChange",
+                        "time_signature": {
+                          "type": "TimeSignature",
+                          "signature": "CommonTime",
+                          "numerator": 4,
+                          "denominator": 4
+                        }
+                      }
+                    },
+                    {
+                      "type": "Note",
+                      "id": 57,
+                      "pitch": {
+                        "type": "Pitch",
+                        "name": "Rest",
+                        "octave": 0
+                      },
+                      "duration": {
+                        "type": "Duration",
+                        "value": "Maxima",
+                        "dots": 0
+                      },
+                      "accidental": "None",
+                      "modifications": []
+                    },
+                    {
+                      "type": "Note",
+                      "id": 58,
+                      "pitch": {
+                        "type": "Pitch",
+                        "name": "A",
+                        "octave": 2
+                      },
+                      "duration": {
+                        "type": "Duration",
+                        "value": "Long",
+                        "dots": 1
+                      },
+                      "accidental": "Sharp",
+                      "modifications": []
+                    },
+                    {
+                      "type": "Note",
+                      "id": 59,
+                      "pitch": {
+                        "type": "Pitch",
+                        "name": "B",
+                        "octave": 2
+                      },
+                      "duration": {
+                        "type": "Duration",
+                        "value": "Breve",
+                        "dots": 2
+                      },
+                      "accidental": "DoubleSharp",
+                      "modifications": []
+                    },
+                    {
+                      "type": "Note",
+                      "id": 60,
+                      "pitch": {
+                        "type": "Pitch",
+                        "name": "C",
+                        "octave": 2
+                      },
+                      "duration": {
+                        "type": "Duration",
+                        "value": "Whole",
+                        "dots": 0
+                      },
+                      "accidental": "Flat",
+                      "modifications": []
+                    },
+                    {
+                      "type": "Note",
+                      "id": 61,
+                      "pitch": {
+                        "type": "Pitch",
+                        "name": "D",
+                        "octave": 2
+                      },
+                      "duration": {
+                        "type": "Duration",
+                        "value": "Half",
+                        "dots": 1
+                      },
+                      "accidental": "DoubleFlat",
+                      "modifications": []
+                    },
+                    {
+                      "type": "Note",
+                      "id": 62,
+                      "pitch": {
+                        "type": "Pitch",
+                        "name": "E",
+                        "octave": 2
+                      },
+                      "duration": {
+                        "type": "Duration",
+                        "value": "Quarter",
+                        "dots": 2
+                      },
+                      "accidental": "None",
+                      "modifications": []
+                    },
+                    {
+                      "type": "Note",
+                      "id": 63,
+                      "pitch": {
+                        "type": "Pitch",
+                        "name": "F",
+                        "octave": 2
+                      },
+                      "duration": {
+                        "type": "Duration",
+                        "value": "Eighth",
+                        "dots": 0
+                      },
+                      "accidental": "Sharp",
+                      "modifications": []
+                    },
+                    {
+                      "type": "Note",
+                      "id": 64,
+                      "pitch": {
+                        "type": "Pitch",
+                        "name": "G",
+                        "octave": 2
+                      },
+                      "duration": {
+                        "type": "Duration",
+                        "value": "Sixteenth",
+                        "dots": 1
+                      },
+                      "accidental": "DoubleSharp",
+                      "modifications": []
+                    },
+                    {
+                      "type": "Note",
+                      "id": 65,
+                      "pitch": {
+                        "type": "Pitch",
+                        "name": "A",
+                        "octave": 4
+                      },
+                      "duration": {
+                        "type": "Duration",
+                        "value": "ThirtySecond",
+                        "dots": 2
+                      },
+                      "accidental": "Flat",
+                      "modifications": []
+                    },
+                    {
+                      "type": "Note",
+                      "id": 66,
+                      "pitch": {
+                        "type": "Pitch",
+                        "name": "B",
+                        "octave": 4
+                      },
+                      "duration": {
+                        "type": "Duration",
+                        "value": "SixtyFourth",
+                        "dots": 0
+                      },
+                      "accidental": "DoubleFlat",
+                      "modifications": []
+                    },
+                    {
+                      "type": "Note",
+                      "id": 67,
+                      "pitch": {
+                        "type": "Pitch",
+                        "name": "C",
+                        "octave": 4
+                      },
+                      "duration": {
+                        "type": "Duration",
+                        "value": "OneHundredTwentyEighth",
+                        "dots": 1
+                      },
+                      "accidental": "None",
+                      "modifications": []
+                    },
+                    {
+                      "type": "Note",
+                      "id": 68,
+                      "pitch": {
+                        "type": "Pitch",
+                        "name": "D",
+                        "octave": 4
+                      },
+                      "duration": {
+                        "type": "Duration",
+                        "value": "TwoHundredFiftySixth",
+                        "dots": 2
+                      },
+                      "accidental": "Sharp",
+                      "modifications": []
+                    },
+                    {
+                      "type": "Note",
+                      "id": 69,
+                      "pitch": {
+                        "type": "Pitch",
+                        "name": "E",
+                        "octave": 4
+                      },
+                      "duration": {
+                        "type": "Duration",
+                        "value": "FiveHundredTwelfth",
+                        "dots": 0
+                      },
+                      "accidental": "DoubleSharp",
+                      "modifications": []
+                    },
+                    {
+                      "type": "Note",
+                      "id": 70,
+                      "pitch": {
+                        "type": "Pitch",
+                        "name": "F",
+                        "octave": 4
+                      },
+                      "duration": {
+                        "type": "Duration",
+                        "value": "OneThousandTwentyFourth",
+                        "dots": 1
+                      },
+                      "accidental": "Flat",
+                      "modifications": []
+                    },
+                    {
+                      "type": "Note",
+                      "id": 71,
+                      "pitch": {
+                        "type": "Pitch",
+                        "name": "G",
+                        "octave": 4
+                      },
+                      "duration": {
+                        "type": "Duration",
+                        "value": "TwoThousandFortyEighth",
+                        "dots": 2
+                      },
+                      "accidental": "DoubleFlat",
+                      "modifications": []
+                    },
+                    {
+                      "type": "Note",
+                      "id": 72,
+                      "pitch": {
+                        "type": "Pitch",
+                        "name": "C",
+                        "octave": 4
+                      },
+                      "duration": {
+                        "type": "Duration",
+                        "value": "Quarter",
+                        "dots": 0
+                      },
+                      "accidental": "None",
+                      "modifications": [
+                        {
+                          "type": "NoteModification",
+                          "id": 73,
+                          "modification": "Accent"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 74,
+                          "modification": "BrassBend"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 75,
+                          "modification": "DetachedLegato"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 76,
+                          "modification": "Doit"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 77,
+                          "modification": "DoubleTongue"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 78,
+                          "modification": "DownBow"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 79,
+                          "modification": {
+                            "type": "Dynamic",
+                            "dynamic": {
+                              "type": "Dynamic",
+                              "marking": "Piano",
+                              "repetitions": 1
+                            }
+                          }
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 80,
+                          "modification": "Falloff"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 81,
+                          "modification": "Fermata"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 82,
+                          "modification": "Fingernails"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 83,
+                          "modification": "Flip"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 84,
+                          "modification": {
+                            "type": "Glissando",
+                            "from_current": false,
+                            "going_up": true
+                          }
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 85,
+                          "modification": "Golpe"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 86,
+                          "modification": {
+                            "type": "Grace",
+                            "acciaccatura": true,
+                            "note_value": 45
+                          }
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 87,
+                          "modification": "HalfMuted"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 88,
+                          "modification": {
+                            "type": "Handbell",
+                            "technique": "Belltree"
+                          }
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 89,
+                          "modification": {
+                            "type": "Handbell",
+                            "technique": "Damp"
+                          }
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 90,
+                          "modification": {
+                            "type": "Handbell",
+                            "technique": "Echo"
+                          }
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 91,
+                          "modification": {
+                            "type": "Handbell",
+                            "technique": "Gyro"
+                          }
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 92,
+                          "modification": {
+                            "type": "Handbell",
+                            "technique": "HandMartellato"
+                          }
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 93,
+                          "modification": {
+                            "type": "Handbell",
+                            "technique": "MalletLift"
+                          }
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 94,
+                          "modification": {
+                            "type": "Handbell",
+                            "technique": "MalletTable"
+                          }
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 95,
+                          "modification": {
+                            "type": "Handbell",
+                            "technique": "Martellato"
+                          }
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 96,
+                          "modification": {
+                            "type": "Handbell",
+                            "technique": "MartellatoLift"
+                          }
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 97,
+                          "modification": {
+                            "type": "Handbell",
+                            "technique": "MutedMartellato"
+                          }
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 98,
+                          "modification": {
+                            "type": "Handbell",
+                            "technique": "PluckLift"
+                          }
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 99,
+                          "modification": {
+                            "type": "Handbell",
+                            "technique": "Swing"
+                          }
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 100,
+                          "modification": {
+                            "type": "HarmonMute",
+                            "open": true,
+                            "half": true
+                          }
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 101,
+                          "modification": "Haydn"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 102,
+                          "modification": "Heel"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 103,
+                          "modification": {
+                            "type": "Hole",
+                            "open": true,
+                            "half": false
+                          }
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 104,
+                          "modification": "Marcato"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 105,
+                          "modification": {
+                            "type": "Mordent",
+                            "upper": true
+                          }
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 106,
+                          "modification": "Open"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 107,
+                          "modification": "Pizzicato"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 108,
+                          "modification": "Plop"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 109,
+                          "modification": {
+                            "type": "Portamento",
+                            "from_current": true,
+                            "going_up": false
+                          }
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 110,
+                          "modification": "Schleifer"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 111,
+                          "modification": "Scoop"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 112,
+                          "modification": "Sforzando"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 113,
+                          "modification": "Shake"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 114,
+                          "modification": "Smear"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 115,
+                          "modification": "SoftAccent"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 116,
+                          "modification": "Spiccato"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 117,
+                          "modification": "Staccatissimo"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 118,
+                          "modification": "Staccato"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 119,
+                          "modification": "Stopped"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 120,
+                          "modification": "Stress"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 121,
+                          "modification": "Tap"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 122,
+                          "modification": "Tenuto"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 123,
+                          "modification": "ThumbPosition"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 124,
+                          "modification": "Tie"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 125,
+                          "modification": "Toe"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 126,
+                          "modification": {
+                            "type": "Tremolo",
+                            "relative_speed": 2
+                          }
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 127,
+                          "modification": {
+                            "type": "Trill",
+                            "upper": true
+                          }
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 128,
+                          "modification": "TripleTongue"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 129,
+                          "modification": {
+                            "type": "Turn",
+                            "upper": false,
+                            "delayed": false,
+                            "vertical": true
+                          }
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 130,
+                          "modification": "Unstress"
+                        },
+                        {
+                          "type": "NoteModification",
+                          "id": 131,
+                          "modification": "UpBow"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "Chord",
+                      "id": 132,
+                      "content": [
+                        {
+                          "type": "Note",
+                          "id": 133,
+                          "pitch": {
+                            "type": "Pitch",
+                            "name": "C",
+                            "octave": 3
+                          },
+                          "duration": {
+                            "type": "Duration",
+                            "value": "Quarter",
+                            "dots": 0
+                          },
+                          "accidental": "None",
+                          "modifications": []
+                        },
+                        {
+                          "type": "Note",
+                          "id": 134,
+                          "pitch": {
+                            "type": "Pitch",
+                            "name": "E",
+                            "octave": 3
+                          },
+                          "duration": {
+                            "type": "Duration",
+                            "value": "Eighth",
+                            "dots": 0
+                          },
+                          "accidental": "None",
+                          "modifications": []
+                        },
+                        {
+                          "type": "Note",
+                          "id": 135,
+                          "pitch": {
+                            "type": "Pitch",
+                            "name": "G",
+                            "octave": 3
+                          },
+                          "duration": {
+                            "type": "Duration",
+                            "value": "Eighth",
+                            "dots": 0
+                          },
+                          "accidental": "None",
+                          "modifications": []
+                        }
+                      ],
+                      "modifications": [
+                        {
+                          "type": "ChordModification",
+                          "id": 136,
+                          "modification": "Accent"
+                        },
+                        {
+                          "type": "ChordModification",
+                          "id": 137,
+                          "modification": "Arpeggiate"
+                        },
+                        {
+                          "type": "ChordModification",
+                          "id": 138,
+                          "modification": "DetachedLegato"
+                        },
+                        {
+                          "type": "ChordModification",
+                          "id": 139,
+                          "modification": "DownBow"
+                        },
+                        {
+                          "type": "ChordModification",
+                          "id": 140,
+                          "modification": {
+                            "type": "Dynamic",
+                            "dynamic": {
+                              "type": "Dynamic",
+                              "marking": "Forte",
+                              "repetitions": 3
+                            }
+                          }
+                        },
+                        {
+                          "type": "ChordModification",
+                          "id": 141,
+                          "modification": "Fermata"
+                        },
+                        {
+                          "type": "ChordModification",
+                          "id": 142,
+                          "modification": "Fingernails"
+                        },
+                        {
+                          "type": "ChordModification",
+                          "id": 143,
+                          "modification": "HalfMuted"
+                        },
+                        {
+                          "type": "ChordModification",
+                          "id": 144,
+                          "modification": {
+                            "type": "HarmonMute",
+                            "open": true,
+                            "half": true
+                          }
+                        },
+                        {
+                          "type": "ChordModification",
+                          "id": 145,
+                          "modification": "Heel"
+                        },
+                        {
+                          "type": "ChordModification",
+                          "id": 146,
+                          "modification": "Marcato"
+                        },
+                        {
+                          "type": "ChordModification",
+                          "id": 147,
+                          "modification": "NonArpeggiate"
+                        },
+                        {
+                          "type": "ChordModification",
+                          "id": 148,
+                          "modification": "Open"
+                        },
+                        {
+                          "type": "ChordModification",
+                          "id": 149,
+                          "modification": "Pizzicato"
+                        },
+                        {
+                          "type": "ChordModification",
+                          "id": 150,
+                          "modification": "Sforzando"
+                        },
+                        {
+                          "type": "ChordModification",
+                          "id": 151,
+                          "modification": "Smear"
+                        },
+                        {
+                          "type": "ChordModification",
+                          "id": 152,
+                          "modification": "SoftAccent"
+                        },
+                        {
+                          "type": "ChordModification",
+                          "id": 153,
+                          "modification": "Spiccato"
+                        },
+                        {
+                          "type": "ChordModification",
+                          "id": 154,
+                          "modification": "Staccatissimo"
+                        },
+                        {
+                          "type": "ChordModification",
+                          "id": 155,
+                          "modification": "Staccato"
+                        },
+                        {
+                          "type": "ChordModification",
+                          "id": 156,
+                          "modification": "Stress"
+                        },
+                        {
+                          "type": "ChordModification",
+                          "id": 157,
+                          "modification": "Tenuto"
+                        },
+                        {
+                          "type": "ChordModification",
+                          "id": 158,
+                          "modification": "Tie"
+                        },
+                        {
+                          "type": "ChordModification",
+                          "id": 159,
+                          "modification": "Toe"
+                        },
+                        {
+                          "type": "ChordModification",
+                          "id": 160,
+                          "modification": {
+                            "type": "Tremolo",
+                            "relative_speed": 1
+                          }
+                        },
+                        {
+                          "type": "ChordModification",
+                          "id": 161,
+                          "modification": "Unstress"
+                        },
+                        {
+                          "type": "ChordModification",
+                          "id": 162,
+                          "modification": "UpBow"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "Phrase",
+                      "id": 163,
+                      "content": [
+                        {
+                          "type": "Note",
+                          "id": 164,
+                          "pitch": {
+                            "type": "Pitch",
+                            "name": "C",
+                            "octave": 3
+                          },
+                          "duration": {
+                            "type": "Duration",
+                            "value": "Quarter",
+                            "dots": 0
+                          },
+                          "accidental": "None",
+                          "modifications": []
+                        },
+                        {
+                          "type": "Chord",
+                          "id": 165,
+                          "content": [
+                            {
+                              "type": "Note",
+                              "id": 166,
+                              "pitch": {
+                                "type": "Pitch",
+                                "name": "C",
+                                "octave": 3
+                              },
+                              "duration": {
+                                "type": "Duration",
+                                "value": "Eighth",
+                                "dots": 0
+                              },
+                              "accidental": "None",
+                              "modifications": []
+                            },
+                            {
+                              "type": "Note",
+                              "id": 167,
+                              "pitch": {
+                                "type": "Pitch",
+                                "name": "E",
+                                "octave": 3
+                              },
+                              "duration": {
+                                "type": "Duration",
+                                "value": "Eighth",
+                                "dots": 0
+                              },
+                              "accidental": "None",
+                              "modifications": []
+                            }
+                          ],
+                          "modifications": []
+                        },
+                        {
+                          "type": "Phrase",
+                          "id": 168,
+                          "content": [
+                            {
+                              "type": "Note",
+                              "id": 169,
+                              "pitch": {
+                                "type": "Pitch",
+                                "name": "C",
+                                "octave": 3
+                              },
+                              "duration": {
+                                "type": "Duration",
+                                "value": "Quarter",
+                                "dots": 0
+                              },
+                              "accidental": "None",
+                              "modifications": []
+                            },
+                            {
+                              "type": "Note",
+                              "id": 170,
+                              "pitch": {
+                                "type": "Pitch",
+                                "name": "D",
+                                "octave": 3
+                              },
+                              "duration": {
+                                "type": "Duration",
+                                "value": "Quarter",
+                                "dots": 0
+                              },
+                              "accidental": "None",
+                              "modifications": []
+                            },
+                            {
+                              "type": "Note",
+                              "id": 171,
+                              "pitch": {
+                                "type": "Pitch",
+                                "name": "E",
+                                "octave": 3
+                              },
+                              "duration": {
+                                "type": "Duration",
+                                "value": "Quarter",
+                                "dots": 0
+                              },
+                              "accidental": "None",
+                              "modifications": []
+                            }
+                          ],
+                          "modifications": [
+                            {
+                              "type": "PhraseModification",
+                              "id": 172,
+                              "modification": {
+                                "type": "Crescendo",
+                                "final_dynamic": {
+                                  "type": "Dynamic",
+                                  "marking": "None",
+                                  "repetitions": 0
+                                }
+                              }
+                            },
+                            {
+                              "type": "PhraseModification",
+                              "id": 173,
+                              "modification": {
+                                "type": "Decrescendo",
+                                "final_dynamic": {
+                                  "type": "Dynamic",
+                                  "marking": "Piano",
+                                  "repetitions": 3
+                                }
+                              }
+                            },
+                            {
+                              "type": "PhraseModification",
+                              "id": 174,
+                              "modification": "Glissando"
+                            },
+                            {
+                              "type": "PhraseModification",
+                              "id": 175,
+                              "modification": {
+                                "type": "Hairpin",
+                                "maximum_dynamic": {
+                                  "type": "Dynamic",
+                                  "marking": "Forte",
+                                  "repetitions": 4
+                                }
+                              }
+                            },
+                            {
+                              "type": "PhraseModification",
+                              "id": 176,
+                              "modification": "Legato"
+                            },
+                            {
+                              "type": "PhraseModification",
+                              "id": 177,
+                              "modification": {
+                                "type": "OctaveShift",
+                                "num_octaves": -1
+                              }
+                            },
+                            {
+                              "type": "PhraseModification",
+                              "id": 178,
+                              "modification": {
+                                "type": "Pedal",
+                                "pedal_type": "Soft"
+                              }
+                            },
+                            {
+                              "type": "PhraseModification",
+                              "id": 179,
+                              "modification": {
+                                "type": "Pedal",
+                                "pedal_type": "Sustain"
+                              }
+                            },
+                            {
+                              "type": "PhraseModification",
+                              "id": 180,
+                              "modification": {
+                                "type": "Pedal",
+                                "pedal_type": "Sostenuto"
+                              }
+                            },
+                            {
+                              "type": "PhraseModification",
+                              "id": 181,
+                              "modification": "Portamento"
+                            },
+                            {
+                              "type": "PhraseModification",
+                              "id": 182,
+                              "modification": {
+                                "type": "Tremolo",
+                                "relative_speed": 3
+                              }
+                            },
+                            {
+                              "type": "PhraseModification",
+                              "id": 183,
+                              "modification": {
+                                "type": "Tuplet",
+                                "num_beats": 3,
+                                "into_beats": 2
+                              }
+                            }
+                          ]
+                        }
+                      ],
+                      "modifications": []
+                    }
+                  ]
+                }
+              ],
+              "modifications": []
+            }
+          ],
+          "modifications": [
+            {
+              "type": "SectionModification",
+              "id": 184,
+              "modification": "Accelerando"
+            },
+            {
+              "type": "SectionModification",
+              "id": 185,
+              "modification": {
+                "type": "OnlyPlay",
+                "iterations": [
+                  1,
+                  2,
+                  4
+                ]
+              }
+            },
+            {
+              "type": "SectionModification",
+              "id": 186,
+              "modification": "Rallentando"
+            },
+            {
+              "type": "SectionModification",
+              "id": 187,
+              "modification": {
+                "type": "Repeat",
+                "num_times": 2
+              }
+            },
+            {
+              "type": "SectionModification",
+              "id": 188,
+              "modification": "Ritardando"
+            },
+            {
+              "type": "SectionModification",
+              "id": 189,
+              "modification": "Ritenuto"
+            },
+            {
+              "type": "SectionModification",
+              "id": 190,
+              "modification": "Stringendo"
+            },
+            {
+              "type": "SectionModification",
+              "id": 191,
+              "modification": {
+                "type": "TempoExplicit",
+                "tempo": {
+                  "type": "Tempo",
+                  "base_note": {
+                    "type": "Duration",
+                    "value": "Whole",
+                    "dots": 0
+                  },
+                  "beats_per_minute": 10
+                }
+              }
+            },
+            {
+              "type": "SectionModification",
+              "id": 192,
+              "modification": {
+                "type": "TempoImplicit",
+                "tempo": {
+                  "type": "TempoSuggestion",
+                  "marking": "Allegretto"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "tempo": {
+    "type": "Tempo",
+    "base_note": {
+      "type": "Duration",
+      "value": "Half",
+      "dots": 1
+    },
+    "beats_per_minute": 118
+  },
+  "starting_key": {
+    "type": "Key",
+    "mode": "Minor",
+    "signature": "GSharpMinor"
+  },
+  "starting_time_signature": {
+    "type": "TimeSignature",
+    "signature": "Explicit",
+    "numerator": 3,
+    "denominator": 8
+  }
+}
