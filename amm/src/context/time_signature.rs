@@ -33,15 +33,13 @@ impl TimeSignature {
     Self {
       signature,
       numerator: match signature {
-        TimeSignatureType::CommonTime => 4,
+        TimeSignatureType::CommonTime | TimeSignatureType::Explicit => 4,
         TimeSignatureType::CutTime => 2,
-        TimeSignatureType::Explicit => 4,
         TimeSignatureType::None => 0,
       },
       denominator: match signature {
-        TimeSignatureType::CommonTime => 4,
+        TimeSignatureType::CommonTime | TimeSignatureType::Explicit => 4,
         TimeSignatureType::CutTime => 2,
-        TimeSignatureType::Explicit => 4,
         TimeSignatureType::None => 0,
       },
     }

@@ -10,6 +10,10 @@ pub trait JsonSerializer {
 }
 
 pub trait JsonDeserializer {
+  /// TODO
+  /// 
+  /// # Errors
+  /// TODO
   fn deserialize_json(json: &str) -> Result<Self, String>
   where
     Self: Sized;
@@ -71,7 +75,7 @@ impl JsonSerializer for isize {
 
 impl JsonSerializer for String {
   fn serialize_json(&self) -> String {
-    format!("\"{}\"", self.to_string())
+    format!("\"{self}\"")
   }
 }
 
@@ -140,51 +144,36 @@ pub mod json_prelude {
   pub use super::JsonSerializer;
   pub use alloc::collections::BTreeMap;
 
+  #[must_use]
   pub fn json_get_type(data: &str) -> &str {
     if let Some((_, type_str)) = data.split_once("\"type\":\"") {
-      type_str.split_once('"').unwrap().0
+      type_str.split_once('"').unwrap_or_default().0
     } else {
       ""
     }
   }
 
+  #[must_use]
   pub fn json_next_key(data: &str) -> (&str, &str) {
     let mut key_start = 0;
     for (idx, ch) in data.chars().enumerate() {
       if ch == '"' {
         if key_start > 0 {
           return (&data[(idx + 1)..], &data[key_start..idx]);
-        } else {
-          key_start = idx + 1;
         }
+        key_start = idx + 1;
       }
     }
     ("", "")
   }
 
+  #[must_use]
   pub fn json_next_value(data: &str) -> (&str, &str) {
     let (mut value_start, mut num_openers, mut in_value) = (0, 0, false);
     for (idx, ch) in data.chars().enumerate() {
-      if !in_value {
-        if ch != ' ' && ch != ':' && ch != ']' && ch != '}' && ch != ',' {
-          value_start = if ch == '"' || ch == '[' || ch == '{' {
-            if ch == '[' || ch == '{' {
-              num_openers += 1;
-            }
-            idx + 1
-          } else {
-            idx
-          };
-          in_value = true;
-        }
-      } else {
+      if in_value {
         match ch {
-          ',' => {
-            if num_openers == 0 {
-              return (&data[(idx + 1)..], &data[value_start..idx]);
-            }
-          }
-          '"' => {
+          ',' | '"' => {
             if num_openers == 0 {
               return (&data[(idx + 1)..], &data[value_start..idx]);
             }
@@ -200,6 +189,16 @@ pub mod json_prelude {
           }
           _ => (),
         }
+      } else if ch != ' ' && ch != ':' && ch != ']' && ch != '}' && ch != ',' {
+        value_start = if ch == '"' || ch == '[' || ch == '{' {
+          if ch == '[' || ch == '{' {
+            num_openers += 1;
+          }
+          idx + 1
+        } else {
+          idx
+        };
+        in_value = true;
       }
     }
     ("", &data[value_start..])

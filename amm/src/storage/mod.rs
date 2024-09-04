@@ -27,6 +27,10 @@ pub enum Storage {
 }
 
 impl Storage {
+  /// TODO
+  /// 
+  /// # Errors
+  /// TODO
   pub fn load(&self, path: &str) -> Result<Composition, String> {
     match self {
       Self::AMM => AmmStorage::load(path),
@@ -36,6 +40,10 @@ impl Storage {
     }
   }
 
+  /// TODO
+  /// 
+  /// # Errors
+  /// TODO
   pub fn load_data(&self, data: &[u8]) -> Result<Composition, String> {
     match self {
       Self::AMM => AmmStorage::load_data(data),
@@ -45,6 +53,10 @@ impl Storage {
     }
   }
 
+  /// TODO
+  /// 
+  /// # Errors
+  /// TODO
   pub fn save(&self, path: &str, composition: &Composition) -> Result<usize, String> {
     match self {
       Self::AMM => AmmStorage::save(path, composition),

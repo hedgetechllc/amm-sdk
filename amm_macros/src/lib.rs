@@ -14,21 +14,20 @@ fn serialize_enum_json(enum_type: &syn::Ident, data: &syn::DataEnum) -> TokenStr
     match &variant.fields {
       syn::Fields::Named(named_fields) => {
         let (mut fields, mut values) = (Vec::new(), Vec::new());
-        let mut key = alloc::format!("{{{{\"type\":\"{}\",", variant_type);
+        let mut key = alloc::format!("{{{{\"type\":\"{variant_type}\",");
         for (idx, field) in named_fields.named.iter().enumerate() {
           let field_name = field.ident.as_ref().unwrap();
           match &field.ty {
             syn::Type::Path(type_path) => {
               fields.push(field_name);
               key += alloc::format!(
-                "\"{}\":{{}}{}",
-                field_name,
+                "\"{field_name}\":{{}}{}",
                 if idx + 1 < named_fields.named.len() { "," } else { "}}" }
               )
               .as_str();
               match &type_path.path.segments.first().unwrap().ident {
                 field_type if field_type == "Vec" => {
-                  values.push(quote! { format!("[{}]", #field_name.iter().map(|el| el.serialize_json()).collect::<Vec<_>>().join(",")) })
+                  values.push(quote! { format!("[{}]", #field_name.iter().map(|el| el.serialize_json()).collect::<Vec<_>>().join(",")) });
                 }
                 _ => values.push(quote! { #field_name.serialize_json() }),
               }
@@ -41,8 +40,8 @@ fn serialize_enum_json(enum_type: &syn::Ident, data: &syn::DataEnum) -> TokenStr
       syn::Fields::Unnamed(_unnamed_fields) => {
         enum_arms.push(quote! { #enum_type::#variant_type(el) => el.borrow().serialize_json() });
       }
-      _ => {
-        let variant_type_string = alloc::format!("\"{}\"", variant_type);
+      syn::Fields::Unit => {
+        let variant_type_string = alloc::format!("\"{variant_type}\"");
         enum_arms.push(quote! { #enum_type::#variant_type => #variant_type_string.to_string() });
       }
     }
@@ -64,24 +63,22 @@ fn deserialize_enum_json(enum_type: &syn::Ident, data: &syn::DataEnum) -> TokenS
   let mut unit_enum_arms: Vec<proc_macro2::TokenStream> = Vec::new();
   for variant in &data.variants {
     let variant_type = &variant.ident;
-    let variant_type_string = alloc::format!("{}", variant_type);
+    let variant_type_string = alloc::format!("{variant_type}");
     match &variant.fields {
       syn::Fields::Named(named_fields) => {
         let mut fields = Vec::new();
         for field in &named_fields.named {
           let field_name = field.ident.as_ref().unwrap();
-          let field_name_string = alloc::format!("{}", field_name);
+          let field_name_string = alloc::format!("{field_name}");
           match &field.ty {
             syn::Type::Path(type_path) => {
               let field_details = type_path.path.segments.first().unwrap();
               match &field_details.ident {
                 field_type if field_type == "Vec" => {
                   if let syn::PathArguments::AngleBracketed(details) = &field_details.arguments {
-                    if let syn::GenericArgument::Type(vec_type) = details.args.first().unwrap() {
-                      if let syn::Type::Path(vec_path) = vec_type {
-                        let content_type = &vec_path.path.segments.first().unwrap().ident;
-                        fields.push(quote! { #field_name: struct_fields.get(#field_name_string).ok_or(format!("Missing AMM enum field: \"{}\"", #field_name_string))?.split(',').map(|x| #content_type::deserialize_json(x).unwrap_or_default()).collect() });
-                      }
+                    if let syn::GenericArgument::Type(syn::Type::Path(vec_path)) = details.args.first().unwrap() {
+                      let content_type = &vec_path.path.segments.first().unwrap().ident;
+                      fields.push(quote! { #field_name: struct_fields.get(#field_name_string).ok_or(format!("Missing AMM enum field: \"{}\"", #field_name_string))?.split(',').map(|x| #content_type::deserialize_json(x).unwrap_or_default()).collect() });
                     }
                   }
                 }
@@ -110,20 +107,20 @@ fn deserialize_enum_json(enum_type: &syn::Ident, data: &syn::DataEnum) -> TokenS
       syn::Fields::Unnamed(_unnamed_fields) => {
         enum_arms.push(quote! { #variant_type_string => Self::#variant_type(Rc::new(RefCell::new(#variant_type::deserialize_json(json)?))) });
       }
-      _ => unit_enum_arms.push(quote! { #variant_type_string => Self::#variant_type }),
+      syn::Fields::Unit => unit_enum_arms.push(quote! { #variant_type_string => Self::#variant_type }),
     }
   }
   unit_enum_arms.push(quote! { _ => Err(alloc::format!("Unknown enum field: {}", json))? });
 
   // Generate the actual deserialization function
   if enum_arms.is_empty() {
-    return TokenStream::from(quote! {
+    TokenStream::from(quote! {
       impl JsonDeserializer for #enum_type {
         fn deserialize_json(json: &str) -> Result<Self, String> {
           Ok(match json { #(#unit_enum_arms),* })
         }
       }
-    });
+    })
   } else {
     TokenStream::from(quote! {
       impl JsonDeserializer for #enum_type {
@@ -140,7 +137,7 @@ fn deserialize_enum_json(enum_type: &syn::Ident, data: &syn::DataEnum) -> TokenS
 
 fn serialize_struct_json(struct_type: &syn::Ident, fields: &syn::FieldsNamed) -> TokenStream {
   // Serialize each struct field based on its type
-  let struct_type_string = alloc::format!("{}", struct_type);
+  let struct_type_string = alloc::format!("{struct_type}");
   let mut serialized_fields: Vec<proc_macro2::TokenStream> = Vec::new();
   for (idx, field) in fields.named.iter().enumerate() {
     let field_name = field.ident.as_ref().unwrap();
@@ -150,25 +147,23 @@ fn serialize_struct_json(struct_type: &syn::Ident, fields: &syn::FieldsNamed) ->
         match &field_details.ident {
           field_type if field_type == "Vec" => {
             if let syn::PathArguments::AngleBracketed(details) = &field_details.arguments {
-              if let syn::GenericArgument::Type(vec_type) = details.args.first().unwrap() {
-                if let syn::Type::Path(vec_path) = vec_type {
-                  match &vec_path.path.segments.first().unwrap().ident {
-                    content_type if content_type == "Rc" => {
-                      let key = alloc::format!(
-                        "\"{}\":[{{}}]{}",
-                        format_ident!("{}", field_name),
-                        if idx + 1 < fields.named.len() { "," } else { "" }
-                      );
-                      serialized_fields.push(quote! { format!(#key, self.#field_name.iter().map(|el| el.borrow().serialize_json()).collect::<Vec<_>>().join(",")).as_str() });
-                    }
-                    _ => {
-                      let key = alloc::format!(
-                        "\"{}\":[{{}}]{}",
-                        format_ident!("{}", field_name),
-                        if idx + 1 < fields.named.len() { "," } else { "" }
-                      );
-                      serialized_fields.push(quote! { format!(#key, self.#field_name.iter().map(|el| el.serialize_json()).collect::<Vec<_>>().join(",")).as_str() });
-                    }
+              if let syn::GenericArgument::Type(syn::Type::Path(vec_path)) = details.args.first().unwrap() {
+                match &vec_path.path.segments.first().unwrap().ident {
+                  content_type if content_type == "Rc" => {
+                    let key = alloc::format!(
+                      "\"{}\":[{{}}]{}",
+                      format_ident!("{field_name}"),
+                      if idx + 1 < fields.named.len() { "," } else { "" }
+                    );
+                    serialized_fields.push(quote! { format!(#key, self.#field_name.iter().map(|el| el.borrow().serialize_json()).collect::<Vec<_>>().join(",")).as_str() });
+                  }
+                  _ => {
+                    let key = alloc::format!(
+                      "\"{}\":[{{}}]{}",
+                      format_ident!("{field_name}"),
+                      if idx + 1 < fields.named.len() { "," } else { "" }
+                    );
+                    serialized_fields.push(quote! { format!(#key, self.#field_name.iter().map(|el| el.serialize_json()).collect::<Vec<_>>().join(",")).as_str() });
                   }
                 }
               }
@@ -177,7 +172,7 @@ fn serialize_struct_json(struct_type: &syn::Ident, fields: &syn::FieldsNamed) ->
           field_type if field_type == "Option" => {
             let key = alloc::format!(
               "\"{}\":{{}}{}",
-              format_ident!("{}", field_name),
+              format_ident!("{field_name}"),
               if idx + 1 < fields.named.len() { "," } else { "" }
             );
             serialized_fields.push(quote! { format!(#key, self.#field_name.as_ref().map(|el| el.serialize_json()).unwrap_or(String::from("\"\""))).as_str() });
@@ -185,7 +180,7 @@ fn serialize_struct_json(struct_type: &syn::Ident, fields: &syn::FieldsNamed) ->
           field_type if field_type == "BTreeMap" => {
             let key = alloc::format!(
               "\"{}\":{{{{{{}}}}}}{}",
-              format_ident!("{}", field_name),
+              format_ident!("{field_name}"),
               if idx + 1 < fields.named.len() { "," } else { "" }
             );
             serialized_fields.push(quote! { format!(#key, self.#field_name.iter().map(|(k, v)| format!("\"{}\":\"{}\"", k, v)).collect::<Vec<_>>().join(",")).as_str() });
@@ -193,7 +188,7 @@ fn serialize_struct_json(struct_type: &syn::Ident, fields: &syn::FieldsNamed) ->
           _ => {
             let key = alloc::format!(
               "\"{}\":{{}}{}",
-              format_ident!("{}", field_name),
+              format_ident!("{field_name}"),
               if idx + 1 < fields.named.len() { "," } else { "" }
             );
             serialized_fields.push(quote! { format!(#key, self.#field_name.serialize_json()).as_str() });
@@ -219,55 +214,46 @@ fn deserialize_struct_json(struct_type: &syn::Ident, fields: &syn::FieldsNamed) 
   let mut serialized_fields: Vec<proc_macro2::TokenStream> = Vec::new();
   for field in &fields.named {
     let field_name = field.ident.as_ref().unwrap();
-    let field_name_string = alloc::format!("{}", field_name);
+    let field_name_string = alloc::format!("{field_name}");
     match &field.ty {
       syn::Type::Path(type_path) => {
         let field_details = type_path.path.segments.first().unwrap();
         match &field_details.ident {
           field_type if field_type == "Vec" => {
             if let syn::PathArguments::AngleBracketed(details) = &field_details.arguments {
-              if let syn::GenericArgument::Type(vec_type) = details.args.first().unwrap() {
-                if let syn::Type::Path(vec_path) = vec_type {
-                  let field_details = vec_path.path.segments.first().unwrap();
-                  match &field_details.ident {
-                    content_type if content_type == "Rc" => {
-                      if let syn::PathArguments::AngleBracketed(details) = &field_details.arguments {
-                        if let syn::GenericArgument::Type(vec_type) = details.args.first().unwrap() {
-                          if let syn::Type::Path(vec_path) = vec_type {
-                            if let syn::PathArguments::AngleBracketed(details) =
-                              &vec_path.path.segments.first().unwrap().arguments
-                            {
-                              if let syn::GenericArgument::Type(vec_type) = details.args.first().unwrap() {
-                                if let syn::Type::Path(vec_path) = vec_type {
-                                  match &vec_path.path.segments.first().unwrap().ident {
-                                    content_type => {
-                                      serialized_fields.push(quote! { #field_name_string => {
-                                        let mut subdata = value;
-                                        (subdata, value) = json_next_value(subdata);
-                                        while !value.is_empty() {
-                                          parsed.#field_name.push(Rc::new(RefCell::new(#content_type::deserialize_json(value)?)));
-                                          (subdata, value) = json_next_value(subdata);
-                                        }
-                                      }});
-                                    }
-                                  }
-                                }
+              if let syn::GenericArgument::Type(syn::Type::Path(vec_path)) = details.args.first().unwrap() {
+                let field_details = vec_path.path.segments.first().unwrap();
+                match &field_details.ident {
+                  content_type if content_type == "Rc" => {
+                    if let syn::PathArguments::AngleBracketed(details) = &field_details.arguments {
+                      if let syn::GenericArgument::Type(syn::Type::Path(vec_path)) = details.args.first().unwrap() {
+                        if let syn::PathArguments::AngleBracketed(details) =
+                          &vec_path.path.segments.first().unwrap().arguments
+                        {
+                          if let syn::GenericArgument::Type(syn::Type::Path(vec_path)) = details.args.first().unwrap() {
+                            let content_type = &vec_path.path.segments.first().unwrap().ident;
+                            serialized_fields.push(quote! { #field_name_string => {
+                              let mut subdata = value;
+                              (subdata, value) = json_next_value(subdata);
+                              while !value.is_empty() {
+                                parsed.#field_name.push(Rc::new(RefCell::new(#content_type::deserialize_json(value)?)));
+                                (subdata, value) = json_next_value(subdata);
                               }
-                            }
+                            }});
                           }
                         }
                       }
                     }
-                    content_type => {
-                      serialized_fields.push(quote! { #field_name_string => {
-                        let mut subdata = value;
+                  }
+                  content_type => {
+                    serialized_fields.push(quote! { #field_name_string => {
+                      let mut subdata = value;
+                      (subdata, value) = json_next_value(subdata);
+                      while !value.is_empty() {
+                        parsed.#field_name.push(#content_type::deserialize_json(value)?);
                         (subdata, value) = json_next_value(subdata);
-                        while !value.is_empty() {
-                          parsed.#field_name.push(#content_type::deserialize_json(value)?);
-                          (subdata, value) = json_next_value(subdata);
-                        }
-                      }});
-                    }
+                      }
+                    }});
                   }
                 }
               }
@@ -275,13 +261,11 @@ fn deserialize_struct_json(struct_type: &syn::Ident, fields: &syn::FieldsNamed) 
           }
           field_type if field_type == "Option" => {
             if let syn::PathArguments::AngleBracketed(details) = &field_details.arguments {
-              if let syn::GenericArgument::Type(option_type) = details.args.first().unwrap() {
-                if let syn::Type::Path(option_path) = option_type {
-                  let content_type = &option_path.path.segments.first().unwrap().ident;
-                  serialized_fields.push(
-                    quote! { #field_name_string => parsed.#field_name = Some(#content_type::deserialize_json(value)?) },
-                  );
-                }
+              if let syn::GenericArgument::Type(syn::Type::Path(option_path)) = details.args.first().unwrap() {
+                let content_type = &option_path.path.segments.first().unwrap().ident;
+                serialized_fields.push(
+                  quote! { #field_name_string => parsed.#field_name = Some(#content_type::deserialize_json(value)?) },
+                );
               }
             }
           }
@@ -327,28 +311,36 @@ fn deserialize_struct_json(struct_type: &syn::Ident, fields: &syn::FieldsNamed) 
   })
 }
 
+#[allow(clippy::missing_panics_doc)]
 #[proc_macro_derive(JsonSerialize)]
 pub fn json_serialize(tokens: TokenStream) -> TokenStream {
-  let ast: syn::DeriveInput = syn::parse(tokens).unwrap();
-  match &ast.data {
-    syn::Data::Struct(data) => match &data.fields {
-      syn::Fields::Named(named_fields) => serialize_struct_json(&ast.ident, named_fields),
-      _ => panic!("Unit and tuple structs are not supported in AMM objects"),
-    },
-    syn::Data::Enum(data) => serialize_enum_json(&ast.ident, data),
-    _ => panic!("Union types are not supported in AMM objects"),
+  if let Ok(ast) = syn::parse::<syn::DeriveInput>(tokens) {
+    match &ast.data {
+      syn::Data::Struct(data) => match &data.fields {
+        syn::Fields::Named(named_fields) => serialize_struct_json(&ast.ident, named_fields),
+        _ => panic!("Unit and tuple structs are not supported in AMM objects"),
+      },
+      syn::Data::Enum(data) => serialize_enum_json(&ast.ident, data),
+      syn::Data::Union(_) => panic!("Union types are not supported in AMM objects"),
+    }
+  } else {
+    panic!("Invalid input for AMM object serialization");
   }
 }
 
+#[allow(clippy::missing_panics_doc)]
 #[proc_macro_derive(JsonDeserialize)]
 pub fn json_deserialize(tokens: TokenStream) -> TokenStream {
-  let ast: syn::DeriveInput = syn::parse(tokens).unwrap();
-  match &ast.data {
-    syn::Data::Struct(data) => match &data.fields {
-      syn::Fields::Named(named_fields) => deserialize_struct_json(&ast.ident, named_fields),
-      _ => panic!("Unit and tuple structs are not supported in AMM objects"),
-    },
-    syn::Data::Enum(data) => deserialize_enum_json(&ast.ident, data),
-    _ => panic!("Union types are not supported in AMM objects"),
+  if let Ok(ast) = syn::parse::<syn::DeriveInput>(tokens) {
+    match &ast.data {
+      syn::Data::Struct(data) => match &data.fields {
+        syn::Fields::Named(named_fields) => deserialize_struct_json(&ast.ident, named_fields),
+        _ => panic!("Unit and tuple structs are not supported in AMM objects"),
+      },
+      syn::Data::Enum(data) => deserialize_enum_json(&ast.ident, data),
+      syn::Data::Union(_) => panic!("Union types are not supported in AMM objects"),
+    }
+  } else {
+    panic!("Invalid input for AMM object deserialization");
   }
 }
