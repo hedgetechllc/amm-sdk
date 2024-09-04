@@ -28,7 +28,7 @@ pub enum Storage {
 
 impl Storage {
   /// TODO
-  /// 
+  ///
   /// # Errors
   /// TODO
   pub fn load(&self, path: &str) -> Result<Composition, String> {
@@ -41,7 +41,7 @@ impl Storage {
   }
 
   /// TODO
-  /// 
+  ///
   /// # Errors
   /// TODO
   pub fn load_data(&self, data: &[u8]) -> Result<Composition, String> {
@@ -54,7 +54,7 @@ impl Storage {
   }
 
   /// TODO
-  /// 
+  ///
   /// # Errors
   /// TODO
   pub fn save(&self, path: &str, composition: &Composition) -> Result<usize, String> {

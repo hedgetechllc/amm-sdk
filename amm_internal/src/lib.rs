@@ -11,7 +11,7 @@ pub trait JsonSerializer {
 
 pub trait JsonDeserializer {
   /// TODO
-  /// 
+  ///
   /// # Errors
   /// TODO
   fn deserialize_json(json: &str) -> Result<Self, String>
