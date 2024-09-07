@@ -325,6 +325,11 @@ impl Phrase {
   }
 
   #[must_use]
+  pub fn iter_modifications(&self) -> Iter<'_, Rc<RefCell<PhraseModification>>> {
+    self.modifications.iter()
+  }
+
+  #[must_use]
   pub fn iter_timeslices(&self) -> Vec<Timeslice> {
     let num_timeslices = self.num_timeslices();
     let (mut index, mut timeslices) = (0, Vec::new());

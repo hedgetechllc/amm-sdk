@@ -2,7 +2,7 @@ use crate::context::{generate_id, Tempo};
 use crate::modification::{NoteModification, NoteModificationType};
 use crate::note::{Accidental, Duration, Pitch};
 use alloc::{rc::Rc, vec::Vec};
-use core::cell::RefCell;
+use core::{cell::RefCell, slice::Iter};
 
 pub use crate::note::Note;
 
@@ -58,5 +58,10 @@ impl Note {
       .modifications
       .retain(|modification| modification.borrow().get_id() != id);
     self
+  }
+
+  #[must_use]
+  pub fn iter_modifications(&self) -> Iter<'_, Rc<RefCell<NoteModification>>> {
+    self.modifications.iter()
   }
 }

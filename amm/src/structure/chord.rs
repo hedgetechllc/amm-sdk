@@ -113,6 +113,11 @@ impl Chord {
   }
 
   #[must_use]
+  pub fn iter_modifications(&self) -> Iter<'_, Rc<RefCell<ChordModification>>> {
+    self.modifications.iter()
+  }
+
+  #[must_use]
   pub fn to_timeslice(&self) -> Timeslice {
     let mut timeslice = Timeslice::new();
     timeslice.arpeggiated = self.modifications.iter().any(|modification| {

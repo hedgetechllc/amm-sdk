@@ -410,6 +410,11 @@ impl Section {
   }
 
   #[must_use]
+  pub fn iter_modifications(&self) -> Iter<'_, Rc<RefCell<SectionModification>>> {
+    self.modifications.iter()
+  }
+
+  #[must_use]
   pub fn iter_timeslices(&self) -> Vec<Timeslice> {
     // Determine if this section contains sub-sections
     if self
