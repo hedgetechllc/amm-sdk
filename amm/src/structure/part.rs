@@ -141,15 +141,15 @@ impl Part {
   }
 
   #[must_use]
-  pub fn get_section(&mut self, id: usize) -> Option<Rc<RefCell<Section>>> {
+  pub fn get_section(&self, id: usize) -> Option<Rc<RefCell<Section>>> {
     self.content.iter().find_map(|item| match item {
       PartContent::Section(section) if section.borrow().get_id() == id => Some(Rc::clone(section)),
-      PartContent::Section(section) => section.borrow_mut().get_section(id),
+      PartContent::Section(section) => section.borrow().get_section(id),
     })
   }
 
   #[must_use]
-  pub fn get_section_by_name(&mut self, name: &str) -> Option<Rc<RefCell<Section>>> {
+  pub fn get_section_by_name(&self, name: &str) -> Option<Rc<RefCell<Section>>> {
     self.content.iter().find_map(|item| match item {
       PartContent::Section(section) if section.borrow().get_name() == name => Some(Rc::clone(section)),
       PartContent::Section(_) => None,
@@ -157,42 +157,42 @@ impl Part {
   }
 
   #[must_use]
-  pub fn get_default_section(&mut self) -> Option<Rc<RefCell<Section>>> {
+  pub fn get_default_section(&self) -> Option<Rc<RefCell<Section>>> {
     self.get_section_by_name("default")
   }
 
   #[must_use]
-  pub fn get_chord(&mut self, id: usize) -> Option<Rc<RefCell<Chord>>> {
+  pub fn get_chord(&self, id: usize) -> Option<Rc<RefCell<Chord>>> {
     self.content.iter().find_map(|item| match item {
-      PartContent::Section(section) => section.borrow_mut().get_chord(id),
+      PartContent::Section(section) => section.borrow().get_chord(id),
     })
   }
 
   #[must_use]
-  pub fn get_multivoice(&mut self, id: usize) -> Option<Rc<RefCell<MultiVoice>>> {
+  pub fn get_multivoice(&self, id: usize) -> Option<Rc<RefCell<MultiVoice>>> {
     self.content.iter().find_map(|item| match item {
-      PartContent::Section(section) => section.borrow_mut().get_multivoice(id),
+      PartContent::Section(section) => section.borrow().get_multivoice(id),
     })
   }
 
   #[must_use]
-  pub fn get_note(&mut self, id: usize) -> Option<Rc<RefCell<Note>>> {
+  pub fn get_note(&self, id: usize) -> Option<Rc<RefCell<Note>>> {
     self.content.iter().find_map(|item| match item {
-      PartContent::Section(section) => section.borrow_mut().get_note(id),
+      PartContent::Section(section) => section.borrow().get_note(id),
     })
   }
 
   #[must_use]
-  pub fn get_phrase(&mut self, id: usize) -> Option<Rc<RefCell<Phrase>>> {
+  pub fn get_phrase(&self, id: usize) -> Option<Rc<RefCell<Phrase>>> {
     self.content.iter().find_map(|item| match item {
-      PartContent::Section(section) => section.borrow_mut().get_phrase(id),
+      PartContent::Section(section) => section.borrow().get_phrase(id),
     })
   }
 
   #[must_use]
-  pub fn get_staff(&mut self, id: usize) -> Option<Rc<RefCell<Staff>>> {
+  pub fn get_staff(&self, id: usize) -> Option<Rc<RefCell<Staff>>> {
     self.content.iter().find_map(|item| match item {
-      PartContent::Section(section) => section.borrow_mut().get_staff(id),
+      PartContent::Section(section) => section.borrow().get_staff(id),
     })
   }
 

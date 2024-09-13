@@ -85,7 +85,7 @@ impl core::fmt::Display for Note {
     let mods = self
       .modifications
       .iter()
-      .map(|modification| modification.borrow_mut().to_string())
+      .map(|modification| modification.borrow().to_string())
       .collect::<Vec<String>>()
       .join(", ");
     write!(

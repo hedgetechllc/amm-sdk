@@ -158,36 +158,39 @@ impl MultiVoice {
           .map(|phrase| {
             // Expand tuplet by only taking the first note and holding it for the full tuplet duration
             let updated_phrase = Rc::new(RefCell::new(phrase.borrow().clone()));
-            if Rc::ptr_eq(phrase, tuplet_phrase) {
-              let target_duration = Duration::from_beats(
-                &beat_base_note,
-                updated_phrase.borrow().get_beats(&beat_base_note, None),
-              );
-              let target_element = match &updated_phrase.borrow().content[0] {
-                PhraseContent::Note(note) => {
-                  let mut updated_note = note.borrow().clone();
-                  updated_note.duration = target_duration;
-                  PhraseContent::Note(Rc::new(RefCell::new(updated_note)))
-                }
-                PhraseContent::Chord(chord) => {
-                  let mut updated_chord = chord.borrow().clone();
-                  updated_chord.content.clear();
-                  chord.borrow().content.iter().for_each(|item| match item {
-                    ChordContent::Note(note) => {
-                      let mut updated_note = note.borrow().clone();
-                      updated_note.duration = target_duration;
-                      updated_chord
-                        .content
-                        .push(ChordContent::Note(Rc::new(RefCell::new(updated_note))));
-                    }
-                  });
-                  PhraseContent::Chord(Rc::new(RefCell::new(updated_chord)))
-                }
-                _ => unsafe { core::hint::unreachable_unchecked() },
-              };
-              updated_phrase.borrow_mut().remove_modification(tuplet_phrases[0].2);
-              updated_phrase.borrow_mut().content.clear();
-              updated_phrase.borrow_mut().content.push(target_element);
+            {
+              let mut updated_phrase = updated_phrase.borrow_mut();
+              if Rc::ptr_eq(phrase, tuplet_phrase) {
+                let target_duration = Duration::from_beats(
+                  &beat_base_note,
+                  updated_phrase.get_beats(&beat_base_note, None),
+                );
+                let target_element = match &updated_phrase.content[0] {
+                  PhraseContent::Note(note) => {
+                    let mut updated_note = note.borrow().clone();
+                    updated_note.duration = target_duration;
+                    PhraseContent::Note(Rc::new(RefCell::new(updated_note)))
+                  }
+                  PhraseContent::Chord(chord) => {
+                    let mut updated_chord = chord.borrow().clone();
+                    updated_chord.content.clear();
+                    chord.borrow().content.iter().for_each(|item| match item {
+                      ChordContent::Note(note) => {
+                        let mut updated_note = note.borrow().clone();
+                        updated_note.duration = target_duration;
+                        updated_chord
+                          .content
+                          .push(ChordContent::Note(Rc::new(RefCell::new(updated_note))));
+                      }
+                    });
+                    PhraseContent::Chord(Rc::new(RefCell::new(updated_chord)))
+                  }
+                  _ => unsafe { core::hint::unreachable_unchecked() },
+                };
+                updated_phrase.remove_modification(tuplet_phrases[0].2);
+                updated_phrase.content.clear();
+                updated_phrase.content.push(target_element);
+              }
             }
             updated_phrase
           })
@@ -218,46 +221,49 @@ impl MultiVoice {
           .iter()
           .map(|phrase| {
             let updated_phrase = Rc::new(RefCell::new(phrase.borrow().clone()));
-            let mod_id = phrase.borrow().modifications.iter().find_map(|modification| {
-              match modification.borrow().get_modification() {
-                PhraseModificationType::Tuplet {
-                  num_beats: _,
-                  into_beats: _,
-                } => Some(modification.borrow().get_id()),
-                _ => None,
+            {
+              let mut updated_phrase = updated_phrase.borrow_mut();
+              let mod_id = phrase.borrow().modifications.iter().find_map(|modification| {
+                match modification.borrow().get_modification() {
+                  PhraseModificationType::Tuplet {
+                    num_beats: _,
+                    into_beats: _,
+                  } => Some(modification.borrow().get_id()),
+                  _ => None,
+                }
+              });
+              if let Some(mod_id) = mod_id {
+                // Expand tuplet by only taking the first note and holding it for the full tuplet duration
+                let target_duration = Duration::from_beats(
+                  &beat_base_note,
+                  updated_phrase.get_beats(&beat_base_note, None),
+                );
+                let target_element = match &updated_phrase.content[0] {
+                  PhraseContent::Note(note) => {
+                    let mut updated_note = note.borrow().clone();
+                    updated_note.duration = target_duration;
+                    PhraseContent::Note(Rc::new(RefCell::new(updated_note)))
+                  }
+                  PhraseContent::Chord(chord) => {
+                    let mut updated_chord = chord.borrow().clone();
+                    updated_chord.content.clear();
+                    chord.borrow().content.iter().for_each(|item| match item {
+                      ChordContent::Note(note) => {
+                        let mut updated_note = note.borrow().clone();
+                        updated_note.duration = target_duration;
+                        updated_chord
+                          .content
+                          .push(ChordContent::Note(Rc::new(RefCell::new(updated_note))));
+                      }
+                    });
+                    PhraseContent::Chord(Rc::new(RefCell::new(updated_chord)))
+                  }
+                  _ => unsafe { core::hint::unreachable_unchecked() },
+                };
+                updated_phrase.remove_modification(mod_id);
+                updated_phrase.content.clear();
+                updated_phrase.content.push(target_element);
               }
-            });
-            if let Some(mod_id) = mod_id {
-              // Expand tuplet by only taking the first note and holding it for the full tuplet duration
-              let target_duration = Duration::from_beats(
-                &beat_base_note,
-                updated_phrase.borrow().get_beats(&beat_base_note, None),
-              );
-              let target_element = match &updated_phrase.borrow().content[0] {
-                PhraseContent::Note(note) => {
-                  let mut updated_note = note.borrow().clone();
-                  updated_note.duration = target_duration;
-                  PhraseContent::Note(Rc::new(RefCell::new(updated_note)))
-                }
-                PhraseContent::Chord(chord) => {
-                  let mut updated_chord = chord.borrow().clone();
-                  updated_chord.content.clear();
-                  chord.borrow().content.iter().for_each(|item| match item {
-                    ChordContent::Note(note) => {
-                      let mut updated_note = note.borrow().clone();
-                      updated_note.duration = target_duration;
-                      updated_chord
-                        .content
-                        .push(ChordContent::Note(Rc::new(RefCell::new(updated_note))));
-                    }
-                  });
-                  PhraseContent::Chord(Rc::new(RefCell::new(updated_chord)))
-                }
-                _ => unsafe { core::hint::unreachable_unchecked() },
-              };
-              updated_phrase.borrow_mut().remove_modification(mod_id);
-              updated_phrase.borrow_mut().content.clear();
-              updated_phrase.borrow_mut().content.push(target_element);
             }
             updated_phrase
           })
@@ -321,59 +327,62 @@ impl MultiVoice {
 
     // Create a new single phrase containing all notes and chords
     let phrase = Rc::new(RefCell::new(to_combine[0].borrow().clone()));
-    phrase.borrow_mut().content.clear();
-    for (idx, (start_time, content)) in timeslices.iter().enumerate() {
-      if content.len() > 1 {
-        let target_beats = if idx + 1 < timeslices.len() {
-          timeslices[idx + 1].0 - start_time
-        } else {
-          content
-            .iter()
-            .map(|item| match item {
-              PhraseContent::Note(note) => note.borrow().get_beats(&beat_base_note, None),
-              PhraseContent::Chord(chord) => chord.borrow().get_beats(&beat_base_note, None),
-              _ => unsafe { core::hint::unreachable_unchecked() },
-            })
-            .reduce(f64::max)
-            .unwrap_or_default()
-        };
-        let target_duration = Duration::from_beats(&beat_base_note, target_beats);
-        let combined = phrase.borrow_mut().add_chord();
-        content.iter().for_each(|item| match item {
-          PhraseContent::Note(note) => {
-            let note = Rc::new(RefCell::new(note.borrow().clone()));
-            if note.borrow().duration.value() < target_duration.value() {
-              note.borrow_mut().duration = target_duration;
-            }
-            combined.borrow_mut().content.push(ChordContent::Note(note));
-          }
-          PhraseContent::Chord(chord) => {
-            chord.borrow().modifications.iter().for_each(|modification| {
-              combined
-                .borrow_mut()
-                .add_modification(*modification.borrow().get_modification());
-            });
-            chord.borrow().iter().for_each(|item| match item {
-              ChordContent::Note(note) => {
-                let note = Rc::new(RefCell::new(note.borrow().clone()));
-                if note.borrow().duration.value() < target_duration.value() {
-                  note.borrow_mut().duration = target_duration;
-                }
-                combined.borrow_mut().content.push(ChordContent::Note(note));
+    {
+      let mut phrase = phrase.borrow_mut();
+      phrase.content.clear();
+      for (idx, (start_time, content)) in timeslices.iter().enumerate() {
+        if content.len() > 1 {
+          let target_beats = if idx + 1 < timeslices.len() {
+            timeslices[idx + 1].0 - start_time
+          } else {
+            content
+              .iter()
+              .map(|item| match item {
+                PhraseContent::Note(note) => note.borrow().get_beats(&beat_base_note, None),
+                PhraseContent::Chord(chord) => chord.borrow().get_beats(&beat_base_note, None),
+                _ => unsafe { core::hint::unreachable_unchecked() },
+              })
+              .reduce(f64::max)
+              .unwrap_or_default()
+          };
+          let target_duration = Duration::from_beats(&beat_base_note, target_beats);
+          let combined = phrase.add_chord();
+          content.iter().for_each(|item| match item {
+            PhraseContent::Note(note) => {
+              let note = Rc::new(RefCell::new(note.borrow().clone()));
+              if note.borrow().duration.value() < target_duration.value() {
+                note.borrow_mut().duration = target_duration;
               }
-            });
+              combined.borrow_mut().content.push(ChordContent::Note(note));
+            }
+            PhraseContent::Chord(chord) => {
+              chord.borrow().modifications.iter().for_each(|modification| {
+                combined
+                  .borrow_mut()
+                  .add_modification(*modification.borrow().get_modification());
+              });
+              chord.borrow().iter().for_each(|item| match item {
+                ChordContent::Note(note) => {
+                  let note = Rc::new(RefCell::new(note.borrow().clone()));
+                  if note.borrow().duration.value() < target_duration.value() {
+                    note.borrow_mut().duration = target_duration;
+                  }
+                  combined.borrow_mut().content.push(ChordContent::Note(note));
+                }
+              });
+            }
+            _ => unsafe { core::hint::unreachable_unchecked() },
+          });
+        } else if let Some(content) = content.first() {
+          match content {
+            PhraseContent::Note(note) => {
+              phrase.content.push(PhraseContent::Note(Rc::clone(note)));
+            }
+            PhraseContent::Chord(chord) => {
+              phrase.content.push(PhraseContent::Chord(Rc::clone(chord)));
+            }
+            _ => unsafe { core::hint::unreachable_unchecked() },
           }
-          _ => unsafe { core::hint::unreachable_unchecked() },
-        });
-      } else if let Some(content) = content.first() {
-        match content {
-          PhraseContent::Note(note) => {
-            phrase.borrow_mut().content.push(PhraseContent::Note(Rc::clone(note)));
-          }
-          PhraseContent::Chord(chord) => {
-            phrase.borrow_mut().content.push(PhraseContent::Chord(Rc::clone(chord)));
-          }
-          _ => unsafe { core::hint::unreachable_unchecked() },
         }
       }
     }
@@ -392,31 +401,31 @@ impl MultiVoice {
   }
 
   #[must_use]
-  pub fn get_phrase(&mut self, id: usize) -> Option<Rc<RefCell<Phrase>>> {
+  pub fn get_phrase(&self, id: usize) -> Option<Rc<RefCell<Phrase>>> {
     self.content.iter().find_map(|item| match item {
       MultiVoiceContent::Phrase(phrase) if phrase.borrow().get_id() == id => Some(Rc::clone(phrase)),
-      MultiVoiceContent::Phrase(phrase) => phrase.borrow_mut().get_phrase(id),
+      MultiVoiceContent::Phrase(phrase) => phrase.borrow().get_phrase(id),
     })
   }
 
   #[must_use]
-  pub fn get_multivoice(&mut self, id: usize) -> Option<Rc<RefCell<MultiVoice>>> {
+  pub fn get_multivoice(&self, id: usize) -> Option<Rc<RefCell<MultiVoice>>> {
     self.content.iter().find_map(|item| match item {
-      MultiVoiceContent::Phrase(phrase) => phrase.borrow_mut().get_multivoice(id),
+      MultiVoiceContent::Phrase(phrase) => phrase.borrow().get_multivoice(id),
     })
   }
 
   #[must_use]
-  pub fn get_chord(&mut self, id: usize) -> Option<Rc<RefCell<Chord>>> {
+  pub fn get_chord(&self, id: usize) -> Option<Rc<RefCell<Chord>>> {
     self.content.iter().find_map(|item| match item {
-      MultiVoiceContent::Phrase(phrase) => phrase.borrow_mut().get_chord(id),
+      MultiVoiceContent::Phrase(phrase) => phrase.borrow().get_chord(id),
     })
   }
 
   #[must_use]
-  pub fn get_note(&mut self, id: usize) -> Option<Rc<RefCell<Note>>> {
+  pub fn get_note(&self, id: usize) -> Option<Rc<RefCell<Note>>> {
     self.content.iter().find_map(|item| match item {
-      MultiVoiceContent::Phrase(phrase) => phrase.borrow_mut().get_note(id),
+      MultiVoiceContent::Phrase(phrase) => phrase.borrow().get_note(id),
     })
   }
 

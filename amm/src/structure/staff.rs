@@ -162,47 +162,47 @@ impl Staff {
   }
 
   #[must_use]
-  pub fn get_note(&mut self, id: usize) -> Option<Rc<RefCell<Note>>> {
+  pub fn get_note(&self, id: usize) -> Option<Rc<RefCell<Note>>> {
     self.content.iter().find_map(|item| match item {
       StaffContent::Note(note) if note.borrow().get_id() == id => Some(Rc::clone(note)),
-      StaffContent::Chord(chord) => chord.borrow_mut().get_note(id),
-      StaffContent::Phrase(phrase) => phrase.borrow_mut().get_note(id),
-      StaffContent::MultiVoice(multivoice) => multivoice.borrow_mut().get_note(id),
+      StaffContent::Chord(chord) => chord.borrow().get_note(id),
+      StaffContent::Phrase(phrase) => phrase.borrow().get_note(id),
+      StaffContent::MultiVoice(multivoice) => multivoice.borrow().get_note(id),
       _ => None,
     })
   }
 
   #[must_use]
-  pub fn get_chord(&mut self, id: usize) -> Option<Rc<RefCell<Chord>>> {
+  pub fn get_chord(&self, id: usize) -> Option<Rc<RefCell<Chord>>> {
     self.content.iter().find_map(|item| match item {
       StaffContent::Chord(chord) if chord.borrow().get_id() == id => Some(Rc::clone(chord)),
-      StaffContent::Phrase(phrase) => phrase.borrow_mut().get_chord(id),
-      StaffContent::MultiVoice(multivoice) => multivoice.borrow_mut().get_chord(id),
+      StaffContent::Phrase(phrase) => phrase.borrow().get_chord(id),
+      StaffContent::MultiVoice(multivoice) => multivoice.borrow().get_chord(id),
       _ => None,
     })
   }
 
   #[must_use]
-  pub fn get_phrase(&mut self, id: usize) -> Option<Rc<RefCell<Phrase>>> {
+  pub fn get_phrase(&self, id: usize) -> Option<Rc<RefCell<Phrase>>> {
     self.content.iter().find_map(|item| match item {
       StaffContent::Phrase(phrase) if phrase.borrow().get_id() == id => Some(Rc::clone(phrase)),
-      StaffContent::Phrase(phrase) => phrase.borrow_mut().get_phrase(id),
-      StaffContent::MultiVoice(multivoice) => multivoice.borrow_mut().get_phrase(id),
+      StaffContent::Phrase(phrase) => phrase.borrow().get_phrase(id),
+      StaffContent::MultiVoice(multivoice) => multivoice.borrow().get_phrase(id),
       _ => None,
     })
   }
 
   #[must_use]
-  pub fn get_multivoice(&mut self, id: usize) -> Option<Rc<RefCell<MultiVoice>>> {
+  pub fn get_multivoice(&self, id: usize) -> Option<Rc<RefCell<MultiVoice>>> {
     self.content.iter().find_map(|item| match item {
       StaffContent::MultiVoice(multivoice) if multivoice.borrow().get_id() == id => Some(Rc::clone(multivoice)),
-      StaffContent::MultiVoice(multivoice) => multivoice.borrow_mut().get_multivoice(id),
+      StaffContent::MultiVoice(multivoice) => multivoice.borrow().get_multivoice(id),
       _ => None,
     })
   }
 
   #[must_use]
-  pub fn get_direction(&mut self, id: usize) -> Option<Rc<RefCell<Direction>>> {
+  pub fn get_direction(&self, id: usize) -> Option<Rc<RefCell<Direction>>> {
     self.content.iter().find_map(|item| match item {
       StaffContent::Direction(direction) if direction.borrow().get_id() == id => Some(Rc::clone(direction)),
       _ => None,
@@ -210,7 +210,7 @@ impl Staff {
   }
 
   #[must_use]
-  pub fn get_index_of_item(&mut self, id: usize) -> Option<usize> {
+  pub fn get_index_of_item(&self, id: usize) -> Option<usize> {
     self.content.iter().position(|item| match item {
       StaffContent::Note(note) => note.borrow().get_id() == id,
       StaffContent::Chord(chord) => chord.borrow().get_id() == id,

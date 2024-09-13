@@ -33,7 +33,7 @@ impl Note {
   }
 
   #[must_use]
-  pub fn get_modification(&mut self, id: usize) -> Option<Rc<RefCell<NoteModification>>> {
+  pub fn get_modification(&self, id: usize) -> Option<Rc<RefCell<NoteModification>>> {
     self.modifications.iter().find_map(|modification| {
       if modification.borrow().get_id() == id {
         Some(Rc::clone(modification))

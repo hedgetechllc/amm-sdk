@@ -59,7 +59,7 @@ impl Chord {
   }
 
   #[must_use]
-  pub fn get_note(&mut self, id: usize) -> Option<Rc<RefCell<Note>>> {
+  pub fn get_note(&self, id: usize) -> Option<Rc<RefCell<Note>>> {
     self.content.iter().find_map(|item| match item {
       ChordContent::Note(note) if note.borrow().get_id() == id => Some(Rc::clone(note)),
       ChordContent::Note(_) => None,
@@ -67,7 +67,7 @@ impl Chord {
   }
 
   #[must_use]
-  pub fn get_modification(&mut self, id: usize) -> Option<Rc<RefCell<ChordModification>>> {
+  pub fn get_modification(&self, id: usize) -> Option<Rc<RefCell<ChordModification>>> {
     self.modifications.iter().find_map(|modification| {
       if modification.borrow().get_id() == id {
         Some(Rc::clone(modification))
@@ -169,7 +169,7 @@ impl core::fmt::Display for Chord {
     let mods = self
       .modifications
       .iter()
-      .map(|modification| modification.borrow_mut().to_string())
+      .map(|modification| modification.borrow().to_string())
       .collect::<Vec<String>>()
       .join(", ");
     let notes = self
