@@ -19,7 +19,7 @@ const A4_FREQUENCY_HZ: f32 = 440.0;
 const MIDI_NUMBER_A4: i16 = 69;
 
 #[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Default, Eq)]
+#[derive(Clone, Debug, Default, Eq)]
 pub struct Note {
   pub id: usize,
   pub pitch: Pitch,

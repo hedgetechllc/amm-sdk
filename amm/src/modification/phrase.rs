@@ -8,7 +8,7 @@ use {
 };
 
 #[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Copy, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum PedalType {
   #[default]
   Sustain,
@@ -17,7 +17,7 @@ pub enum PedalType {
 }
 
 #[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Copy, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum PhraseModificationType {
   Crescendo {
     final_dynamic: Dynamic,
@@ -48,7 +48,7 @@ pub enum PhraseModificationType {
 }
 
 #[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct PhraseModification {
   id: usize,
   modification: PhraseModificationType,

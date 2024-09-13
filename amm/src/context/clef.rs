@@ -8,7 +8,7 @@ use {
 
 #[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Default, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
 pub enum ClefSymbol {
   #[default]
   GClef,
@@ -18,7 +18,7 @@ pub enum ClefSymbol {
 
 #[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Default, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
 pub enum ClefType {
   #[default]
   Treble,
@@ -34,7 +34,7 @@ pub enum ClefType {
 
 #[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Default, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
 pub struct Clef {
   pub symbol: ClefSymbol,
   pub clef_type: ClefType,

@@ -15,7 +15,7 @@ use {
 };
 
 #[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum PhraseContent {
   Note(Rc<RefCell<Note>>),
   Chord(Rc<RefCell<Chord>>),
@@ -24,7 +24,7 @@ pub enum PhraseContent {
 }
 
 #[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Phrase {
   pub(crate) id: usize,
   pub(crate) content: Vec<PhraseContent>,

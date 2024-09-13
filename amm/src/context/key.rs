@@ -41,7 +41,7 @@ const FIFTHS_E_FLAT_MINOR: i8 = -6;
 
 #[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Default, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
 pub enum KeyMode {
   #[default]
   Major,
@@ -50,7 +50,7 @@ pub enum KeyMode {
 
 #[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Default, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
 pub enum KeySignature {
   A,
   ASharp,
@@ -75,7 +75,7 @@ pub enum KeySignature {
 
 #[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Default, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
 pub struct Key {
   pub mode: KeyMode,
   pub signature: KeySignature,

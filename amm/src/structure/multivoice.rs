@@ -15,13 +15,13 @@ use {
 };
 
 #[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum MultiVoiceContent {
   Phrase(Rc<RefCell<Phrase>>),
 }
 
 #[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct MultiVoice {
   pub(crate) id: usize,
   pub(crate) content: Vec<MultiVoiceContent>,

@@ -8,7 +8,7 @@ use {
 
 #[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Default, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
 pub enum Accidental {
   #[default]
   None,

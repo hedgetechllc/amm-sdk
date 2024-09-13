@@ -11,14 +11,14 @@ use {
 };
 
 #[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum SectionContent {
   Staff(Rc<RefCell<Staff>>),
   Section(Rc<RefCell<Section>>),
 }
 
 #[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Section {
   pub(crate) id: usize,
   pub(crate) name: String,

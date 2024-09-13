@@ -17,13 +17,13 @@ use {
 };
 
 #[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum PartContent {
   Section(Rc<RefCell<Section>>),
 }
 
 #[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Part {
   pub(crate) id: usize,
   pub(crate) name: String,

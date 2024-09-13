@@ -10,7 +10,7 @@ use {
 };
 
 #[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Composition {
   title: String,
   copyright: Option<String>,

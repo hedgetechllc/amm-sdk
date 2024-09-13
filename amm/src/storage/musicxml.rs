@@ -17,7 +17,7 @@ use musicxml::{self, elements::ScorePartwise};
 
 pub struct MusicXmlConverter;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct PhraseModDetails {
   pub modification: PhraseModificationType,
   pub is_start: bool,
@@ -42,7 +42,7 @@ impl core::fmt::Display for PhraseModDetails {
   }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct NoteDetails {
   pub pitch: Pitch,
   pub duration: Duration,
@@ -106,7 +106,7 @@ impl core::fmt::Display for NoteDetails {
   }
 }
 
-#[derive(Default, Clone)]
+#[derive(Debug, Default, Clone)]
 struct TimeSliceContainer {
   pub direction: Vec<DirectionType>,
   pub chord_modification: Vec<ChordModificationType>,
@@ -204,6 +204,7 @@ impl core::fmt::Display for TimeSliceContainer {
   }
 }
 
+#[derive(Debug, Default)]
 struct TemporalPartData {
   pub data: BTreeMap<String, BTreeMap<String, Vec<TimeSliceContainer>>>,
 }

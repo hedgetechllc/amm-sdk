@@ -5,7 +5,7 @@ use crate::structure::note::Note;
 use alloc::{collections::BTreeMap, rc::Rc, vec::Vec};
 use core::cell::RefCell;
 
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct TimesliceContext {
   pub key: Key,
   pub original_tempo: Tempo,
@@ -13,6 +13,7 @@ pub struct TimesliceContext {
   pub time_signature: TimeSignature,
 }
 
+#[derive(Debug)]
 pub struct TimeslicePhraseDetails {
   pub modifications: Vec<PhraseModificationType>,
   pub index_in_phrase: usize,
@@ -39,6 +40,7 @@ impl core::fmt::Display for TimeslicePhraseDetails {
   }
 }
 
+#[derive(Debug)]
 pub struct TimesliceContent {
   pub note: Rc<RefCell<Note>>,
   pub phrase_details: Vec<TimeslicePhraseDetails>,
@@ -114,7 +116,7 @@ impl core::fmt::Display for TimesliceContent {
   }
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Timeslice {
   pub arpeggiated: bool,
   pub content: Vec<TimesliceContent>,
@@ -195,7 +197,7 @@ impl core::fmt::Display for Timeslice {
   }
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct PartTimeslice {
   pub timeslices: BTreeMap<String, Timeslice>,
 }

@@ -15,13 +15,13 @@ use {
 };
 
 #[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ChordContent {
   Note(Rc<RefCell<Note>>),
 }
 
 #[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Chord {
   pub(crate) id: usize,
   pub(crate) content: Vec<ChordContent>,

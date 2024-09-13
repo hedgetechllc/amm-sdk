@@ -9,7 +9,7 @@ use {
 
 #[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Tempo {
   pub base_note: Duration,
   pub beats_per_minute: u16,

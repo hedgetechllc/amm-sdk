@@ -8,7 +8,7 @@ use {
 };
 
 #[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Eq, Default, PartialEq)]
+#[derive(Clone, Eq, Debug, Default, PartialEq)]
 pub enum SectionModificationType {
   #[default]
   Accelerando, // Quick tempo acceleration over few notes or measures
@@ -31,7 +31,7 @@ pub enum SectionModificationType {
 }
 
 #[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct SectionModification {
   id: usize,
   modification: SectionModificationType,

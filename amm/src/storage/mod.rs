@@ -17,7 +17,7 @@ pub(crate) trait Convert {
   fn save(path: &str, composition: &Composition) -> Result<usize, String>;
 }
 
-#[derive(Copy, Clone, Default, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
 pub enum Storage {
   #[default]
   AMM,
