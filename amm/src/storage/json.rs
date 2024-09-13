@@ -111,94 +111,94 @@ mod test {
       dynamic: Dynamic::new(DynamicMarking::MezzoForte, 1),
     });
     staff.borrow_mut().add_direction(DirectionType::KeyChange {
-      key: Key::new(KeySignature::AFlatMajor),
+      key: Key::new(KeySignature::AFlat, KeyMode::Major),
     });
     staff.borrow_mut().add_direction(DirectionType::KeyChange {
-      key: Key::new(KeySignature::AFlatMinor),
+      key: Key::new(KeySignature::AFlat, KeyMode::Minor),
     });
     staff.borrow_mut().add_direction(DirectionType::KeyChange {
-      key: Key::new(KeySignature::AMajor),
+      key: Key::new(KeySignature::A, KeyMode::Major),
     });
     staff.borrow_mut().add_direction(DirectionType::KeyChange {
-      key: Key::new(KeySignature::AMinor),
+      key: Key::new(KeySignature::A, KeyMode::Minor),
     });
     staff.borrow_mut().add_direction(DirectionType::KeyChange {
-      key: Key::new(KeySignature::ASharpMinor),
+      key: Key::new(KeySignature::ASharp, KeyMode::Minor),
     });
     staff.borrow_mut().add_direction(DirectionType::KeyChange {
-      key: Key::new(KeySignature::BFlatMajor),
+      key: Key::new(KeySignature::BFlat, KeyMode::Major),
     });
     staff.borrow_mut().add_direction(DirectionType::KeyChange {
-      key: Key::new(KeySignature::BFlatMinor),
+      key: Key::new(KeySignature::BFlat, KeyMode::Minor),
     });
     staff.borrow_mut().add_direction(DirectionType::KeyChange {
-      key: Key::new(KeySignature::BMajor),
+      key: Key::new(KeySignature::B, KeyMode::Major),
     });
     staff.borrow_mut().add_direction(DirectionType::KeyChange {
-      key: Key::new(KeySignature::BMinor),
+      key: Key::new(KeySignature::B, KeyMode::Minor),
     });
     staff.borrow_mut().add_direction(DirectionType::KeyChange {
-      key: Key::new(KeySignature::CFlatMajor),
+      key: Key::new(KeySignature::CFlat, KeyMode::Major),
     });
     staff.borrow_mut().add_direction(DirectionType::KeyChange {
-      key: Key::new(KeySignature::CMajor),
+      key: Key::new(KeySignature::C, KeyMode::Major),
     });
     staff.borrow_mut().add_direction(DirectionType::KeyChange {
-      key: Key::new(KeySignature::CMinor),
+      key: Key::new(KeySignature::C, KeyMode::Minor),
     });
     staff.borrow_mut().add_direction(DirectionType::KeyChange {
-      key: Key::new(KeySignature::CSharpMajor),
+      key: Key::new(KeySignature::CSharp, KeyMode::Major),
     });
     staff.borrow_mut().add_direction(DirectionType::KeyChange {
-      key: Key::new(KeySignature::CSharpMinor),
+      key: Key::new(KeySignature::CSharp, KeyMode::Minor),
     });
     staff.borrow_mut().add_direction(DirectionType::KeyChange {
-      key: Key::new(KeySignature::DFlatMajor),
+      key: Key::new(KeySignature::DFlat, KeyMode::Major),
     });
     staff.borrow_mut().add_direction(DirectionType::KeyChange {
-      key: Key::new(KeySignature::DMajor),
+      key: Key::new(KeySignature::D, KeyMode::Major),
     });
     staff.borrow_mut().add_direction(DirectionType::KeyChange {
-      key: Key::new(KeySignature::DMinor),
+      key: Key::new(KeySignature::D, KeyMode::Minor),
     });
     staff.borrow_mut().add_direction(DirectionType::KeyChange {
-      key: Key::new(KeySignature::DSharpMinor),
+      key: Key::new(KeySignature::DSharp, KeyMode::Minor),
     });
     staff.borrow_mut().add_direction(DirectionType::KeyChange {
-      key: Key::new(KeySignature::EFlatMajor),
+      key: Key::new(KeySignature::EFlat, KeyMode::Major),
     });
     staff.borrow_mut().add_direction(DirectionType::KeyChange {
-      key: Key::new(KeySignature::EFlatMinor),
+      key: Key::new(KeySignature::EFlat, KeyMode::Minor),
     });
     staff.borrow_mut().add_direction(DirectionType::KeyChange {
-      key: Key::new(KeySignature::EMajor),
+      key: Key::new(KeySignature::E, KeyMode::Major),
     });
     staff.borrow_mut().add_direction(DirectionType::KeyChange {
-      key: Key::new(KeySignature::EMinor),
+      key: Key::new(KeySignature::E, KeyMode::Minor),
     });
     staff.borrow_mut().add_direction(DirectionType::KeyChange {
-      key: Key::new(KeySignature::FMajor),
+      key: Key::new(KeySignature::F, KeyMode::Major),
     });
     staff.borrow_mut().add_direction(DirectionType::KeyChange {
-      key: Key::new(KeySignature::FMinor),
+      key: Key::new(KeySignature::F, KeyMode::Minor),
     });
     staff.borrow_mut().add_direction(DirectionType::KeyChange {
-      key: Key::new(KeySignature::FSharpMajor),
+      key: Key::new(KeySignature::FSharp, KeyMode::Major),
     });
     staff.borrow_mut().add_direction(DirectionType::KeyChange {
-      key: Key::new(KeySignature::FSharpMinor),
+      key: Key::new(KeySignature::FSharp, KeyMode::Minor),
     });
     staff.borrow_mut().add_direction(DirectionType::KeyChange {
-      key: Key::new(KeySignature::GFlatMajor),
+      key: Key::new(KeySignature::GFlat, KeyMode::Major),
     });
     staff.borrow_mut().add_direction(DirectionType::KeyChange {
-      key: Key::new(KeySignature::GMajor),
+      key: Key::new(KeySignature::G, KeyMode::Major),
     });
     staff.borrow_mut().add_direction(DirectionType::KeyChange {
-      key: Key::new(KeySignature::GMinor),
+      key: Key::new(KeySignature::G, KeyMode::Minor),
     });
     staff.borrow_mut().add_direction(DirectionType::KeyChange {
-      key: Key::new(KeySignature::GSharpMinor),
+      key: Key::new(KeySignature::GSharp, KeyMode::Minor),
     });
     staff.borrow_mut().add_direction(DirectionType::StringMute { on: true });
     staff.borrow_mut().add_direction(DirectionType::TimeSignatureChange {
