@@ -355,8 +355,7 @@ mod test {
     note.add_modification(NoteModificationType::Handbell {
       technique: HandbellTechnique::Swing,
     });
-    note
-      .add_modification(NoteModificationType::HarmonMute { open: true, half: true });
+    note.add_modification(NoteModificationType::HarmonMute { open: true, half: true });
     note.add_modification(NoteModificationType::Haydn);
     note.add_modification(NoteModificationType::Heel);
     note.add_modification(NoteModificationType::Hole {
@@ -364,8 +363,7 @@ mod test {
       half: false,
     });
     note.add_modification(NoteModificationType::Marcato);
-    note
-      .add_modification(NoteModificationType::Mordent { upper: true });
+    note.add_modification(NoteModificationType::Mordent { upper: true });
     note.add_modification(NoteModificationType::Open);
     note.add_modification(NoteModificationType::Pizzicato);
     note.add_modification(NoteModificationType::Plop);
@@ -389,10 +387,8 @@ mod test {
     note.add_modification(NoteModificationType::ThumbPosition);
     note.add_modification(NoteModificationType::Tie);
     note.add_modification(NoteModificationType::Toe);
-    note
-      .add_modification(NoteModificationType::Tremolo { relative_speed: 2 });
-    note
-      .add_modification(NoteModificationType::Trill { upper: true });
+    note.add_modification(NoteModificationType::Tremolo { relative_speed: 2 });
+    note.add_modification(NoteModificationType::Trill { upper: true });
     note.add_modification(NoteModificationType::TripleTongue);
     note.add_modification(NoteModificationType::Turn {
       upper: false,
@@ -421,8 +417,7 @@ mod test {
       );
       chord.add_modification(ChordModificationType::Accent);
       chord.add_modification(ChordModificationType::Arpeggiate);
-      chord
-        .add_modification(ChordModificationType::DetachedLegato);
+      chord.add_modification(ChordModificationType::DetachedLegato);
       chord.add_modification(ChordModificationType::DownBow);
       chord.add_modification(ChordModificationType::Dynamic {
         dynamic: Dynamic::new(DynamicMarking::Forte, 3),
@@ -430,27 +425,23 @@ mod test {
       chord.add_modification(ChordModificationType::Fermata);
       chord.add_modification(ChordModificationType::Fingernails);
       chord.add_modification(ChordModificationType::HalfMuted);
-      chord
-        .add_modification(ChordModificationType::HarmonMute { open: true, half: true });
+      chord.add_modification(ChordModificationType::HarmonMute { open: true, half: true });
       chord.add_modification(ChordModificationType::Heel);
       chord.add_modification(ChordModificationType::Marcato);
-      chord
-        .add_modification(ChordModificationType::NonArpeggiate);
+      chord.add_modification(ChordModificationType::NonArpeggiate);
       chord.add_modification(ChordModificationType::Open);
       chord.add_modification(ChordModificationType::Pizzicato);
       chord.add_modification(ChordModificationType::Sforzando);
       chord.add_modification(ChordModificationType::Smear);
       chord.add_modification(ChordModificationType::SoftAccent);
       chord.add_modification(ChordModificationType::Spiccato);
-      chord
-        .add_modification(ChordModificationType::Staccatissimo);
+      chord.add_modification(ChordModificationType::Staccatissimo);
       chord.add_modification(ChordModificationType::Staccato);
       chord.add_modification(ChordModificationType::Stress);
       chord.add_modification(ChordModificationType::Tenuto);
       chord.add_modification(ChordModificationType::Tie);
       chord.add_modification(ChordModificationType::Toe);
-      chord
-        .add_modification(ChordModificationType::Tremolo { relative_speed: 1 });
+      chord.add_modification(ChordModificationType::Tremolo { relative_speed: 1 });
       chord.add_modification(ChordModificationType::Unstress);
       chord.add_modification(ChordModificationType::UpBow);
     }
@@ -490,23 +481,18 @@ mod test {
       Duration::new(DurationType::Quarter, 0),
       None,
     );
-    subphrase
-      .add_modification(PhraseModificationType::Crescendo {
-        final_dynamic: Dynamic::new(DynamicMarking::None, 0),
-      });
-    subphrase
-      .add_modification(PhraseModificationType::Decrescendo {
-        final_dynamic: Dynamic::new(DynamicMarking::Piano, 3),
-      });
-    subphrase
-      .add_modification(PhraseModificationType::Glissando);
-    subphrase
-      .add_modification(PhraseModificationType::Hairpin {
-        maximum_dynamic: Dynamic::new(DynamicMarking::Forte, 4),
-      });
+    subphrase.add_modification(PhraseModificationType::Crescendo {
+      final_dynamic: Dynamic::new(DynamicMarking::None, 0),
+    });
+    subphrase.add_modification(PhraseModificationType::Decrescendo {
+      final_dynamic: Dynamic::new(DynamicMarking::Piano, 3),
+    });
+    subphrase.add_modification(PhraseModificationType::Glissando);
+    subphrase.add_modification(PhraseModificationType::Hairpin {
+      maximum_dynamic: Dynamic::new(DynamicMarking::Forte, 4),
+    });
     subphrase.add_modification(PhraseModificationType::Legato);
-    subphrase
-      .add_modification(PhraseModificationType::OctaveShift { num_octaves: -1 });
+    subphrase.add_modification(PhraseModificationType::OctaveShift { num_octaves: -1 });
     subphrase.add_modification(PhraseModificationType::Pedal {
       pedal_type: PedalType::Soft,
     });
@@ -516,37 +502,27 @@ mod test {
     subphrase.add_modification(PhraseModificationType::Pedal {
       pedal_type: PedalType::Sostenuto,
     });
-    subphrase
-      .add_modification(PhraseModificationType::Portamento);
-    subphrase
-      .add_modification(PhraseModificationType::Tremolo { relative_speed: 3 });
+    subphrase.add_modification(PhraseModificationType::Portamento);
+    subphrase.add_modification(PhraseModificationType::Tremolo { relative_speed: 3 });
     subphrase.add_modification(PhraseModificationType::Tuplet {
       num_beats: 3,
       into_beats: 2,
     });
-    section
-      .add_modification(SectionModificationType::Accelerando);
-    section
-      .add_modification(SectionModificationType::OnlyPlay {
-        iterations: vec![1, 2, 4],
-      });
-    section
-      .add_modification(SectionModificationType::Rallentando);
-    section
-      .add_modification(SectionModificationType::Repeat { num_times: 2 });
-    section
-      .add_modification(SectionModificationType::Ritardando);
+    section.add_modification(SectionModificationType::Accelerando);
+    section.add_modification(SectionModificationType::OnlyPlay {
+      iterations: vec![1, 2, 4],
+    });
+    section.add_modification(SectionModificationType::Rallentando);
+    section.add_modification(SectionModificationType::Repeat { num_times: 2 });
+    section.add_modification(SectionModificationType::Ritardando);
     section.add_modification(SectionModificationType::Ritenuto);
-    section
-      .add_modification(SectionModificationType::Stringendo);
-    section
-      .add_modification(SectionModificationType::TempoExplicit {
-        tempo: Tempo::new(Duration::new(DurationType::Whole, 0), 10),
-      });
-    section
-      .add_modification(SectionModificationType::TempoImplicit {
-        tempo: TempoSuggestion::new(TempoMarking::Allegretto),
-      });
+    section.add_modification(SectionModificationType::Stringendo);
+    section.add_modification(SectionModificationType::TempoExplicit {
+      tempo: Tempo::new(Duration::new(DurationType::Whole, 0), 10),
+    });
+    section.add_modification(SectionModificationType::TempoImplicit {
+      tempo: TempoSuggestion::new(TempoMarking::Allegretto),
+    });
     let serialized = composition.serialize_json();
     match JsonConverter::load_data(serialized.as_bytes()) {
       Ok(ref loaded) => {

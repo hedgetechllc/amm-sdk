@@ -161,10 +161,8 @@ impl MultiVoice {
             {
               let mut updated_phrase = updated_phrase.borrow_mut();
               if Rc::ptr_eq(phrase, tuplet_phrase) {
-                let target_duration = Duration::from_beats(
-                  &beat_base_note,
-                  updated_phrase.get_beats(&beat_base_note, None),
-                );
+                let target_duration =
+                  Duration::from_beats(&beat_base_note, updated_phrase.get_beats(&beat_base_note, None));
                 let target_element = match &updated_phrase.content[0] {
                   PhraseContent::Note(note) => {
                     let mut updated_note = note.borrow().clone();
@@ -234,10 +232,8 @@ impl MultiVoice {
               });
               if let Some(mod_id) = mod_id {
                 // Expand tuplet by only taking the first note and holding it for the full tuplet duration
-                let target_duration = Duration::from_beats(
-                  &beat_base_note,
-                  updated_phrase.get_beats(&beat_base_note, None),
-                );
+                let target_duration =
+                  Duration::from_beats(&beat_base_note, updated_phrase.get_beats(&beat_base_note, None));
                 let target_element = match &updated_phrase.content[0] {
                   PhraseContent::Note(note) => {
                     let mut updated_note = note.borrow().clone();

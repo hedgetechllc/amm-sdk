@@ -91,9 +91,7 @@ impl Section {
               .add_note(Pitch::new_rest(), Duration::new(note_type, 0), None);
           }
         }
-        clone
-          .content
-          .push(unsafe { section.content.pop().unwrap_unchecked() });
+        clone.content.push(unsafe { section.content.pop().unwrap_unchecked() });
       } else {
         clone.content.push(SectionContent::Section(Rc::clone(&section_ref)));
       }
