@@ -22,7 +22,7 @@ Abstract Music Manipulation (AMM) SDK
 * Finish AMM Reader Implementation
 * Finish AMM Writer Implementation
 * Make fully `no_std` compatible
-* Add a test containing Glissandos and/or multi-note tremolos
+* Add a test containing Glissandos and/or multi-note tremolos and/or implicit + explicit tempo changes
 * Ensure `iter` and `iter_timeslices` maintain IDs and only copy when necessary
 * MusicXML change to inline serialize/deserialize, remove Regex, implement ZIP transcoder
 * Create MusicXML WASM build

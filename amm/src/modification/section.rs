@@ -62,7 +62,10 @@ impl core::fmt::Display for SectionModificationType {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     match self {
       Self::Accelerando => write!(f, "Accelerando"),
-      Self::OnlyPlay { iterations } => write!(f, "Only Play: {} times", iterations.len()),
+      Self::OnlyPlay { iterations } => {
+        let iterations = iterations.iter().map(|i| i.to_string()).collect::<Vec<_>>().join(", ");
+        write!(f, "Only Play: [{}]", iterations)
+      },
       Self::Rallentando => write!(f, "Rallentando"),
       Self::Repeat { num_times } => write!(f, "Repeat: {num_times} times"),
       Self::Ritardando => write!(f, "Ritardando"),
