@@ -152,179 +152,99 @@ impl Key {
 
   #[must_use]
   pub fn to_parallel(&self) -> Self {
-    Self { mode: if self.mode == KeyMode::Major { KeyMode::Minor } else { KeyMode::Major }, signature: self.signature }
+    Self {
+      mode: if self.mode == KeyMode::Major {
+        KeyMode::Minor
+      } else {
+        KeyMode::Major
+      },
+      signature: self.signature,
+    }
   }
 
   #[must_use]
   pub fn to_relative(&self) -> Self {
-    let new_mode = if self.mode == KeyMode::Major { KeyMode::Minor } else { KeyMode::Major };
+    let new_mode = if self.mode == KeyMode::Major {
+      KeyMode::Minor
+    } else {
+      KeyMode::Major
+    };
     Key::from_fifths(self.fifths(), Some(new_mode))
   }
 
   pub fn make_parallel(&mut self) {
-    self.mode = if self.mode == KeyMode::Major { KeyMode::Minor } else { KeyMode::Major };
+    self.mode = if self.mode == KeyMode::Major {
+      KeyMode::Minor
+    } else {
+      KeyMode::Major
+    };
   }
 
   pub fn make_relative(&mut self) {
-    let new_mode = if self.mode == KeyMode::Major { KeyMode::Minor } else { KeyMode::Major };
+    let new_mode = if self.mode == KeyMode::Major {
+      KeyMode::Minor
+    } else {
+      KeyMode::Major
+    };
     *self = Key::from_fifths(self.fifths(), Some(new_mode));
   }
 
   #[must_use]
   #[allow(clippy::too_many_lines)]
   pub(crate) fn accidentals(self) -> [Accidental; 8] {
-    match (self.signature, self.mode) {
-      (KeySignature::A, KeyMode::Major) | (KeySignature::FSharp, KeyMode::Minor) => [
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-        Accidental::Sharp,
-        Accidental::None,
-        Accidental::None,
-        Accidental::Sharp,
-        Accidental::Sharp,
-      ],
-      (KeySignature::ASharp, KeyMode::Minor) | (KeySignature::CSharp, KeyMode::Major) => [
-        Accidental::None,
-        Accidental::Sharp,
-        Accidental::Sharp,
-        Accidental::Sharp,
-        Accidental::Sharp,
-        Accidental::Sharp,
-        Accidental::Sharp,
-        Accidental::Sharp,
-      ],
-      (KeySignature::AFlat, KeyMode::Major) | (KeySignature::F, KeyMode::Minor) => [
-        Accidental::None,
-        Accidental::Flat,
-        Accidental::Flat,
-        Accidental::None,
-        Accidental::Flat,
-        Accidental::Flat,
-        Accidental::None,
-        Accidental::None,
-      ],
-      (KeySignature::AFlat, KeyMode::Minor) | (KeySignature::CFlat, KeyMode::Major) => [
-        Accidental::None,
-        Accidental::Flat,
-        Accidental::Flat,
-        Accidental::Flat,
-        Accidental::Flat,
-        Accidental::Flat,
-        Accidental::Flat,
-        Accidental::Flat,
-      ],
-      (KeySignature::B, KeyMode::Major) | (KeySignature::GSharp, KeyMode::Minor) => [
-        Accidental::None,
-        Accidental::Sharp,
-        Accidental::None,
-        Accidental::Sharp,
-        Accidental::Sharp,
-        Accidental::None,
-        Accidental::Sharp,
-        Accidental::Sharp,
-      ],
-      (KeySignature::B, KeyMode::Minor) | (KeySignature::D, KeyMode::Major) => [
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-        Accidental::Sharp,
-        Accidental::None,
-        Accidental::None,
-        Accidental::Sharp,
-        Accidental::None,
-      ],
-      (KeySignature::BFlat, KeyMode::Major) | (KeySignature::G, KeyMode::Minor) => [
-        Accidental::None,
-        Accidental::None,
-        Accidental::Flat,
-        Accidental::None,
-        Accidental::None,
-        Accidental::Flat,
-        Accidental::None,
-        Accidental::None,
-      ],
-      (KeySignature::BFlat, KeyMode::Minor) | (KeySignature::DFlat, KeyMode::Major) => [
-        Accidental::None,
-        Accidental::Flat,
-        Accidental::Flat,
-        Accidental::None,
-        Accidental::Flat,
-        Accidental::Flat,
-        Accidental::None,
-        Accidental::Flat,
-      ],
-      (KeySignature::C, KeyMode::Minor) | (KeySignature::EFlat, KeyMode::Major) => [
-        Accidental::None,
-        Accidental::Flat,
-        Accidental::Flat,
-        Accidental::None,
-        Accidental::None,
-        Accidental::Flat,
-        Accidental::None,
-        Accidental::None,
-      ],
-      (KeySignature::CSharp, KeyMode::Minor) | (KeySignature::E, KeyMode::Major) => [
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-        Accidental::Sharp,
-        Accidental::Sharp,
-        Accidental::None,
-        Accidental::Sharp,
-        Accidental::Sharp,
-      ],
-      (KeySignature::D, KeyMode::Minor) | (KeySignature::F, KeyMode::Major) => [
-        Accidental::None,
-        Accidental::None,
-        Accidental::Flat,
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-      ],
-      (KeySignature::DSharp, KeyMode::Minor) | (KeySignature::FSharp, KeyMode::Major) => [
-        Accidental::None,
-        Accidental::Sharp,
-        Accidental::None,
-        Accidental::Sharp,
-        Accidental::Sharp,
-        Accidental::Sharp,
-        Accidental::Sharp,
-        Accidental::Sharp,
-      ],
-      (KeySignature::E, KeyMode::Minor) | (KeySignature::G, KeyMode::Major) => [
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-        Accidental::Sharp,
-        Accidental::None,
-      ],
-      (KeySignature::EFlat, KeyMode::Minor) | (KeySignature::GFlat, KeyMode::Major) => [
-        Accidental::None,
-        Accidental::Flat,
-        Accidental::Flat,
-        Accidental::Flat,
-        Accidental::Flat,
-        Accidental::Flat,
-        Accidental::None,
-        Accidental::Flat,
-      ],
-      _ => [
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-        Accidental::None,
-      ],
-    }
+    let fifths = self.fifths();
+    [
+      Accidental::None,
+      if fifths <= -3 {
+        Accidental::Flat
+      } else if fifths >= 5 {
+        Accidental::Sharp
+      } else {
+        Accidental::None
+      },
+      if fifths <= -1 {
+        Accidental::Flat
+      } else if fifths >= 7 {
+        Accidental::Sharp
+      } else {
+        Accidental::None
+      },
+      if fifths <= -6 {
+        Accidental::Flat
+      } else if fifths >= 2 {
+        Accidental::Sharp
+      } else {
+        Accidental::None
+      },
+      if fifths <= -4 {
+        Accidental::Flat
+      } else if fifths >= 4 {
+        Accidental::Sharp
+      } else {
+        Accidental::None
+      },
+      if fifths <= -2 {
+        Accidental::Flat
+      } else if fifths >= 6 {
+        Accidental::Sharp
+      } else {
+        Accidental::None
+      },
+      if fifths <= -7 {
+        Accidental::Flat
+      } else if fifths >= 1 {
+        Accidental::Sharp
+      } else {
+        Accidental::None
+      },
+      if fifths <= -5 {
+        Accidental::Flat
+      } else if fifths >= 3 {
+        Accidental::Sharp
+      } else {
+        Accidental::None
+      },
+    ]
   }
 }
 
