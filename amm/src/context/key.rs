@@ -149,9 +149,27 @@ impl Key {
       _ => FIFTHS_C_MAJOR,
     }
   }
-}
 
-impl Key {
+  #[must_use]
+  pub fn to_parallel(&self) -> Self {
+    Self { mode: if self.mode == KeyMode::Major { KeyMode::Minor } else { KeyMode::Major }, signature: self.signature }
+  }
+
+  #[must_use]
+  pub fn to_relative(&self) -> Self {
+    let new_mode = if self.mode == KeyMode::Major { KeyMode::Minor } else { KeyMode::Major };
+    Key::from_fifths(self.fifths(), Some(new_mode))
+  }
+
+  pub fn make_parallel(&mut self) {
+    self.mode = if self.mode == KeyMode::Major { KeyMode::Minor } else { KeyMode::Major };
+  }
+
+  pub fn make_relative(&mut self) {
+    let new_mode = if self.mode == KeyMode::Major { KeyMode::Minor } else { KeyMode::Major };
+    *self = Key::from_fifths(self.fifths(), Some(new_mode));
+  }
+
   #[must_use]
   #[allow(clippy::too_many_lines)]
   pub(crate) fn accidentals(self) -> [Accidental; 8] {
