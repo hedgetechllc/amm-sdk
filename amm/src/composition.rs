@@ -203,32 +203,32 @@ impl Composition {
 
   #[must_use]
   pub fn get_chord(&mut self, id: usize) -> Option<Rc<RefCell<Chord>>> {
-    self.parts.iter_mut().find_map(|part| part.get_chord(id))
+    self.parts.iter().find_map(|part| part.get_chord(id))
   }
 
   #[must_use]
   pub fn get_multivoice(&mut self, id: usize) -> Option<Rc<RefCell<MultiVoice>>> {
-    self.parts.iter_mut().find_map(|part| part.get_multivoice(id))
+    self.parts.iter().find_map(|part| part.get_multivoice(id))
   }
 
   #[must_use]
   pub fn get_note(&mut self, id: usize) -> Option<Rc<RefCell<Note>>> {
-    self.parts.iter_mut().find_map(|part| part.get_note(id))
+    self.parts.iter().find_map(|part| part.get_note(id))
   }
 
   #[must_use]
   pub fn get_phrase(&mut self, id: usize) -> Option<Rc<RefCell<Phrase>>> {
-    self.parts.iter_mut().find_map(|part| part.get_phrase(id))
+    self.parts.iter().find_map(|part| part.get_phrase(id))
   }
 
   #[must_use]
   pub fn get_section(&mut self, id: usize) -> Option<Rc<RefCell<Section>>> {
-    self.parts.iter_mut().find_map(|part| part.get_section(id))
+    self.parts.iter().find_map(|part| part.get_section(id))
   }
 
   #[must_use]
   pub fn get_staff(&mut self, id: usize) -> Option<Rc<RefCell<Staff>>> {
-    self.parts.iter_mut().find_map(|part| part.get_staff(id))
+    self.parts.iter().find_map(|part| part.get_staff(id))
   }
 
   #[must_use]
