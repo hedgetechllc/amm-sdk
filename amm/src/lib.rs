@@ -14,8 +14,8 @@ pub mod wasm;
 
 pub use composition::Composition;
 pub use context::{
-  Clef, ClefSymbol, ClefType, Dynamic, DynamicMarking, Key, KeyMode, KeySignature, Tempo, TempoMarking,
-  TempoSuggestion, TimeSignature, TimeSignatureType,
+  Clef, ClefSymbol, ClefType, Dynamic, Key, KeyMode, KeySignature, Tempo, TempoMarking, TempoSuggestion, TimeSignature,
+  TimeSignatureType,
 };
 pub use modification::{
   ChordModification, ChordModificationType, Direction, DirectionType, HandbellTechnique, NoteModification,

@@ -1,4 +1,4 @@
-use crate::context::{generate_id, Dynamic, DynamicMarking};
+use crate::context::{generate_id, Dynamic};
 use alloc::rc::Rc;
 use core::cell::RefCell;
 #[cfg(feature = "json")]
@@ -20,14 +20,14 @@ pub enum PedalType {
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum PhraseModificationType {
   Crescendo {
-    final_dynamic: Dynamic,
+    final_dynamic: Option<Dynamic>,
   },
   Decrescendo {
-    final_dynamic: Dynamic,
+    final_dynamic: Option<Dynamic>,
   },
   Glissando,
   Hairpin {
-    maximum_dynamic: Dynamic,
+    maximum_dynamic: Option<Dynamic>,
   },
   #[default]
   Legato,
@@ -93,37 +93,19 @@ impl core::fmt::Display for PedalType {
 impl core::fmt::Display for PhraseModificationType {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     match self {
-      Self::Crescendo { final_dynamic } => write!(
-        f,
-        "Crescendo{}{}",
-        if final_dynamic.marking == DynamicMarking::None {
-          ""
-        } else {
-          ": to "
-        },
-        final_dynamic
-      ),
-      Self::Decrescendo { final_dynamic } => write!(
-        f,
-        "Decrescendo{}{}",
-        if final_dynamic.marking == DynamicMarking::None {
-          ""
-        } else {
-          ": to "
-        },
-        final_dynamic
-      ),
+      Self::Crescendo {
+        final_dynamic: Some(dynamic),
+      } => write!(f, "Crescendo to {dynamic}"),
+      Self::Crescendo { final_dynamic: None } => write!(f, "Crescendo"),
+      Self::Decrescendo {
+        final_dynamic: Some(dynamic),
+      } => write!(f, "Decrescendo to {dynamic}"),
+      Self::Decrescendo { final_dynamic: None } => write!(f, "Decrescendo"),
       Self::Glissando => write!(f, "Glissando"),
-      Self::Hairpin { maximum_dynamic } => write!(
-        f,
-        "Hairpin{}{}",
-        if maximum_dynamic.marking == DynamicMarking::None {
-          ""
-        } else {
-          ": to "
-        },
-        maximum_dynamic
-      ),
+      Self::Hairpin {
+        maximum_dynamic: Some(dynamic),
+      } => write!(f, "Hairpin to {dynamic}"),
+      Self::Hairpin { maximum_dynamic: None } => write!(f, "Hairpin"),
       Self::Legato => write!(f, "Legato"),
       Self::OctaveShift { num_octaves } => write!(f, "Octave Shift: by {num_octaves}"),
       Self::Pedal { pedal_type } => write!(f, "Pedal: {pedal_type}"),

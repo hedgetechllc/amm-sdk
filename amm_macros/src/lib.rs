@@ -29,6 +29,9 @@ fn serialize_enum_json(enum_type: &syn::Ident, data: &syn::DataEnum) -> TokenStr
                 field_type if field_type == "Vec" => {
                   values.push(quote! { format!("[{}]", #field_name.iter().map(|el| el.serialize_json()).collect::<Vec<_>>().join(",")) });
                 }
+                field_type if field_type == "Option" => {
+                  values.push(quote! { #field_name.map(|el| el.serialize_json()).unwrap_or(String::from("\"\"")) });
+                }
                 _ => values.push(quote! { #field_name.serialize_json() }),
               }
             }
@@ -37,9 +40,21 @@ fn serialize_enum_json(enum_type: &syn::Ident, data: &syn::DataEnum) -> TokenStr
         }
         enum_arms.push(quote! { #enum_type::#variant_type { #(#fields),* } => format!(#key, #(#values),*) });
       }
-      syn::Fields::Unnamed(_unnamed_fields) => {
-        enum_arms.push(quote! { #enum_type::#variant_type(el) => el.borrow().serialize_json() });
-      }
+      syn::Fields::Unnamed(unnamed_fields) => match &unnamed_fields.unnamed.first().unwrap().ty {
+        syn::Type::Path(type_path) => {
+          let field_details = type_path.path.segments.first().unwrap();
+          match &field_details.ident {
+            field_type if field_type == "Rc" => {
+              enum_arms.push(quote! { #enum_type::#variant_type(el) => el.borrow().serialize_json() });
+            }
+            _ => {
+              let variant_type_string = alloc::format!("\"{variant_type}");
+              enum_arms.push(quote! { #enum_type::#variant_type(el) => #variant_type_string.to_string() + "-" + el.serialize_json().as_str() + "\"" });
+            }
+          }
+        }
+        _ => panic!("Unknown AMM Enum field type"),
+      },
       syn::Fields::Unit => {
         let variant_type_string = alloc::format!("\"{variant_type}\"");
         enum_arms.push(quote! { #enum_type::#variant_type => #variant_type_string.to_string() });
@@ -82,6 +97,19 @@ fn deserialize_enum_json(enum_type: &syn::Ident, data: &syn::DataEnum) -> TokenS
                     }
                   }
                 }
+                field_type if field_type == "Option" => {
+                  if let syn::PathArguments::AngleBracketed(details) = &field_details.arguments {
+                    if let syn::GenericArgument::Type(syn::Type::Path(option_path)) = details.args.first().unwrap() {
+                      let content_type = &option_path.path.segments.first().unwrap().ident;
+                      fields.push(quote! {
+                        #field_name: match struct_fields.get(#field_name_string) {
+                          Some(value) => { if value.is_empty() { None } else { Some(#content_type::deserialize_json(value).unwrap_or_default()) } },
+                          None => None,
+                        }
+                      });
+                    }
+                  }
+                }
                 _ => {
                   fields.push(quote! { #field_name: #type_path::deserialize_json(struct_fields.get(#field_name_string).ok_or(format!("Missing AMM enum field: \"{}\"", #field_name_string))?)? });
                 }
@@ -104,9 +132,27 @@ fn deserialize_enum_json(enum_type: &syn::Ident, data: &syn::DataEnum) -> TokenS
           }
         });
       }
-      syn::Fields::Unnamed(_unnamed_fields) => {
-        enum_arms.push(quote! { #variant_type_string => Self::#variant_type(Rc::new(RefCell::new(#variant_type::deserialize_json(json)?))) });
-      }
+      syn::Fields::Unnamed(unnamed_fields) => match &unnamed_fields.unnamed.first().unwrap().ty {
+        syn::Type::Path(type_path) => {
+          let field_details = type_path.path.segments.first().unwrap();
+          match &field_details.ident {
+            field_type if field_type == "Rc" => {
+              enum_arms.push(quote! { #variant_type_string => Self::#variant_type(Rc::new(RefCell::new(#variant_type::deserialize_json(json)?))) });
+            }
+            _ => {
+              let variant_type_string_dash = variant_type_string.clone() + "-";
+              unit_enum_arms.push(quote! { x if x.contains(#variant_type_string_dash) => {
+                  match json.find('-') {
+                    Some(idx) => Self::#variant_type(#type_path::deserialize_json(&json[idx+1..])?),
+                    None => Self::#variant_type(1),
+                  }
+                }
+              });
+            }
+          }
+        }
+        _ => panic!("Unknown AMM Enum field type"),
+      },
       syn::Fields::Unit => unit_enum_arms.push(quote! { #variant_type_string => Self::#variant_type }),
     }
   }

@@ -195,54 +195,40 @@ impl Key {
     let fifths = self.fifths();
     [
       Accidental::None,
-      if fifths <= -3 {
-        Accidental::Flat
-      } else if fifths >= 5 {
-        Accidental::Sharp
-      } else {
-        Accidental::None
+      match fifths {
+        x if x <= -3 => Accidental::Flat,
+        x if x >= 5 => Accidental::Sharp,
+        _ => Accidental::None,
       },
-      if fifths <= -1 {
-        Accidental::Flat
-      } else if fifths >= 7 {
-        Accidental::Sharp
-      } else {
-        Accidental::None
+      match fifths {
+        x if x <= -1 => Accidental::Flat,
+        x if x >= 7 => Accidental::Sharp,
+        _ => Accidental::None,
       },
-      if fifths <= -6 {
-        Accidental::Flat
-      } else if fifths >= 2 {
-        Accidental::Sharp
-      } else {
-        Accidental::None
+      match fifths {
+        x if x <= -6 => Accidental::Flat,
+        x if x >= 2 => Accidental::Sharp,
+        _ => Accidental::None,
       },
-      if fifths <= -4 {
-        Accidental::Flat
-      } else if fifths >= 4 {
-        Accidental::Sharp
-      } else {
-        Accidental::None
+      match fifths {
+        x if x <= -4 => Accidental::Flat,
+        x if x >= 4 => Accidental::Sharp,
+        _ => Accidental::None,
       },
-      if fifths <= -2 {
-        Accidental::Flat
-      } else if fifths >= 6 {
-        Accidental::Sharp
-      } else {
-        Accidental::None
+      match fifths {
+        x if x <= -2 => Accidental::Flat,
+        x if x >= 6 => Accidental::Sharp,
+        _ => Accidental::None,
       },
-      if fifths <= -7 {
-        Accidental::Flat
-      } else if fifths >= 1 {
-        Accidental::Sharp
-      } else {
-        Accidental::None
+      match fifths {
+        x if x <= -7 => Accidental::Flat,
+        x if x >= 1 => Accidental::Sharp,
+        _ => Accidental::None,
       },
-      if fifths <= -5 {
-        Accidental::Flat
-      } else if fifths >= 3 {
-        Accidental::Sharp
-      } else {
-        Accidental::None
+      match fifths {
+        x if x <= -5 => Accidental::Flat,
+        x if x >= 3 => Accidental::Sharp,
+        _ => Accidental::None,
       },
     ]
   }

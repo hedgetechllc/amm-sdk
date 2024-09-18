@@ -1,5 +1,5 @@
-use super::{Accidental, Duration, DurationType, Pitch};
-use crate::context::{Key, KeyMode, KeySignature};
+use super::{Accidental, Duration, Pitch};
+use crate::context::Key;
 use crate::modification::NoteModification;
 use alloc::{
   rc::Rc,
@@ -52,14 +52,14 @@ impl Note {
 
   #[must_use]
   pub fn pitch_hz(&self, key: Option<Key>, a4_frequency_hz: Option<f32>) -> f32 {
-    let accidentals = key.unwrap_or(Key::new(KeySignature::C, KeyMode::Major)).accidentals();
+    let accidentals = key.unwrap_or_default().accidentals();
     a4_frequency_hz.unwrap_or(A4_FREQUENCY_HZ) * 2f32.powf(f32::from(self.semitone_distance(accidentals)) / 12.0)
   }
 
   #[must_use]
   #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
   pub fn midi_number(&self, key: Option<Key>) -> u8 {
-    let accidentals = key.unwrap_or(Key::new(KeySignature::C, KeyMode::Major)).accidentals();
+    let accidentals = key.unwrap_or_default().accidentals();
     (MIDI_NUMBER_A4 + self.semitone_distance(accidentals)) as u8
   }
 
@@ -71,11 +71,10 @@ impl Note {
 
 impl PartialEq for Note {
   fn eq(&self, other: &Self) -> bool {
-    let c_major_accidentals = Key::new(KeySignature::C, KeyMode::Major).accidentals();
-    let quarter_duration = Duration::new(DurationType::Quarter, 0).value();
-    (self.semitone_distance(c_major_accidentals) == other.semitone_distance(c_major_accidentals))
-      && (self.beats(quarter_duration) == other.beats(quarter_duration))
-      && (self.is_rest() == other.is_rest())
+    let default_duration = Duration::default().value();
+    let default_accidentals = Key::default().accidentals();
+    (self.semitone_distance(default_accidentals) == other.semitone_distance(default_accidentals))
+      && (self.beats(default_duration) == other.beats(default_duration))
   }
 }
 

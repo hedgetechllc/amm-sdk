@@ -27,7 +27,7 @@ impl Accidental {
       Self::Flat => -1,
       Self::DoubleSharp => 2,
       Self::DoubleFlat => -2,
-      _ => 0,
+      Self::None | Self::Natural => 0,
     }
   }
 }
