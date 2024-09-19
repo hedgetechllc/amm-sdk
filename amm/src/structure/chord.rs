@@ -52,7 +52,7 @@ impl Chord {
   pub fn add_modification(&mut self, modification: ChordModificationType) -> Rc<RefCell<ChordModification>> {
     self
       .modifications
-      .retain(|mods| *mods.borrow().get_modification() != modification);
+      .retain(|mods| mods.borrow().r#type != modification);
     let modification = ChordModification::new(modification);
     self.modifications.push(Rc::clone(&modification));
     modification
@@ -122,14 +122,14 @@ impl Chord {
     let mut timeslice = Timeslice::new();
     timeslice.arpeggiated = self.modifications.iter().any(|modification| {
       matches!(
-        modification.borrow().get_modification(),
+        modification.borrow().r#type,
         ChordModificationType::Arpeggiate
       )
     });
     let transferrable_modifications = self
       .modifications
       .iter()
-      .filter_map(|modification| NoteModification::from_chord_modification(modification.borrow().get_modification()))
+      .filter_map(|modification| NoteModification::from_chord_modification(&modification.borrow().r#type))
       .collect::<Vec<_>>();
     self.content.iter().for_each(|item| match item {
       ChordContent::Note(note) => {
@@ -137,7 +137,7 @@ impl Chord {
         for modification in &transferrable_modifications {
           chord_note
             .modifications
-            .retain(|chord_mod| chord_mod.borrow().get_modification() != modification.borrow().get_modification());
+            .retain(|chord_mod| chord_mod.borrow().r#type != modification.borrow().r#type);
           chord_note.modifications.push(Rc::clone(modification));
         }
         timeslice.add_note(&Rc::new(RefCell::new(chord_note)));

@@ -39,26 +39,21 @@ pub enum DirectionType {
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Direction {
   id: usize,
-  modification: DirectionType,
+  pub r#type: DirectionType,
 }
 
 impl Direction {
   #[must_use]
-  pub fn new(modification: DirectionType) -> Rc<RefCell<Self>> {
+  pub fn new(r#type: DirectionType) -> Rc<RefCell<Self>> {
     Rc::new(RefCell::new(Self {
       id: generate_id(),
-      modification,
+      r#type,
     }))
   }
 
   #[must_use]
   pub fn get_id(&self) -> usize {
     self.id
-  }
-
-  #[must_use]
-  pub fn get_modification(&self) -> &DirectionType {
-    &self.modification
   }
 }
 
@@ -91,6 +86,6 @@ impl core::fmt::Display for DirectionType {
 #[cfg(feature = "print")]
 impl core::fmt::Display for Direction {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-    write!(f, "{}", self.modification)
+    write!(f, "{}", self.r#type)
   }
 }

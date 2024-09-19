@@ -116,7 +116,7 @@ impl Phrase {
   pub fn add_modification(&mut self, modification: PhraseModificationType) -> Rc<RefCell<PhraseModification>> {
     self
       .modifications
-      .retain(|mods| *mods.borrow().get_modification() != modification);
+      .retain(|mods| mods.borrow().r#type != modification);
     let modification = PhraseModification::new(modification);
     self.modifications.push(Rc::clone(&modification));
     modification
@@ -218,9 +218,9 @@ impl Phrase {
     let new_tuplet_ratio = self
       .modifications
       .iter()
-      .find_map(|item| match item.borrow().get_modification() {
+      .find_map(|item| match item.borrow().r#type {
         PhraseModificationType::Tuplet { num_beats, into_beats } => {
-          Some(f64::from(*into_beats) / f64::from(*num_beats))
+          Some(f64::from(into_beats) / f64::from(num_beats))
         }
         _ => None,
       });
@@ -303,7 +303,7 @@ impl Phrase {
       for content in &mut timeslice.content {
         let details = content.add_phrase_details(index, num_timeslices);
         self.modifications.iter().for_each(|modification| {
-          details.modifications.push(*modification.borrow().get_modification());
+          details.modifications.push(modification.borrow().r#type);
         });
         if index > 0 {
           timeslices[index - 1].content.iter_mut().for_each(|item| {

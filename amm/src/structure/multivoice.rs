@@ -59,12 +59,12 @@ impl MultiVoice {
           .borrow()
           .modifications
           .iter()
-          .find_map(|modification| match modification.borrow().get_modification() {
+          .find_map(|modification| match modification.borrow().r#type {
             PhraseModificationType::Tuplet { num_beats, into_beats } => Some((
               Rc::clone(phrase),
               Rc::clone(modification),
               modification.borrow().get_id(),
-              (*num_beats, *into_beats),
+              (num_beats, into_beats),
             )),
             _ => None,
           })
@@ -202,8 +202,8 @@ impl MultiVoice {
         && phrases.iter().all(|phrase| {
           (phrase.borrow().get_beats(&beat_base_note, None) - target_duration).abs() < f64::EPSILON
             && match phrase.borrow().modifications.iter().find_map(|modification| {
-              match modification.borrow().get_modification() {
-                PhraseModificationType::Tuplet { num_beats, into_beats } => Some((*num_beats, *into_beats)),
+              match modification.borrow().r#type {
+                PhraseModificationType::Tuplet { num_beats, into_beats } => Some((num_beats, into_beats)),
                 _ => None,
               }
             }) {
@@ -222,7 +222,7 @@ impl MultiVoice {
             {
               let mut updated_phrase = updated_phrase.borrow_mut();
               let mod_id = phrase.borrow().modifications.iter().find_map(|modification| {
-                match modification.borrow().get_modification() {
+                match modification.borrow().r#type {
                   PhraseModificationType::Tuplet {
                     num_beats: _,
                     into_beats: _,
@@ -276,9 +276,9 @@ impl MultiVoice {
           .borrow()
           .modifications
           .iter()
-          .find_map(|modification| match modification.borrow().get_modification() {
+          .find_map(|modification| match modification.borrow().r#type {
             PhraseModificationType::Tuplet { num_beats, into_beats } => {
-              Some(f64::from(*into_beats) / f64::from(*num_beats))
+              Some(f64::from(into_beats) / f64::from(num_beats))
             }
             _ => None,
           });
@@ -355,7 +355,7 @@ impl MultiVoice {
               chord.borrow().modifications.iter().for_each(|modification| {
                 combined
                   .borrow_mut()
-                  .add_modification(*modification.borrow().get_modification());
+                  .add_modification(modification.borrow().r#type);
               });
               chord.borrow().iter().for_each(|item| match item {
                 ChordContent::Note(note) => {

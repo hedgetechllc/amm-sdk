@@ -25,7 +25,7 @@ pub struct Note {
   pub pitch: Pitch,
   pub duration: Duration,
   pub accidental: Accidental,
-  pub modifications: Vec<Rc<RefCell<NoteModification>>>,
+  pub(crate) modifications: Vec<Rc<RefCell<NoteModification>>>,
 }
 
 impl Note {

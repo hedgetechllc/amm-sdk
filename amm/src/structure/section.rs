@@ -152,7 +152,7 @@ impl Section {
   pub fn add_modification(&mut self, modification: SectionModificationType) -> Rc<RefCell<SectionModification>> {
     self
       .modifications
-      .retain(|mods| *mods.borrow().get_modification() != modification);
+      .retain(|mods| mods.borrow().r#type != modification);
     let modification = SectionModification::new(modification);
     self.modifications.push(Rc::clone(&modification));
     modification
@@ -298,8 +298,8 @@ impl Section {
     self
       .modifications
       .iter()
-      .find_map(|item| match item.borrow().get_modification() {
-        SectionModificationType::Repeat { num_times } => Some(*num_times),
+      .find_map(|item| match item.borrow().r#type {
+        SectionModificationType::Repeat { num_times } => Some(num_times),
         _ => None,
       })
       .unwrap_or(1)
@@ -310,7 +310,7 @@ impl Section {
     self
       .modifications
       .iter()
-      .find_map(|item| match item.borrow().get_modification() {
+      .find_map(|item| match &item.borrow().r#type {
         SectionModificationType::OnlyPlay { iterations } => Some(iterations.clone()),
         _ => None,
       })
@@ -322,8 +322,8 @@ impl Section {
     self
       .modifications
       .iter()
-      .find_map(|item| match item.borrow().get_modification() {
-        SectionModificationType::TempoExplicit { tempo } => Some(*tempo),
+      .find_map(|item| match item.borrow().r#type {
+        SectionModificationType::TempoExplicit { tempo } => Some(tempo),
         SectionModificationType::TempoImplicit { tempo } => {
           Some(Tempo::new(Duration::new(DurationType::Quarter, 0), tempo.value()))
         }

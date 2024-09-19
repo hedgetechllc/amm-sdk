@@ -322,7 +322,7 @@ impl core::fmt::Display for Staff {
         StaffContent::Chord(chord) => chord.borrow().to_string(),
         StaffContent::Phrase(phrase) => phrase.borrow().to_string(),
         StaffContent::MultiVoice(multi_voice) => multi_voice.borrow().to_string(),
-        StaffContent::Direction(direction) => direction.borrow().get_modification().to_string(),
+        StaffContent::Direction(direction) => direction.borrow().r#type.to_string(),
       })
       .collect::<Vec<_>>()
       .join(", ");

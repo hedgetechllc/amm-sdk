@@ -210,9 +210,9 @@ impl Duration {
 fn dots_to_text(dots: u8) -> String {
   match dots {
     0 => String::new(),
-    1 => String::from("Dotted "),
-    2 => String::from("Double-Dotted "),
-    _ => format!("{dots}-Dotted "),
+    1 => String::from(" Dotted"),
+    2 => String::from(" Double-Dotted"),
+    _ => format!(" {dots}-Dotted"),
   }
 }
 

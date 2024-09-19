@@ -112,21 +112,21 @@ pub enum NoteModificationType {
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct NoteModification {
   id: usize,
-  modification: NoteModificationType,
+  pub r#type: NoteModificationType,
 }
 
 impl NoteModification {
   #[must_use]
-  pub fn new(modification: NoteModificationType) -> Rc<RefCell<Self>> {
+  pub fn new(r#type: NoteModificationType) -> Rc<RefCell<Self>> {
     Rc::new(RefCell::new(Self {
       id: generate_id(),
-      modification,
+      r#type,
     }))
   }
 
   #[must_use]
-  pub fn from_chord_modification(modification: &ChordModificationType) -> Option<Rc<RefCell<Self>>> {
-    match *modification {
+  pub fn from_chord_modification(r#type: &ChordModificationType) -> Option<Rc<RefCell<Self>>> {
+    match *r#type {
       ChordModificationType::Accent => Some(NoteModificationType::Accent),
       ChordModificationType::DetachedLegato => Some(NoteModificationType::DetachedLegato),
       ChordModificationType::DownBow => Some(NoteModificationType::DownBow),
@@ -154,10 +154,10 @@ impl NoteModification {
       ChordModificationType::UpBow => Some(NoteModificationType::UpBow),
       _ => None,
     }
-    .map(|modification| {
+    .map(|r#type| {
       Rc::new(RefCell::new(Self {
         id: generate_id(),
-        modification,
+        r#type,
       }))
     })
   }
@@ -165,11 +165,6 @@ impl NoteModification {
   #[must_use]
   pub fn get_id(&self) -> usize {
     self.id
-  }
-
-  #[must_use]
-  pub fn get_modification(&self) -> &NoteModificationType {
-    &self.modification
   }
 }
 
@@ -293,6 +288,6 @@ impl core::fmt::Display for NoteModificationType {
 #[cfg(feature = "print")]
 impl core::fmt::Display for NoteModification {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-    write!(f, "{}", self.modification)
+    write!(f, "{}", self.r#type)
   }
 }

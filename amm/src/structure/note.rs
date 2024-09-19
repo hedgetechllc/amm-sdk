@@ -26,7 +26,7 @@ impl Note {
   pub fn add_modification(&mut self, modification: NoteModificationType) -> Rc<RefCell<NoteModification>> {
     self
       .modifications
-      .retain(|mods| *mods.borrow().get_modification() != modification);
+      .retain(|mods| mods.borrow().r#type != modification);
     let modification = NoteModification::new(modification);
     self.modifications.push(Rc::clone(&modification));
     modification

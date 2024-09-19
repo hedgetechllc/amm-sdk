@@ -51,26 +51,21 @@ pub enum PhraseModificationType {
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct PhraseModification {
   id: usize,
-  modification: PhraseModificationType,
+  pub r#type: PhraseModificationType,
 }
 
 impl PhraseModification {
   #[must_use]
-  pub fn new(modification: PhraseModificationType) -> Rc<RefCell<Self>> {
+  pub fn new(r#type: PhraseModificationType) -> Rc<RefCell<Self>> {
     Rc::new(RefCell::new(Self {
       id: generate_id(),
-      modification,
+      r#type,
     }))
   }
 
   #[must_use]
   pub fn get_id(&self) -> usize {
     self.id
-  }
-
-  #[must_use]
-  pub fn get_modification(&self) -> &PhraseModificationType {
-    &self.modification
   }
 }
 
@@ -119,6 +114,6 @@ impl core::fmt::Display for PhraseModificationType {
 #[cfg(feature = "print")]
 impl core::fmt::Display for PhraseModification {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-    write!(f, "{}", self.modification)
+    write!(f, "{}", self.r#type)
   }
 }

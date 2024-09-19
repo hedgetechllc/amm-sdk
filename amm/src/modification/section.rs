@@ -34,26 +34,21 @@ pub enum SectionModificationType {
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct SectionModification {
   id: usize,
-  modification: SectionModificationType,
+  pub r#type: SectionModificationType,
 }
 
 impl SectionModification {
   #[must_use]
-  pub fn new(modification: SectionModificationType) -> Rc<RefCell<Self>> {
+  pub fn new(r#type: SectionModificationType) -> Rc<RefCell<Self>> {
     Rc::new(RefCell::new(Self {
       id: generate_id(),
-      modification,
+      r#type,
     }))
   }
 
   #[must_use]
   pub fn get_id(&self) -> usize {
     self.id
-  }
-
-  #[must_use]
-  pub fn get_modification(&self) -> &SectionModificationType {
-    &self.modification
   }
 }
 
@@ -80,7 +75,7 @@ impl core::fmt::Display for SectionModificationType {
 #[cfg(feature = "print")]
 impl core::fmt::Display for SectionModification {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-    write!(f, "{}", self.modification)
+    write!(f, "{}", self.r#type)
   }
 }
 
