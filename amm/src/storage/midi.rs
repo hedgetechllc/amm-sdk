@@ -33,7 +33,7 @@ impl Convert for MidiConverter {
   }
 
   fn load_data(data: &[u8]) -> Result<Composition, String> {
-    MidiConverter::load_from_midi(&data)
+    MidiConverter::load_from_midi(data)
   }
 
   fn save(_path: &str, _composition: &Composition) -> Result<usize, String> {

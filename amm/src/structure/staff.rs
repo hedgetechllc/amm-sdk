@@ -332,7 +332,6 @@ impl Staff {
       .sum()
   }
 
-  #[must_use]
   pub fn iter(&self) -> Iter<'_, StaffContent> {
     self.content.iter()
   }

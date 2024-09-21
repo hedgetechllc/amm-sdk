@@ -45,6 +45,7 @@ impl Pitch {
   }
 
   #[must_use]
+  #[allow(clippy::cast_possible_wrap)]
   pub(crate) fn value(self) -> (usize, i8) {
     match self.name {
       PitchName::Rest => (0, 0),

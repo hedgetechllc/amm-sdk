@@ -200,36 +200,34 @@ impl MultiVoice {
           .iter()
           .map(|phrase| {
             let mut updated_phrase = phrase.clone();
-            phrase
-              .iter_modifications()
-              .for_each(|modification| match modification.r#type {
-                PhraseModificationType::Tuplet {
-                  num_beats: _,
-                  into_beats: _,
-                } => {
-                  // Expand tuplet by only taking the first note and holding it for the full tuplet duration
-                  unsafe {
-                    let target_duration =
-                      Duration::from_beats(&beat_base_note, updated_phrase.get_beats(&beat_base_note, None));
-                    match updated_phrase.content.first_mut().unwrap_unchecked() {
-                      PhraseContent::Note(note) => {
-                        note.duration = target_duration;
-                      }
-                      PhraseContent::Chord(chord) => {
-                        chord.content.iter_mut().for_each(|item| match item {
-                          ChordContent::Note(note) => {
-                            note.duration = target_duration;
-                          }
-                        });
-                      }
-                      _ => core::hint::unreachable_unchecked(),
-                    };
-                    updated_phrase.remove_modification(modification.get_id());
-                    updated_phrase.content.drain(1..);
-                  }
+            phrase.iter_modifications().for_each(|modification| {
+              if let PhraseModificationType::Tuplet {
+                num_beats: _,
+                into_beats: _,
+              } = modification.r#type
+              {
+                // Expand tuplet by only taking the first note and holding it for the full tuplet duration
+                unsafe {
+                  let target_duration =
+                    Duration::from_beats(&beat_base_note, updated_phrase.get_beats(&beat_base_note, None));
+                  match updated_phrase.content.first_mut().unwrap_unchecked() {
+                    PhraseContent::Note(note) => {
+                      note.duration = target_duration;
+                    }
+                    PhraseContent::Chord(chord) => {
+                      chord.content.iter_mut().for_each(|item| match item {
+                        ChordContent::Note(note) => {
+                          note.duration = target_duration;
+                        }
+                      });
+                    }
+                    _ => core::hint::unreachable_unchecked(),
+                  };
+                  updated_phrase.remove_modification(modification.get_id());
+                  updated_phrase.content.drain(1..);
                 }
-                _ => (),
-              });
+              }
+            });
             updated_phrase
           })
           .collect()
@@ -458,7 +456,6 @@ impl MultiVoice {
     self.iter_timeslices().len()
   }
 
-  #[must_use]
   pub fn iter(&self) -> Iter<'_, MultiVoiceContent> {
     self.content.iter()
   }

@@ -358,16 +358,13 @@ impl Phrase {
         self.modifications.iter().for_each(|modification| {
           details.modifications.push(modification.r#type);
         });
-        match timeslices.last_mut() {
-          Some(previous_timeslice) => {
-            previous_timeslice.content.iter_mut().for_each(|note| {
-              note.phrase_details.iter_mut().for_each(|details| {
-                details.next_pitch = content.note.pitch;
-                details.next_accidental = content.note.accidental;
-              });
+        if let Some(previous_timeslice) = timeslices.last_mut() {
+          previous_timeslice.content.iter_mut().for_each(|note| {
+            note.phrase_details.iter_mut().for_each(|details| {
+              details.next_pitch = content.note.pitch;
+              details.next_accidental = content.note.accidental;
             });
-          }
-          None => (),
+          });
         }
       }
     }
@@ -375,12 +372,10 @@ impl Phrase {
     index + 1
   }
 
-  #[must_use]
   pub fn iter(&self) -> Iter<'_, PhraseContent> {
     self.content.iter()
   }
 
-  #[must_use]
   pub fn iter_modifications(&self) -> Iter<'_, PhraseModification> {
     self.modifications.iter()
   }

@@ -79,7 +79,7 @@ pub struct Key {
 impl Key {
   #[must_use]
   pub fn new(signature: KeySignature, mode: KeyMode) -> Self {
-    Self { signature, mode }
+    Self { mode, signature }
   }
 
   #[must_use]
@@ -105,7 +105,7 @@ impl Key {
       (FIFTHS_G_SHARP_MINOR, KeyMode::Minor) => KeySignature::GSharp,
       _ => KeySignature::C,
     };
-    Self { signature, mode }
+    Self { mode, signature }
   }
 
   #[must_use]

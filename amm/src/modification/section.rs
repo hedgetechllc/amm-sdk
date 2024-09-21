@@ -71,7 +71,7 @@ impl core::fmt::Display for SectionModificationType {
           .map(ToString::to_string)
           .collect::<Vec<_>>()
           .join(", ");
-        write!(f, "Only Play: [{}]", iterations)
+        write!(f, "Only Play: [{iterations}]")
       }
       Self::Rallentando => write!(f, "Rallentando"),
       Self::Repeat { num_times } => write!(f, "Repeat: {num_times} times"),

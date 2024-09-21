@@ -299,7 +299,6 @@ impl Part {
       .sum()
   }
 
-  #[must_use]
   pub fn iter(&self) -> Iter<'_, PartContent> {
     self.content.iter()
   }

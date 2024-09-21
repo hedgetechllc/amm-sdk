@@ -159,7 +159,7 @@ struct TimeSliceContainer {
   pub jump_to: Option<String>,
   pub section_start: Option<String>,
   pub ending: Vec<(bool, Vec<u8>)>,
-  pub repeat: Vec<(bool, u32)>,
+  pub repeat: Vec<(bool, u8)>,
   pub tempo_change_explicit: Option<Tempo>,
   pub tempo_change_implicit: Option<TempoSuggestion>,
   pub notes: Vec<NoteDetails>,
@@ -836,10 +836,10 @@ impl MusicXmlConverter {
     if let Some(repeat) = &element.content.repeat {
       let item = (
         repeat.attributes.direction == musicxml::datatypes::BackwardForward::Forward,
-        repeat.attributes.times.as_ref().map_or(1, |item| **item),
+        repeat.attributes.times.as_ref().map_or(1, |item| **item as u8),
       );
       for slice in time_slice.values_mut() {
-        slice[cursor].repeat.push(item.clone());
+        slice[cursor].repeat.push(item);
       }
     }
     if element.content.coda.is_some() {
@@ -1577,8 +1577,8 @@ impl MusicXmlConverter {
 
     // Use the temporally ordered time slices to generate a section structure for the composition
     let mut section_structure_by_staff = Vec::new();
-    for (_, staves) in &part_data.data {
-      for (_, time_slices) in staves {
+    for staves in part_data.data.values() {
+      for time_slices in staves.values() {
         section_structure_by_staff.push(BTreeMap::new());
         let staff_section_structure = section_structure_by_staff.last_mut().unwrap();
         let (mut open_endings, mut open_repeats) = (Vec::new(), Vec::new());
@@ -1633,7 +1633,7 @@ impl MusicXmlConverter {
                 details.ending_sections.push(section);
               }
               let (new_section_id, new_section) = details.new_section("Explicit Tempo Section");
-              new_section.add_modification(SectionModificationType::TempoExplicit { tempo: tempo.clone() });
+              new_section.add_modification(SectionModificationType::TempoExplicit { tempo: *tempo });
               open_tempos.push(new_section_id);
             }
             if let Some(tempo) = &time_slice.tempo_change_implicit {
@@ -1647,15 +1647,13 @@ impl MusicXmlConverter {
                 details.ending_sections.push(section);
               }
               let (new_section_id, new_section) = details.new_section("Implicit Tempo Section");
-              new_section.add_modification(SectionModificationType::TempoImplicit { tempo: tempo.clone() });
+              new_section.add_modification(SectionModificationType::TempoImplicit { tempo: *tempo });
               open_tempos.push(new_section_id);
             }
             for (repeat_start, times) in &time_slice.repeat {
               if *repeat_start {
                 let (new_section_id, new_section) = details.new_section("Repeated Section");
-                new_section.add_modification(SectionModificationType::Repeat {
-                  num_times: *times as u8,
-                });
+                new_section.add_modification(SectionModificationType::Repeat { num_times: *times });
                 open_repeats.push(new_section_id);
               }
             }
@@ -1692,9 +1690,9 @@ impl MusicXmlConverter {
         .expect("Unknown part name encountered");
 
       // Handle creation of the section structure for this part
-      let default_section = part.add_default_section();
       let mut last_section_idx = 0;
-      let mut open_sections = vec![(0, default_section)];
+      let default_section = part.add_default_section();
+      let mut open_sections = Vec::from([(0, default_section)]);
       let mut section_listing = BTreeMap::from([(0, default_section)]);
       for (idx, details) in section_structure {
         for _ in 0..details.ending_sections.len() {
@@ -1738,7 +1736,7 @@ impl MusicXmlConverter {
         let mut staff;
         let mut phrase_ids = BTreeMap::new();
         let mut multivoice_phrases: BTreeMap<String, &mut Phrase> = BTreeMap::new();
-        let (mut local_phrases, mut global_phrases) = (BTreeMap::<String, Vec<&Phrase>>::new(), Vec::new());
+        let (mut local_phrases, mut global_phrases) = (BTreeMap::<String, Vec<Phrase>>::new(), Vec::new());
         let (mut delayed_phrase_starts, mut delayed_phrase_ends) = (Vec::new(), Vec::new());
         for (time_slice_idx, time_slice) in time_slices.into_iter().enumerate() {
           // Handle section delineations
@@ -1931,11 +1929,11 @@ impl MusicXmlConverter {
                     } else if let Some(chord) = voice_items.1 {
                       phrase.content.push(PhraseContent::Chord(chord));
                     }
-                    local_phrases.insert(voice.clone(), vec![&phrase]);
-                    if let Some(phrase) = global_phrases.last() {
-                      phrase.content.push(PhraseContent::Phrase(&phrase));
+                    local_phrases.insert(voice.clone(), vec![phrase]);
+                    if let Some(global_phrase) = global_phrases.last() {
+                      phrase.content.push(PhraseContent::Phrase(**global_phrase));
                     } else {
-                      staff.content.push(StaffContent::Phrase(&phrase));
+                      staff.content.push(StaffContent::Phrase(phrase));
                     }
                   } else {
                     pending_legato_phrases.push(voice.clone());

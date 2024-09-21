@@ -468,12 +468,10 @@ impl Section {
     self.iter_timeslices().len()
   }
 
-  #[must_use]
   pub fn iter(&self) -> Iter<'_, SectionContent> {
     self.content.iter()
   }
 
-  #[must_use]
   pub fn iter_modifications(&self) -> Iter<'_, SectionModification> {
     self.modifications.iter()
   }

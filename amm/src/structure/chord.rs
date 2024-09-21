@@ -110,12 +110,10 @@ impl Chord {
     self
   }
 
-  #[must_use]
   pub fn iter(&self) -> Iter<'_, ChordContent> {
     self.content.iter()
   }
 
-  #[must_use]
   pub fn iter_modifications(&self) -> Iter<'_, ChordModification> {
     self.modifications.iter()
   }

@@ -330,7 +330,6 @@ impl Composition {
     self.parts.iter().map(Part::num_timeslices).max().unwrap_or_default()
   }
 
-  #[must_use]
   pub fn iter(&self) -> Iter<'_, Part> {
     self.parts.iter()
   }

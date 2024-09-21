@@ -58,7 +58,6 @@ impl Note {
     self
   }
 
-  #[must_use]
   pub fn iter_modifications(&self) -> Iter<'_, NoteModification> {
     self.modifications.iter()
   }
