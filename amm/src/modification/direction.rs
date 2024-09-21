@@ -1,14 +1,8 @@
 use crate::context::{generate_id, Clef, Dynamic, Key, TimeSignature};
-use alloc::{rc::Rc, string::String};
-use core::cell::RefCell;
-#[cfg(feature = "json")]
-use {
-  amm_internal::json_prelude::*,
-  amm_macros::{JsonDeserialize, JsonSerialize},
-};
+use amm_internal::amm_prelude::*;
+use amm_macros::{JsonDeserialize, JsonSerialize};
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum DirectionType {
   AccordionRegistration {
     high: bool,
@@ -35,8 +29,7 @@ pub enum DirectionType {
   },
 }
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, JsonDeserialize, JsonSerialize)]
 pub struct Direction {
   id: usize,
   pub r#type: DirectionType,
@@ -44,16 +37,31 @@ pub struct Direction {
 
 impl Direction {
   #[must_use]
-  pub fn new(r#type: DirectionType) -> Rc<RefCell<Self>> {
-    Rc::new(RefCell::new(Self {
+  pub fn new(r#type: DirectionType) -> Self {
+    Self {
       id: generate_id(),
       r#type,
-    }))
+    }
   }
 
   #[must_use]
   pub fn get_id(&self) -> usize {
     self.id
+  }
+}
+
+impl Clone for Direction {
+  fn clone(&self) -> Self {
+    Self {
+      id: generate_id(),
+      r#type: self.r#type,
+    }
+  }
+}
+
+impl PartialEq for Direction {
+  fn eq(&self, other: &Self) -> bool {
+    self.r#type == other.r#type
   }
 }
 

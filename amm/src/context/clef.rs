@@ -1,14 +1,10 @@
+use amm_internal::amm_prelude::*;
+use amm_macros::{JsonDeserialize, JsonSerialize};
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
-#[cfg(feature = "json")]
-use {
-  amm_internal::json_prelude::*,
-  amm_macros::{JsonDeserialize, JsonSerialize},
-};
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum ClefSymbol {
   #[default]
   GClef,
@@ -16,9 +12,8 @@ pub enum ClefSymbol {
   FClef,
 }
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum ClefType {
   #[default]
   Treble,
@@ -32,9 +27,8 @@ pub enum ClefType {
   Baritone,
 }
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub struct Clef {
   pub symbol: ClefSymbol,
   pub clef_type: ClefType,

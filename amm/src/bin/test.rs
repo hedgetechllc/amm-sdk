@@ -5,7 +5,6 @@ fn test_iterating(composition: &mut Composition) {
   println!("{}", composition);
   for part_name in &composition.get_part_names() {
     let part = unsafe { composition.get_part_by_name(part_name).unwrap_unchecked() };
-    println!("\nPart {part_name}:");
     println!("{}\n\n\n", part);
   }
 }
@@ -37,7 +36,7 @@ fn test_flattened_and_restructured_timeslices(composition: &mut Composition) {
 }
 
 fn main() {
-  let mut composition = Storage::MusicXML.load("./examples/Grande Valse Brillante.musicxml");
+  let mut composition = Storage::MusicXML.load("./amm/examples/Grande Valse Brillante.musicxml");
   match composition {
     Ok(ref mut composition) => {
       test_iterating(composition);

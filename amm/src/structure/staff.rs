@@ -1,79 +1,54 @@
 use super::{chord::Chord, multivoice::MultiVoice, phrase::Phrase, timeslice::Timeslice};
-use crate::context::{generate_id, Clef, Key, Tempo, TimeSignature};
+use crate::context::{generate_id, Tempo};
 use crate::modification::{Direction, DirectionType};
 use crate::note::{Accidental, Duration, Note, Pitch};
-use alloc::{
-  rc::Rc,
-  string::{String, ToString},
-  vec::Vec,
-};
-use core::{cell::RefCell, slice::Iter};
-#[cfg(feature = "json")]
-use {
-  amm_internal::json_prelude::*,
-  amm_macros::{JsonDeserialize, JsonSerialize},
-};
+use amm_internal::amm_prelude::*;
+use amm_macros::{JsonDeserialize, JsonSerialize};
+use core::slice::Iter;
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum StaffContent {
-  Note(Rc<RefCell<Note>>),
-  Chord(Rc<RefCell<Chord>>),
-  Phrase(Rc<RefCell<Phrase>>),
-  MultiVoice(Rc<RefCell<MultiVoice>>),
-  Direction(Rc<RefCell<Direction>>),
+  Note(Note),
+  Chord(Chord),
+  Phrase(Phrase),
+  MultiVoice(MultiVoice),
+  Direction(Direction),
 }
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default, Eq, JsonDeserialize, JsonSerialize)]
 pub struct Staff {
-  pub(crate) id: usize,
-  pub(crate) name: String,
-  pub(crate) content: Vec<StaffContent>,
+  id: usize,
+  name: String,
+  content: Vec<StaffContent>,
 }
 
 impl Staff {
   #[must_use]
-  pub fn new(
-    name: &str,
-    clef: Option<Clef>,
-    key: Option<Key>,
-    time_signature: Option<TimeSignature>,
-  ) -> Rc<RefCell<Staff>> {
-    let mut staff = Self {
+  pub fn new(name: &str) -> Staff {
+    Self {
       id: generate_id(),
       name: String::from(name),
       content: Vec::new(),
-    };
-    if let Some(clef) = clef {
-      staff.add_direction(DirectionType::ClefChange { clef });
     }
-    if let Some(key) = key {
-      staff.add_direction(DirectionType::KeyChange { key });
-    }
-    if let Some(time_signature) = time_signature {
-      staff.add_direction(DirectionType::TimeSignatureChange { time_signature });
-    }
-    Rc::new(RefCell::new(staff))
   }
 
   #[must_use]
-  pub fn flatten(&self) -> Rc<RefCell<Self>> {
-    Rc::new(RefCell::new(Self {
-      id: self.id,
+  pub fn flatten(&self) -> Self {
+    Self {
+      id: generate_id(),
       name: self.name.clone(),
       content: self
         .content
         .iter()
         .map(|item| match item {
-          StaffContent::Note(note) => StaffContent::Note(Rc::clone(note)),
-          StaffContent::Chord(chord) => StaffContent::Chord(Rc::clone(chord)),
-          StaffContent::Phrase(phrase) => StaffContent::Phrase(phrase.borrow().flatten(false)),
-          StaffContent::MultiVoice(multivoice) => StaffContent::Phrase(multivoice.borrow().flatten()),
-          StaffContent::Direction(direction) => StaffContent::Direction(Rc::clone(direction)),
+          StaffContent::Note(note) => StaffContent::Note(note.clone()),
+          StaffContent::Chord(chord) => StaffContent::Chord(chord.clone()),
+          StaffContent::Phrase(phrase) => StaffContent::Phrase(phrase.flatten(false)),
+          StaffContent::MultiVoice(multivoice) => StaffContent::Phrase(multivoice.flatten()),
+          StaffContent::Direction(direction) => StaffContent::Direction(direction.clone()),
         })
         .collect(),
-    }))
+    }
   }
 
   #[must_use]
@@ -91,34 +66,46 @@ impl Staff {
     self
   }
 
-  pub fn add_note(&mut self, pitch: Pitch, duration: Duration, accidental: Option<Accidental>) -> Rc<RefCell<Note>> {
-    let note = Note::new(pitch, duration, accidental);
-    self.content.push(StaffContent::Note(Rc::clone(&note)));
-    note
+  pub fn add_note(&mut self, pitch: Pitch, duration: Duration, accidental: Option<Accidental>) -> &mut Note {
+    self
+      .content
+      .push(StaffContent::Note(Note::new(pitch, duration, accidental)));
+    match self.content.last_mut() {
+      Some(StaffContent::Note(note)) => note,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
   }
 
-  pub fn add_chord(&mut self) -> Rc<RefCell<Chord>> {
-    let chord = Chord::new();
-    self.content.push(StaffContent::Chord(Rc::clone(&chord)));
-    chord
+  pub fn add_chord(&mut self) -> &mut Chord {
+    self.content.push(StaffContent::Chord(Chord::new()));
+    match self.content.last_mut() {
+      Some(StaffContent::Chord(chord)) => chord,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
   }
 
-  pub fn add_phrase(&mut self) -> Rc<RefCell<Phrase>> {
-    let phrase = Phrase::new();
-    self.content.push(StaffContent::Phrase(Rc::clone(&phrase)));
-    phrase
+  pub fn add_phrase(&mut self) -> &mut Phrase {
+    self.content.push(StaffContent::Phrase(Phrase::new()));
+    match self.content.last_mut() {
+      Some(StaffContent::Phrase(phrase)) => phrase,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
   }
 
-  pub fn add_multivoice(&mut self) -> Rc<RefCell<MultiVoice>> {
-    let multivoice = MultiVoice::new();
-    self.content.push(StaffContent::MultiVoice(Rc::clone(&multivoice)));
-    multivoice
+  pub fn add_multivoice(&mut self) -> &mut MultiVoice {
+    self.content.push(StaffContent::MultiVoice(MultiVoice::new()));
+    match self.content.last_mut() {
+      Some(StaffContent::MultiVoice(multivoice)) => multivoice,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
   }
 
-  pub fn add_direction(&mut self, direction: DirectionType) -> Rc<RefCell<Direction>> {
-    let direction = Direction::new(direction);
-    self.content.push(StaffContent::Direction(Rc::clone(&direction)));
-    direction
+  pub fn add_direction(&mut self, direction: DirectionType) -> &mut Direction {
+    self.content.push(StaffContent::Direction(Direction::new(direction)));
+    match self.content.last_mut() {
+      Some(StaffContent::Direction(direction)) => direction,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
   }
 
   pub fn insert_note(
@@ -127,84 +114,152 @@ impl Staff {
     pitch: Pitch,
     duration: Duration,
     accidental: Option<Accidental>,
-  ) -> Rc<RefCell<Note>> {
-    let note = Note::new(pitch, duration, accidental);
-    self.content.insert(index, StaffContent::Note(Rc::clone(&note)));
-    note
-  }
-
-  pub fn insert_chord(&mut self, index: usize) -> Rc<RefCell<Chord>> {
-    let chord = Chord::new();
-    self.content.insert(index, StaffContent::Chord(Rc::clone(&chord)));
-    chord
-  }
-
-  pub fn insert_phrase(&mut self, index: usize) -> Rc<RefCell<Phrase>> {
-    let phrase = Phrase::new();
-    self.content.insert(index, StaffContent::Phrase(Rc::clone(&phrase)));
-    phrase
-  }
-
-  pub fn insert_multivoice(&mut self, index: usize) -> Rc<RefCell<MultiVoice>> {
-    let multivoice = MultiVoice::new();
+  ) -> &mut Note {
     self
       .content
-      .insert(index, StaffContent::MultiVoice(Rc::clone(&multivoice)));
-    multivoice
+      .insert(index, StaffContent::Note(Note::new(pitch, duration, accidental)));
+    match self.content.last_mut() {
+      Some(StaffContent::Note(note)) => note,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
   }
 
-  pub fn insert_direction(&mut self, index: usize, direction: DirectionType) -> Rc<RefCell<Direction>> {
-    let direction = Direction::new(direction);
+  pub fn insert_chord(&mut self, index: usize) -> &mut Chord {
+    self.content.insert(index, StaffContent::Chord(Chord::new()));
+    match self.content.last_mut() {
+      Some(StaffContent::Chord(chord)) => chord,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
+  }
+
+  pub fn insert_phrase(&mut self, index: usize) -> &mut Phrase {
+    self.content.insert(index, StaffContent::Phrase(Phrase::new()));
+    match self.content.last_mut() {
+      Some(StaffContent::Phrase(phrase)) => phrase,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
+  }
+
+  pub fn insert_multivoice(&mut self, index: usize) -> &mut MultiVoice {
+    self.content.insert(index, StaffContent::MultiVoice(MultiVoice::new()));
+    match self.content.last_mut() {
+      Some(StaffContent::MultiVoice(multivoice)) => multivoice,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
+  }
+
+  pub fn insert_direction(&mut self, index: usize, direction: DirectionType) -> &mut Direction {
     self
       .content
-      .insert(index, StaffContent::Direction(Rc::clone(&direction)));
-    direction
+      .insert(index, StaffContent::Direction(Direction::new(direction)));
+    match self.content.last_mut() {
+      Some(StaffContent::Direction(direction)) => direction,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
   }
 
   #[must_use]
-  pub fn get_note(&self, id: usize) -> Option<Rc<RefCell<Note>>> {
+  pub fn get_note(&self, id: usize) -> Option<&Note> {
     self.content.iter().find_map(|item| match item {
-      StaffContent::Note(note) if note.borrow().get_id() == id => Some(Rc::clone(note)),
-      StaffContent::Chord(chord) => chord.borrow().get_note(id),
-      StaffContent::Phrase(phrase) => phrase.borrow().get_note(id),
-      StaffContent::MultiVoice(multivoice) => multivoice.borrow().get_note(id),
+      StaffContent::Note(note) if note.get_id() == id => Some(note),
+      StaffContent::Chord(chord) => chord.get_note(id),
+      StaffContent::Phrase(phrase) => phrase.get_note(id),
+      StaffContent::MultiVoice(multivoice) => multivoice.get_note(id),
       _ => None,
     })
   }
 
   #[must_use]
-  pub fn get_chord(&self, id: usize) -> Option<Rc<RefCell<Chord>>> {
-    self.content.iter().find_map(|item| match item {
-      StaffContent::Chord(chord) if chord.borrow().get_id() == id => Some(Rc::clone(chord)),
-      StaffContent::Phrase(phrase) => phrase.borrow().get_chord(id),
-      StaffContent::MultiVoice(multivoice) => multivoice.borrow().get_chord(id),
+  pub fn get_note_mut(&mut self, id: usize) -> Option<&mut Note> {
+    self.content.iter_mut().find_map(|item| match item {
+      StaffContent::Note(note) if note.get_id() == id => Some(note),
+      StaffContent::Chord(chord) => chord.get_note_mut(id),
+      StaffContent::Phrase(phrase) => phrase.get_note_mut(id),
+      StaffContent::MultiVoice(multivoice) => multivoice.get_note_mut(id),
       _ => None,
     })
   }
 
   #[must_use]
-  pub fn get_phrase(&self, id: usize) -> Option<Rc<RefCell<Phrase>>> {
+  pub fn get_chord(&self, id: usize) -> Option<&Chord> {
     self.content.iter().find_map(|item| match item {
-      StaffContent::Phrase(phrase) if phrase.borrow().get_id() == id => Some(Rc::clone(phrase)),
-      StaffContent::Phrase(phrase) => phrase.borrow().get_phrase(id),
-      StaffContent::MultiVoice(multivoice) => multivoice.borrow().get_phrase(id),
+      StaffContent::Chord(chord) if chord.get_id() == id => Some(chord),
+      StaffContent::Phrase(phrase) => phrase.get_chord(id),
+      StaffContent::MultiVoice(multivoice) => multivoice.get_chord(id),
       _ => None,
     })
   }
 
   #[must_use]
-  pub fn get_multivoice(&self, id: usize) -> Option<Rc<RefCell<MultiVoice>>> {
-    self.content.iter().find_map(|item| match item {
-      StaffContent::MultiVoice(multivoice) if multivoice.borrow().get_id() == id => Some(Rc::clone(multivoice)),
-      StaffContent::MultiVoice(multivoice) => multivoice.borrow().get_multivoice(id),
+  pub fn get_chord_mut(&mut self, id: usize) -> Option<&mut Chord> {
+    self.content.iter_mut().find_map(|item| match item {
+      StaffContent::Chord(chord) if chord.get_id() == id => Some(chord),
+      StaffContent::Phrase(phrase) => phrase.get_chord_mut(id),
+      StaffContent::MultiVoice(multivoice) => multivoice.get_chord_mut(id),
       _ => None,
     })
   }
 
   #[must_use]
-  pub fn get_direction(&self, id: usize) -> Option<Rc<RefCell<Direction>>> {
+  pub fn get_phrase(&self, id: usize) -> Option<&Phrase> {
     self.content.iter().find_map(|item| match item {
-      StaffContent::Direction(direction) if direction.borrow().get_id() == id => Some(Rc::clone(direction)),
+      StaffContent::Phrase(phrase) if phrase.get_id() == id => Some(phrase),
+      StaffContent::Phrase(phrase) => phrase.get_phrase(id),
+      StaffContent::MultiVoice(multivoice) => multivoice.get_phrase(id),
+      _ => None,
+    })
+  }
+
+  #[must_use]
+  pub fn get_phrase_mut(&mut self, id: usize) -> Option<&mut Phrase> {
+    self.content.iter_mut().find_map(|item| match item {
+      StaffContent::Phrase(phrase) => {
+        if phrase.get_id() == id {
+          Some(phrase)
+        } else {
+          phrase.get_phrase_mut(id)
+        }
+      }
+      StaffContent::MultiVoice(multivoice) => multivoice.get_phrase_mut(id),
+      _ => None,
+    })
+  }
+
+  #[must_use]
+  pub fn get_multivoice(&self, id: usize) -> Option<&MultiVoice> {
+    self.content.iter().find_map(|item| match item {
+      StaffContent::MultiVoice(multivoice) if multivoice.get_id() == id => Some(multivoice),
+      StaffContent::MultiVoice(multivoice) => multivoice.get_multivoice(id),
+      _ => None,
+    })
+  }
+
+  #[must_use]
+  pub fn get_multivoice_mut(&mut self, id: usize) -> Option<&mut MultiVoice> {
+    self.content.iter_mut().find_map(|item| match item {
+      StaffContent::MultiVoice(multivoice) => {
+        if multivoice.get_id() == id {
+          Some(multivoice)
+        } else {
+          multivoice.get_multivoice_mut(id)
+        }
+      }
+      _ => None,
+    })
+  }
+
+  #[must_use]
+  pub fn get_direction(&self, id: usize) -> Option<&Direction> {
+    self.content.iter().find_map(|item| match item {
+      StaffContent::Direction(direction) if direction.get_id() == id => Some(direction),
+      _ => None,
+    })
+  }
+
+  #[must_use]
+  pub fn get_direction_mut(&mut self, id: usize) -> Option<&mut Direction> {
+    self.content.iter_mut().find_map(|item| match item {
+      StaffContent::Direction(direction) if direction.get_id() == id => Some(direction),
       _ => None,
     })
   }
@@ -212,11 +267,11 @@ impl Staff {
   #[must_use]
   pub fn get_index_of_item(&self, id: usize) -> Option<usize> {
     self.content.iter().position(|item| match item {
-      StaffContent::Note(note) => note.borrow().get_id() == id,
-      StaffContent::Chord(chord) => chord.borrow().get_id() == id,
-      StaffContent::Phrase(phrase) => phrase.borrow().get_id() == id,
-      StaffContent::MultiVoice(multivoice) => multivoice.borrow().get_id() == id,
-      StaffContent::Direction(direction) => direction.borrow().get_id() == id,
+      StaffContent::Note(note) => note.get_id() == id,
+      StaffContent::Chord(chord) => chord.get_id() == id,
+      StaffContent::Phrase(phrase) => phrase.get_id() == id,
+      StaffContent::MultiVoice(multivoice) => multivoice.get_id() == id,
+      StaffContent::Direction(direction) => direction.get_id() == id,
     })
   }
 
@@ -226,10 +281,10 @@ impl Staff {
       .content
       .iter()
       .map(|content| match &content {
-        StaffContent::Note(note) => note.borrow().get_beats(beat_base, None),
-        StaffContent::Chord(chord) => chord.borrow().get_beats(beat_base, None),
-        StaffContent::Phrase(phrase) => phrase.borrow().get_beats(beat_base, None),
-        StaffContent::MultiVoice(multivoice) => multivoice.borrow().get_beats(beat_base, None),
+        StaffContent::Note(note) => note.get_beats(beat_base, None),
+        StaffContent::Chord(chord) => chord.get_beats(beat_base, None),
+        StaffContent::Phrase(phrase) => phrase.get_beats(beat_base, None),
+        StaffContent::MultiVoice(multivoice) => multivoice.get_beats(beat_base, None),
         StaffContent::Direction(_) => 0.0,
       })
       .sum()
@@ -242,27 +297,42 @@ impl Staff {
 
   pub fn remove_item(&mut self, id: usize) -> &mut Self {
     self.content.retain(|item| match item {
-      StaffContent::Note(note) => note.borrow().get_id() != id,
-      StaffContent::Chord(chord) => chord.borrow().get_id() != id,
-      StaffContent::Phrase(phrase) => phrase.borrow().get_id() != id,
-      StaffContent::MultiVoice(multivoice) => multivoice.borrow().get_id() != id,
-      StaffContent::Direction(direction) => direction.borrow().get_id() != id,
+      StaffContent::Note(note) => note.get_id() != id,
+      StaffContent::Chord(chord) => chord.get_id() != id,
+      StaffContent::Phrase(phrase) => phrase.get_id() != id,
+      StaffContent::MultiVoice(multivoice) => multivoice.get_id() != id,
+      StaffContent::Direction(direction) => direction.get_id() != id,
     });
-    self.content.iter().for_each(|item| match item {
+    self.content.iter_mut().for_each(|item| match item {
       StaffContent::Chord(chord) => {
-        chord.borrow_mut().remove_item(id);
+        chord.remove_item(id);
       }
       StaffContent::Phrase(phrase) => {
-        phrase.borrow_mut().remove_item(id);
+        phrase.remove_item(id);
       }
       StaffContent::MultiVoice(multivoice) => {
-        multivoice.borrow_mut().remove_item(id);
+        multivoice.remove_item(id);
       }
       _ => (),
     });
     self
   }
 
+  #[must_use]
+  pub fn num_timeslices(&self) -> usize {
+    self
+      .content
+      .iter()
+      .map(|item| match item {
+        StaffContent::Note(_) | StaffContent::Chord(_) => 1,
+        StaffContent::Phrase(phrase) => phrase.num_timeslices(),
+        StaffContent::MultiVoice(multivoice) => multivoice.num_timeslices(),
+        StaffContent::Direction(_) => 0,
+      })
+      .sum()
+  }
+
+  #[must_use]
   pub fn iter(&self) -> Iter<'_, StaffContent> {
     self.content.iter()
   }
@@ -273,21 +343,21 @@ impl Staff {
     self.content.iter().for_each(|item| match item {
       StaffContent::Note(note) => {
         let mut timeslice = Timeslice::new();
-        timeslice.add_note(note);
+        timeslice.add_note(note.clone());
         timeslices.push(timeslice);
       }
       StaffContent::Chord(chord) => {
-        timeslices.push(chord.borrow().to_timeslice());
+        timeslices.push(chord.to_timeslice());
       }
       StaffContent::Phrase(phrase) => {
-        timeslices.append(&mut phrase.borrow().iter_timeslices());
+        timeslices.append(&mut phrase.iter_timeslices());
       }
       StaffContent::MultiVoice(multivoice) => {
-        timeslices.append(&mut multivoice.borrow().iter_timeslices());
+        timeslices.append(&mut multivoice.iter_timeslices());
       }
       StaffContent::Direction(direction) => {
         let mut timeslice = Timeslice::new();
-        timeslice.add_direction(direction);
+        timeslice.add_direction(direction.clone());
         timeslices.push(timeslice);
       }
     });
@@ -311,6 +381,22 @@ impl<'a> IntoIterator for &'a Staff {
   }
 }
 
+impl Clone for Staff {
+  fn clone(&self) -> Self {
+    Self {
+      id: generate_id(),
+      name: self.name.clone(),
+      content: self.content.clone(),
+    }
+  }
+}
+
+impl PartialEq for Staff {
+  fn eq(&self, other: &Self) -> bool {
+    self.content == other.content && self.name == other.name
+  }
+}
+
 #[cfg(feature = "print")]
 impl core::fmt::Display for Staff {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
@@ -318,11 +404,11 @@ impl core::fmt::Display for Staff {
       .content
       .iter()
       .map(|item| match item {
-        StaffContent::Note(note) => note.borrow().to_string(),
-        StaffContent::Chord(chord) => chord.borrow().to_string(),
-        StaffContent::Phrase(phrase) => phrase.borrow().to_string(),
-        StaffContent::MultiVoice(multi_voice) => multi_voice.borrow().to_string(),
-        StaffContent::Direction(direction) => direction.borrow().r#type.to_string(),
+        StaffContent::Note(note) => note.to_string(),
+        StaffContent::Chord(chord) => chord.to_string(),
+        StaffContent::Phrase(phrase) => phrase.to_string(),
+        StaffContent::MultiVoice(multi_voice) => multi_voice.to_string(),
+        StaffContent::Direction(direction) => direction.r#type.to_string(),
       })
       .collect::<Vec<_>>()
       .join(", ");

@@ -1,16 +1,12 @@
 use crate::context::{Key, Tempo, TimeSignature};
-use crate::note::{Duration, DurationType, Note};
+use crate::note::Note;
+use crate::structure::place_and_merge_part_timeslice;
 use crate::structure::{Chord, MultiVoice, Part, PartTimeslice, Phrase, Section, Staff};
-use alloc::{rc::Rc, string::String, vec::Vec};
-use core::{cell::RefCell, slice::Iter};
-#[cfg(feature = "json")]
-use {
-  amm_internal::json_prelude::*,
-  amm_macros::{JsonDeserialize, JsonSerialize},
-};
+use amm_internal::amm_prelude::*;
+use amm_macros::{JsonDeserialize, JsonSerialize};
+use core::slice::Iter;
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub struct Composition {
   title: String,
   copyright: Option<String>,
@@ -192,43 +188,83 @@ impl Composition {
   }
 
   #[must_use]
-  pub fn get_part_by_name(&mut self, name: &str) -> Option<&mut Part> {
+  pub fn get_part_by_name(&self, name: &str) -> Option<&Part> {
+    self.parts.iter().find(|part| part.get_name() == name)
+  }
+
+  #[must_use]
+  pub fn get_part_mut_by_name(&mut self, name: &str) -> Option<&mut Part> {
     self.parts.iter_mut().find(|part| part.get_name() == name)
   }
 
   #[must_use]
-  pub fn get_part(&mut self, id: usize) -> Option<&mut Part> {
+  pub fn get_part(&self, id: usize) -> Option<&Part> {
+    self.parts.iter().find(|part| part.get_id() == id)
+  }
+
+  #[must_use]
+  pub fn get_part_mut(&mut self, id: usize) -> Option<&mut Part> {
     self.parts.iter_mut().find(|part| part.get_id() == id)
   }
 
   #[must_use]
-  pub fn get_chord(&mut self, id: usize) -> Option<Rc<RefCell<Chord>>> {
+  pub fn get_chord(&self, id: usize) -> Option<&Chord> {
     self.parts.iter().find_map(|part| part.get_chord(id))
   }
 
   #[must_use]
-  pub fn get_multivoice(&mut self, id: usize) -> Option<Rc<RefCell<MultiVoice>>> {
+  pub fn get_chord_mut(&mut self, id: usize) -> Option<&mut Chord> {
+    self.parts.iter_mut().find_map(|part| part.get_chord_mut(id))
+  }
+
+  #[must_use]
+  pub fn get_multivoice(&self, id: usize) -> Option<&MultiVoice> {
     self.parts.iter().find_map(|part| part.get_multivoice(id))
   }
 
   #[must_use]
-  pub fn get_note(&mut self, id: usize) -> Option<Rc<RefCell<Note>>> {
+  pub fn get_multivoice_mut(&mut self, id: usize) -> Option<&mut MultiVoice> {
+    self.parts.iter_mut().find_map(|part| part.get_multivoice_mut(id))
+  }
+
+  #[must_use]
+  pub fn get_note(&self, id: usize) -> Option<&Note> {
     self.parts.iter().find_map(|part| part.get_note(id))
   }
 
   #[must_use]
-  pub fn get_phrase(&mut self, id: usize) -> Option<Rc<RefCell<Phrase>>> {
+  pub fn get_note_mut(&mut self, id: usize) -> Option<&mut Note> {
+    self.parts.iter_mut().find_map(|part| part.get_note_mut(id))
+  }
+
+  #[must_use]
+  pub fn get_phrase(&self, id: usize) -> Option<&Phrase> {
     self.parts.iter().find_map(|part| part.get_phrase(id))
   }
 
   #[must_use]
-  pub fn get_section(&mut self, id: usize) -> Option<Rc<RefCell<Section>>> {
+  pub fn get_phrase_mut(&mut self, id: usize) -> Option<&mut Phrase> {
+    self.parts.iter_mut().find_map(|part| part.get_phrase_mut(id))
+  }
+
+  #[must_use]
+  pub fn get_section(&self, id: usize) -> Option<&Section> {
     self.parts.iter().find_map(|part| part.get_section(id))
   }
 
   #[must_use]
-  pub fn get_staff(&mut self, id: usize) -> Option<Rc<RefCell<Staff>>> {
+  pub fn get_section_mut(&mut self, id: usize) -> Option<&mut Section> {
+    self.parts.iter_mut().find_map(|part| part.get_section_mut(id))
+  }
+
+  #[must_use]
+  pub fn get_staff(&self, id: usize) -> Option<&Staff> {
     self.parts.iter().find_map(|part| part.get_staff(id))
+  }
+
+  #[must_use]
+  pub fn get_staff_mut(&mut self, id: usize) -> Option<&mut Staff> {
+    self.parts.iter_mut().find_map(|part| part.get_staff_mut(id))
   }
 
   #[must_use]
@@ -289,6 +325,12 @@ impl Composition {
     self
   }
 
+  #[must_use]
+  pub fn num_timeslices(&self) -> usize {
+    self.parts.iter().map(Part::num_timeslices).max().unwrap_or_default()
+  }
+
+  #[must_use]
   pub fn iter(&self) -> Iter<'_, Part> {
     self.parts.iter()
   }
@@ -297,37 +339,12 @@ impl Composition {
   pub fn iter_timeslices(&self) -> impl IntoIterator<Item = PartTimeslice> {
     // Return PartTimeslices where each slice contains a map of parts and their current timeslice
     // Note: If you want timeslices for a single part, call `iter_timeslices()` on the part directly
-    let beat_base_note = Duration::new(DurationType::SixtyFourth, 0);
     let mut timeslices: Vec<(f64, PartTimeslice)> = Vec::new();
     for part in &self.parts {
       let part_name = part.get_name();
       let (mut index, mut curr_time) = (0, 0.0);
       for slice in part.iter_timeslices() {
-        let slice_duration = slice.get_beats(&beat_base_note);
-        if let Some((mut slice_time, existing_slice)) = timeslices.get_mut(index) {
-          let mut existing_slice = existing_slice;
-          while (slice_time - curr_time).abs() > 0.000_001 && curr_time > slice_time {
-            index += 1;
-            (slice_time, existing_slice) = if let Some((start_time, slice)) = timeslices.get_mut(index) {
-              (*start_time, slice)
-            } else {
-              unsafe {
-                timeslices.push((curr_time, PartTimeslice::default()));
-                let (start_time, slice) = timeslices.last_mut().unwrap_unchecked();
-                (*start_time, slice)
-              }
-            };
-          }
-          if (slice_time - curr_time).abs() < 0.000_001 {
-            existing_slice.add_timeslice(part_name, slice);
-          } else {
-            timeslices.insert(index, (curr_time, PartTimeslice::from(part_name, slice)));
-          }
-        } else {
-          timeslices.push((curr_time, PartTimeslice::from(part_name, slice)));
-        }
-        curr_time += slice_duration;
-        index += 1;
+        (index, curr_time) = place_and_merge_part_timeslice(part_name, &mut timeslices, slice, index, curr_time);
       }
     }
     timeslices.into_iter().map(|(_, slice)| slice)

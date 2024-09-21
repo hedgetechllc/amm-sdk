@@ -59,11 +59,9 @@ mod test {
     composition.add_metadata("TestKey2", "TestValue2");
     {
       let part = composition.add_part("Guitar");
-      let section_ref = part.add_section("Intro");
-      let mut section = section_ref.borrow_mut();
+      let section = part.add_section("Intro");
       let subsection = section.add_section("Subsection");
-      let staff_ref = subsection.borrow_mut().add_staff("Staff1", None, None, None);
-      let mut staff = staff_ref.borrow_mut();
+      let staff = subsection.add_staff("Staff1");
       staff.add_direction(DirectionType::AccordionRegistration {
         high: true,
         middle: 2,
@@ -288,12 +286,11 @@ mod test {
         Duration::new(DurationType::TwoThousandFortyEighth, 2),
         Some(Accidental::DoubleFlat),
       );
-      let note_ref = staff.add_note(
+      let note = staff.add_note(
         Pitch::new(PitchName::C, 4),
         Duration::new(DurationType::Quarter, 0),
         Some(Accidental::None),
       );
-      let mut note = note_ref.borrow_mut();
       note.add_modification(NoteModificationType::Accent);
       note.add_modification(NoteModificationType::BrassBend);
       note.add_modification(NoteModificationType::DetachedLegato);
@@ -395,63 +392,58 @@ mod test {
       });
       note.add_modification(NoteModificationType::Unstress);
       note.add_modification(NoteModificationType::UpBow);
-      {
-        let chord_ref = staff.add_chord();
-        let mut chord = chord_ref.borrow_mut();
-        chord.add_note(
-          Pitch::new(PitchName::C, 3),
-          Duration::new(DurationType::Quarter, 0),
-          None,
-        );
-        chord.add_note(
-          Pitch::new(PitchName::E, 3),
-          Duration::new(DurationType::Eighth, 0),
-          None,
-        );
-        chord.add_note(
-          Pitch::new(PitchName::G, 3),
-          Duration::new(DurationType::Eighth, 0),
-          None,
-        );
-        chord.add_modification(ChordModificationType::Accent);
-        chord.add_modification(ChordModificationType::Arpeggiate);
-        chord.add_modification(ChordModificationType::DetachedLegato);
-        chord.add_modification(ChordModificationType::DownBow);
-        chord.add_modification(ChordModificationType::Dynamic {
-          dynamic: Dynamic::Forte(3),
-        });
-        chord.add_modification(ChordModificationType::Fermata);
-        chord.add_modification(ChordModificationType::Fingernails);
-        chord.add_modification(ChordModificationType::HalfMuted);
-        chord.add_modification(ChordModificationType::HarmonMute { open: true, half: true });
-        chord.add_modification(ChordModificationType::Heel);
-        chord.add_modification(ChordModificationType::Marcato);
-        chord.add_modification(ChordModificationType::NonArpeggiate);
-        chord.add_modification(ChordModificationType::Open);
-        chord.add_modification(ChordModificationType::Pizzicato);
-        chord.add_modification(ChordModificationType::Sforzando);
-        chord.add_modification(ChordModificationType::Smear);
-        chord.add_modification(ChordModificationType::SoftAccent);
-        chord.add_modification(ChordModificationType::Spiccato);
-        chord.add_modification(ChordModificationType::Staccatissimo);
-        chord.add_modification(ChordModificationType::Staccato);
-        chord.add_modification(ChordModificationType::Stress);
-        chord.add_modification(ChordModificationType::Tenuto);
-        chord.add_modification(ChordModificationType::Tie);
-        chord.add_modification(ChordModificationType::Toe);
-        chord.add_modification(ChordModificationType::Tremolo { relative_speed: 1 });
-        chord.add_modification(ChordModificationType::Unstress);
-        chord.add_modification(ChordModificationType::UpBow);
-      }
-      let phrase_ref = staff.add_phrase();
-      let mut phrase = phrase_ref.borrow_mut();
+      let mut chord = staff.add_chord();
+      chord.add_note(
+        Pitch::new(PitchName::C, 3),
+        Duration::new(DurationType::Quarter, 0),
+        None,
+      );
+      chord.add_note(
+        Pitch::new(PitchName::E, 3),
+        Duration::new(DurationType::Eighth, 0),
+        None,
+      );
+      chord.add_note(
+        Pitch::new(PitchName::G, 3),
+        Duration::new(DurationType::Eighth, 0),
+        None,
+      );
+      chord.add_modification(ChordModificationType::Accent);
+      chord.add_modification(ChordModificationType::Arpeggiate);
+      chord.add_modification(ChordModificationType::DetachedLegato);
+      chord.add_modification(ChordModificationType::DownBow);
+      chord.add_modification(ChordModificationType::Dynamic {
+        dynamic: Dynamic::Forte(3),
+      });
+      chord.add_modification(ChordModificationType::Fermata);
+      chord.add_modification(ChordModificationType::Fingernails);
+      chord.add_modification(ChordModificationType::HalfMuted);
+      chord.add_modification(ChordModificationType::HarmonMute { open: true, half: true });
+      chord.add_modification(ChordModificationType::Heel);
+      chord.add_modification(ChordModificationType::Marcato);
+      chord.add_modification(ChordModificationType::NonArpeggiate);
+      chord.add_modification(ChordModificationType::Open);
+      chord.add_modification(ChordModificationType::Pizzicato);
+      chord.add_modification(ChordModificationType::Sforzando);
+      chord.add_modification(ChordModificationType::Smear);
+      chord.add_modification(ChordModificationType::SoftAccent);
+      chord.add_modification(ChordModificationType::Spiccato);
+      chord.add_modification(ChordModificationType::Staccatissimo);
+      chord.add_modification(ChordModificationType::Staccato);
+      chord.add_modification(ChordModificationType::Stress);
+      chord.add_modification(ChordModificationType::Tenuto);
+      chord.add_modification(ChordModificationType::Tie);
+      chord.add_modification(ChordModificationType::Toe);
+      chord.add_modification(ChordModificationType::Tremolo { relative_speed: 1 });
+      chord.add_modification(ChordModificationType::Unstress);
+      chord.add_modification(ChordModificationType::UpBow);
+      let phrase = staff.add_phrase();
       phrase.add_note(
         Pitch::new(PitchName::C, 3),
         Duration::new(DurationType::Quarter, 0),
         None,
       );
-      let chord_ref = phrase.add_chord();
-      let mut chord = chord_ref.borrow_mut();
+      chord = phrase.add_chord();
       chord.add_note(
         Pitch::new(PitchName::C, 3),
         Duration::new(DurationType::Eighth, 0),
@@ -462,8 +454,7 @@ mod test {
         Duration::new(DurationType::Eighth, 0),
         None,
       );
-      let subphrase_ref = phrase.add_phrase();
-      let mut subphrase = subphrase_ref.borrow_mut();
+      let subphrase = phrase.add_phrase();
       subphrase.add_note(
         Pitch::new(PitchName::C, 3),
         Duration::new(DurationType::Quarter, 0),
@@ -524,6 +515,7 @@ mod test {
     match JsonConverter::load_data(serialized.as_bytes()) {
       Ok(ref loaded) => {
         let reserialized = loaded.serialize_json();
+        assert_eq!(composition, *loaded);
         assert_eq!(serialized, reserialized);
       }
       Err(error) => assert!(false, "{}", error),
@@ -542,6 +534,7 @@ mod test {
               println!("Re-imported file from JSON representation, comparing to original...");
               let original = composition.serialize_json();
               let new = loaded.serialize_json();
+              assert_eq!(*composition, *loaded);
               assert_eq!(original, new);
             }
             Err(error) => assert!(false, "{}", error),

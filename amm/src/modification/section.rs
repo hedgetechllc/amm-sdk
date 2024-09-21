@@ -1,14 +1,8 @@
 use crate::context::{generate_id, Tempo, TempoSuggestion};
-use alloc::{rc::Rc, vec::Vec};
-use core::cell::RefCell;
-#[cfg(feature = "json")]
-use {
-  amm_internal::json_prelude::*,
-  amm_macros::{JsonDeserialize, JsonSerialize},
-};
+use amm_internal::amm_prelude::*;
+use amm_macros::{JsonDeserialize, JsonSerialize};
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Eq, Debug, Default, PartialEq)]
+#[derive(Clone, Eq, Debug, Default, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum SectionModificationType {
   #[default]
   Accelerando, // Quick tempo acceleration over few notes or measures
@@ -30,8 +24,7 @@ pub enum SectionModificationType {
   },
 }
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, JsonDeserialize, JsonSerialize)]
 pub struct SectionModification {
   id: usize,
   pub r#type: SectionModificationType,
@@ -39,16 +32,31 @@ pub struct SectionModification {
 
 impl SectionModification {
   #[must_use]
-  pub fn new(r#type: SectionModificationType) -> Rc<RefCell<Self>> {
-    Rc::new(RefCell::new(Self {
+  pub fn new(r#type: SectionModificationType) -> Self {
+    Self {
       id: generate_id(),
       r#type,
-    }))
+    }
   }
 
   #[must_use]
   pub fn get_id(&self) -> usize {
     self.id
+  }
+}
+
+impl Clone for SectionModification {
+  fn clone(&self) -> Self {
+    Self {
+      id: generate_id(),
+      r#type: self.r#type.clone(),
+    }
+  }
+}
+
+impl PartialEq for SectionModification {
+  fn eq(&self, other: &Self) -> bool {
+    self.r#type == other.r#type
   }
 }
 
@@ -58,7 +66,11 @@ impl core::fmt::Display for SectionModificationType {
     match self {
       Self::Accelerando => write!(f, "Accelerando"),
       Self::OnlyPlay { iterations } => {
-        let iterations = iterations.iter().map(|i| i.to_string()).collect::<Vec<_>>().join(", ");
+        let iterations = iterations
+          .iter()
+          .map(ToString::to_string)
+          .collect::<Vec<_>>()
+          .join(", ");
         write!(f, "Only Play: [{}]", iterations)
       }
       Self::Rallentando => write!(f, "Rallentando"),
@@ -101,15 +113,15 @@ mod test {
       },
     });
     assert_eq!(
-      JsonSerializer::serialize_json(&*accel.borrow()),
+      JsonSerializer::serialize_json(&accel),
       "{\"id\":1,\"modification\":\"Accelerando\"}"
     );
     assert_eq!(
-      JsonSerializer::serialize_json(&*only_play.borrow()),
+      JsonSerializer::serialize_json(&only_play),
       "{\"id\":2,\"modification\":{\"type\":\"OnlyPlay\",\"iterations\":[1,3,4]}}"
     );
     assert_eq!(
-      JsonSerializer::serialize_json(&*tempo_explicit.borrow()),
+      JsonSerializer::serialize_json(&tempo_explicit),
       "{\"id\":3,\"modification\":{\"type\":\"TempoExplicit\",\"tempo\":{\"base_note\":{\"type\":\"Half\",\"dots\":0},\"beats_per_minute\":135}}}"
     );
   }

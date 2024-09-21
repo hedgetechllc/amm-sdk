@@ -1,11 +1,8 @@
 use crate::note::Accidental;
+use amm_internal::amm_prelude::*;
+use amm_macros::{JsonDeserialize, JsonSerialize};
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
-#[cfg(feature = "json")]
-use {
-  amm_internal::json_prelude::*,
-  amm_macros::{JsonDeserialize, JsonSerialize},
-};
 
 const FIFTHS_A_MAJOR: i8 = 3;
 const FIFTHS_A_FLAT_MAJOR: i8 = -4;
@@ -39,18 +36,16 @@ const FIFTHS_D_SHARP_MINOR: i8 = 6;
 const FIFTHS_E_MINOR: i8 = 1;
 const FIFTHS_E_FLAT_MINOR: i8 = -6;
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum KeyMode {
   #[default]
   Major,
   Minor,
 }
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum KeySignature {
   A,
   ASharp,
@@ -73,9 +68,8 @@ pub enum KeySignature {
   GFlat,
 }
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub struct Key {
   pub mode: KeyMode,
   pub signature: KeySignature,
@@ -190,7 +184,6 @@ impl Key {
   }
 
   #[must_use]
-  #[allow(clippy::too_many_lines)]
   pub(crate) fn accidentals(self) -> [Accidental; 8] {
     let fifths = self.fifths();
     [

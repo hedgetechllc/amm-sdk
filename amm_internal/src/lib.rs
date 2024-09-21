@@ -139,14 +139,16 @@ impl JsonDeserializer for String {
   }
 }
 
-pub mod json_prelude {
+pub mod amm_prelude {
   pub use super::JsonDeserializer;
   pub use super::JsonSerializer;
-  pub use alloc::collections::BTreeMap;
+  pub use alloc::collections::{BTreeMap, BTreeSet};
+  pub use alloc::string::{String, ToString};
+  pub use alloc::vec::Vec;
 
   #[must_use]
   pub fn json_get_type(data: &str) -> &str {
-    if let Some((_, type_str)) = data.split_once("\"type\":\"") {
+    if let Some((_, type_str)) = data.split_once("\"_type\":\"") {
       type_str.split_once('"').unwrap_or_default().0
     } else {
       ""

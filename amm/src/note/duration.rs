@@ -1,12 +1,8 @@
 use crate::context::Tempo;
-use alloc::string::String;
+use amm_internal::amm_prelude::*;
+use amm_macros::{JsonDeserialize, JsonSerialize};
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
-#[cfg(feature = "json")]
-use {
-  amm_internal::json_prelude::*,
-  amm_macros::{JsonDeserialize, JsonSerialize},
-};
 
 const MAXIMA_VALUE: f64 = 8.0;
 const LONG_VALUE: f64 = 4.0;
@@ -24,9 +20,8 @@ const FIVE_HUNDRED_TWELFTH_VALUE: f64 = 0.001_953_125;
 const ONE_THOUSAND_TWENTY_FOURTH_VALUE: f64 = 0.000_976_562_5;
 const TWO_THOUSAND_FOURTH_EIGHTH_VALUE: f64 = 0.000_488_281_25;
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum DurationType {
   Maxima,
   Long,
@@ -46,9 +41,8 @@ pub enum DurationType {
   TwoThousandFortyEighth,
 }
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub struct Duration {
   pub value: DurationType,
   pub dots: u8,

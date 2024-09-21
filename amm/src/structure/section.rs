@@ -1,119 +1,107 @@
+use super::place_and_merge_timeslice;
 use super::{chord::Chord, multivoice::MultiVoice, phrase::Phrase, staff::Staff, timeslice::Timeslice};
-use crate::context::{generate_id, Clef, Key, Tempo, TimeSignature};
+use crate::context::{generate_id, Tempo};
 use crate::modification::{SectionModification, SectionModificationType};
 use crate::note::{Duration, DurationType, Note, Pitch};
-use alloc::{collections::BTreeSet, rc::Rc, string::String, vec::Vec};
-use core::{cell::RefCell, slice::Iter};
-#[cfg(feature = "json")]
-use {
-  amm_internal::json_prelude::*,
-  amm_macros::{JsonDeserialize, JsonSerialize},
-};
+use amm_internal::amm_prelude::*;
+use amm_macros::{JsonDeserialize, JsonSerialize};
+use core::slice::Iter;
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum SectionContent {
-  Staff(Rc<RefCell<Staff>>),
-  Section(Rc<RefCell<Section>>),
+  Staff(Staff),
+  Section(Section),
 }
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default, Eq, JsonDeserialize, JsonSerialize)]
 pub struct Section {
-  pub(crate) id: usize,
-  pub(crate) name: String,
-  pub(crate) content: Vec<SectionContent>,
-  pub(crate) modifications: Vec<Rc<RefCell<SectionModification>>>,
+  id: usize,
+  name: String,
+  content: Vec<SectionContent>,
+  modifications: Vec<SectionModification>,
 }
 
 impl Section {
   #[must_use]
-  pub fn new(name: &str) -> Rc<RefCell<Self>> {
-    Rc::new(RefCell::new(Self {
+  pub fn new(name: &str) -> Self {
+    Self {
       id: generate_id(),
       name: String::from(name),
       content: Vec::new(),
       modifications: Vec::new(),
-    }))
+    }
   }
 
   #[must_use]
-  pub(crate) fn single_staff_clone(&self, retained_staff: &str) -> Rc<RefCell<Self>> {
+  pub(crate) fn clone_with_single_staff(&self, retained_staff: &str) -> Self {
+    // Create an implicit section for all naked staff groupings
+    let mut sections = Vec::new();
+    let mut implicit_section = None;
+    let beat_base_note = Duration::new(DurationType::Whole, 0);
+    for item in &self.content {
+      match item {
+        SectionContent::Staff(staff) => {
+          if implicit_section.is_none() {
+            sections.push((Section::new("Implicit Wrapper"), staff.get_beats(&beat_base_note)));
+            implicit_section = sections.last_mut();
+          }
+          if staff.get_name() == retained_staff {
+            unsafe {
+              implicit_section
+                .as_mut()
+                .unwrap_unchecked()
+                .0
+                .content
+                .push(SectionContent::Staff(staff.clone()));
+            }
+          }
+        }
+        SectionContent::Section(section) => {
+          sections.push((section.clone_with_single_staff(retained_staff), 0.0));
+          implicit_section = None;
+        }
+      }
+    }
+
     // Create a clone of this section with a new ID
-    let mut clone = Self {
+    Self {
       id: generate_id(),
       name: self.name.clone(),
-      content: Vec::new(),
+      content:
+        // Ensure that all implicit sections contain at least one staff
+        sections.into_iter().map(|(mut section, beats)| {
+          if section.name == "Implicit Wrapper" {
+            if section.content.is_empty() {
+              let implicit_staff = section.add_staff(retained_staff);
+              let (note_type, num_notes) = Duration::get_minimum_divisible_notes(beats);
+              for _ in 0..num_notes {
+                implicit_staff.add_note(Pitch::new_rest(), Duration::new(note_type, 0), None);
+              }
+            }
+            unsafe { section.content.pop().unwrap_unchecked() }
+          } else {
+            SectionContent::Section(section)
+          }
+        }).collect(),
       modifications: self.modifications.clone(),
-    };
-
-    // Create an implicit section for all naked staff groupings
-    let mut sections: Vec<Rc<RefCell<Section>>> = Vec::new();
-    let mut implicit_section = None;
-    let (mut section_beats, beat_base_note) = (Vec::new(), Duration::new(DurationType::Whole, 0));
-    for item in &self.content {
-      unsafe {
-        match item {
-          SectionContent::Staff(staff_ref) => {
-            let staff = staff_ref.borrow();
-            if implicit_section.is_none() {
-              sections.push(Section::new("implicit"));
-              implicit_section = Some(sections.last().unwrap_unchecked());
-              section_beats.push(staff.get_beats(&beat_base_note));
-            }
-            if staff.get_name() == retained_staff {
-              implicit_section
-                .unwrap_unchecked()
-                .borrow_mut()
-                .content
-                .push(SectionContent::Staff(Rc::clone(staff_ref)));
-            }
-          }
-          SectionContent::Section(section) => {
-            section_beats.push(0.0);
-            sections.push(section.borrow().single_staff_clone(retained_staff));
-            implicit_section = None;
-          }
-        }
-      }
     }
-
-    // Ensure that all implicit sections contain at least one staff
-    for (idx, section_ref) in sections.into_iter().enumerate() {
-      let mut section = section_ref.borrow_mut();
-      if section.name == "implicit" {
-        if section.content.is_empty() {
-          let implicit_staff = section.add_staff(retained_staff, None, None, None);
-          let (note_type, num_notes) = Duration::get_minimum_divisible_notes(section_beats[idx]);
-          for _ in 0..num_notes {
-            implicit_staff
-              .borrow_mut()
-              .add_note(Pitch::new_rest(), Duration::new(note_type, 0), None);
-          }
-        }
-        clone.content.push(unsafe { section.content.pop().unwrap_unchecked() });
-      } else {
-        clone.content.push(SectionContent::Section(Rc::clone(&section_ref)));
-      }
-    }
-    Rc::new(RefCell::new(clone))
   }
 
   #[must_use]
-  pub fn flatten(&self) -> Rc<RefCell<Self>> {
-    Rc::new(RefCell::new(Self {
-      id: self.id,
+  pub fn flatten(&self) -> Self {
+    Self {
+      id: generate_id(),
       name: self.name.clone(),
       content: self
         .content
         .iter()
         .map(|item| match item {
-          SectionContent::Staff(staff) => SectionContent::Staff(staff.borrow().flatten()),
-          SectionContent::Section(section) => SectionContent::Section(section.borrow().flatten()),
+          SectionContent::Staff(staff) => SectionContent::Staff(staff.flatten()),
+          SectionContent::Section(section) => SectionContent::Section(section.flatten()),
         })
         .collect(),
       modifications: self.modifications.clone(),
-    }))
+    }
   }
 
   #[must_use]
@@ -131,68 +119,62 @@ impl Section {
     self
   }
 
-  pub fn add_staff(
-    &mut self,
-    name: &str,
-    clef: Option<Clef>,
-    key_signature: Option<Key>,
-    time_signature: Option<TimeSignature>,
-  ) -> Rc<RefCell<Staff>> {
-    let staff = Staff::new(name, clef, key_signature, time_signature);
-    self.content.push(SectionContent::Staff(Rc::clone(&staff)));
-    staff
+  pub fn add_staff(&mut self, name: &str) -> &mut Staff {
+    self.content.push(SectionContent::Staff(Staff::new(name)));
+    match self.content.last_mut() {
+      Some(SectionContent::Staff(staff)) => staff,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
   }
 
-  pub fn add_section(&mut self, name: &str) -> Rc<RefCell<Section>> {
-    let section = Section::new(name);
-    self.content.push(SectionContent::Section(Rc::clone(&section)));
-    section
+  pub fn add_section(&mut self, name: &str) -> &mut Section {
+    self.content.push(SectionContent::Section(Section::new(name)));
+    match self.content.last_mut() {
+      Some(SectionContent::Section(section)) => section,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
   }
 
-  pub fn add_modification(&mut self, modification: SectionModificationType) -> Rc<RefCell<SectionModification>> {
-    self
-      .modifications
-      .retain(|mods| mods.borrow().r#type != modification);
-    let modification = SectionModification::new(modification);
-    self.modifications.push(Rc::clone(&modification));
-    modification
+  pub fn add_modification(&mut self, mod_type: SectionModificationType) -> &mut SectionModification {
+    self.modifications.retain(|mods| mods.r#type != mod_type);
+    self.modifications.push(SectionModification::new(mod_type));
+    unsafe { self.modifications.last_mut().unwrap_unchecked() }
   }
 
-  pub fn insert_staff(
-    &mut self,
-    index: usize,
-    name: &str,
-    clef: Option<Clef>,
-    key_signature: Option<Key>,
-    time_signature: Option<TimeSignature>,
-  ) -> Rc<RefCell<Staff>> {
-    let staff = Staff::new(name, clef, key_signature, time_signature);
-    self.content.insert(index, SectionContent::Staff(Rc::clone(&staff)));
-    staff
+  pub fn insert_staff(&mut self, index: usize, name: &str) -> &mut Staff {
+    self.content.insert(index, SectionContent::Staff(Staff::new(name)));
+    match self.content.last_mut() {
+      Some(SectionContent::Staff(staff)) => staff,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
   }
 
-  pub fn insert_section(&mut self, index: usize, name: &str) -> Rc<RefCell<Section>> {
-    let section = Section::new(name);
-    self.content.insert(index, SectionContent::Section(Rc::clone(&section)));
-    section
+  pub fn insert_section(&mut self, index: usize, name: &str) -> &mut Section {
+    self.content.insert(index, SectionContent::Section(Section::new(name)));
+    match self.content.last_mut() {
+      Some(SectionContent::Section(section)) => section,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
   }
 
   #[must_use]
   pub fn get_staff_names(&self, recurse: bool) -> Vec<String> {
-    let mut staff_names = BTreeSet::new();
-    self.content.iter().for_each(|item| match item {
-      SectionContent::Staff(staff) => {
-        staff_names.insert(String::from(staff.borrow().get_name()));
-      }
-      SectionContent::Section(section) => {
-        if recurse {
-          section.borrow().get_staff_names(true).into_iter().for_each(|name| {
-            staff_names.insert(name);
-          });
+    self
+      .content
+      .iter()
+      .flat_map(|item| match item {
+        SectionContent::Staff(staff) => Vec::from([String::from(staff.get_name())]),
+        SectionContent::Section(section) => {
+          if recurse {
+            section.get_staff_names(recurse)
+          } else {
+            Vec::new()
+          }
         }
-      }
-    });
-    staff_names.into_iter().collect()
+      })
+      .collect::<BTreeSet<String>>()
+      .into_iter()
+      .collect()
   }
 
   #[must_use]
@@ -202,11 +184,9 @@ impl Section {
     let mut section_names = BTreeSet::new();
     self.content.iter().for_each(|item| match item {
       SectionContent::Section(section) => {
-        section_names.insert(String::from(section.borrow().get_name()));
+        section_names.insert(String::from(section.get_name()));
         if recurse {
-          section.borrow().get_section_names(true).into_iter().for_each(|name| {
-            section_names.insert(name);
-          });
+          section_names.extend(section.get_section_names(recurse));
         }
       }
       SectionContent::Staff(_) => (),
@@ -215,82 +195,165 @@ impl Section {
   }
 
   #[must_use]
-  pub fn get_staff(&self, id: usize) -> Option<Rc<RefCell<Staff>>> {
+  pub fn get_staff(&self, id: usize) -> Option<&Staff> {
     self.content.iter().find_map(|item| match item {
-      SectionContent::Staff(staff) if staff.borrow().get_id() == id => Some(Rc::clone(staff)),
-      SectionContent::Section(section) => section.borrow().get_staff(id),
+      SectionContent::Staff(staff) if staff.get_id() == id => Some(staff),
+      SectionContent::Section(section) => section.get_staff(id),
       SectionContent::Staff(_) => None,
     })
   }
 
   #[must_use]
-  pub fn get_staff_by_name(&self, name: &str) -> Option<Rc<RefCell<Staff>>> {
-    self.content.iter().find_map(|item| match item {
-      SectionContent::Staff(staff) if staff.borrow().get_name() == name => Some(Rc::clone(staff)),
-      SectionContent::Section(section) => section.borrow().get_staff_by_name(name),
+  pub fn get_staff_mut(&mut self, id: usize) -> Option<&mut Staff> {
+    self.content.iter_mut().find_map(|item| match item {
+      SectionContent::Staff(staff) if staff.get_id() == id => Some(staff),
+      SectionContent::Section(section) => section.get_staff_mut(id),
       SectionContent::Staff(_) => None,
     })
   }
 
   #[must_use]
-  pub fn get_section(&self, id: usize) -> Option<Rc<RefCell<Section>>> {
+  pub fn get_staff_by_name(&self, name: &str) -> Option<&Staff> {
     self.content.iter().find_map(|item| match item {
-      SectionContent::Section(section) if section.borrow().get_id() == id => Some(Rc::clone(section)),
-      SectionContent::Section(section) => section.borrow().get_section(id),
+      SectionContent::Staff(staff) if staff.get_name() == name => Some(staff),
+      SectionContent::Section(section) => section.get_staff_by_name(name),
       SectionContent::Staff(_) => None,
     })
   }
 
   #[must_use]
-  pub fn get_section_by_name(&self, name: &str) -> Option<Rc<RefCell<Section>>> {
-    self.content.iter().find_map(|item| match item {
-      SectionContent::Section(section) if section.borrow().get_name() == name => Some(Rc::clone(section)),
-      SectionContent::Section(section) => section.borrow().get_section_by_name(name),
+  pub fn get_staff_mut_by_name(&mut self, name: &str) -> Option<&mut Staff> {
+    self.content.iter_mut().find_map(|item| match item {
+      SectionContent::Staff(staff) if staff.get_name() == name => Some(staff),
+      SectionContent::Section(section) => section.get_staff_mut_by_name(name),
       SectionContent::Staff(_) => None,
     })
   }
 
   #[must_use]
-  pub fn get_chord(&self, id: usize) -> Option<Rc<RefCell<Chord>>> {
+  pub fn get_section(&self, id: usize) -> Option<&Section> {
     self.content.iter().find_map(|item| match item {
-      SectionContent::Staff(staff) => staff.borrow().get_chord(id),
-      SectionContent::Section(section) => section.borrow().get_chord(id),
+      SectionContent::Section(section) if section.get_id() == id => Some(section),
+      SectionContent::Section(section) => section.get_section(id),
+      SectionContent::Staff(_) => None,
     })
   }
 
   #[must_use]
-  pub fn get_multivoice(&self, id: usize) -> Option<Rc<RefCell<MultiVoice>>> {
-    self.content.iter().find_map(|item| match item {
-      SectionContent::Staff(staff) => staff.borrow().get_multivoice(id),
-      SectionContent::Section(section) => section.borrow().get_multivoice(id),
-    })
-  }
-
-  #[must_use]
-  pub fn get_note(&self, id: usize) -> Option<Rc<RefCell<Note>>> {
-    self.content.iter().find_map(|item| match item {
-      SectionContent::Staff(staff) => staff.borrow().get_note(id),
-      SectionContent::Section(section) => section.borrow().get_note(id),
-    })
-  }
-
-  #[must_use]
-  pub fn get_phrase(&self, id: usize) -> Option<Rc<RefCell<Phrase>>> {
-    self.content.iter().find_map(|item| match item {
-      SectionContent::Staff(staff) => staff.borrow().get_phrase(id),
-      SectionContent::Section(section) => section.borrow().get_phrase(id),
-    })
-  }
-
-  #[must_use]
-  pub fn get_modification(&self, id: usize) -> Option<Rc<RefCell<SectionModification>>> {
-    self.modifications.iter().find_map(|modification| {
-      if modification.borrow().get_id() == id {
-        Some(Rc::clone(modification))
-      } else {
-        None
+  pub fn get_section_mut(&mut self, id: usize) -> Option<&mut Section> {
+    self.content.iter_mut().find_map(|item| match item {
+      SectionContent::Section(section) => {
+        if section.get_id() == id {
+          Some(section)
+        } else {
+          section.get_section_mut(id)
+        }
       }
+      SectionContent::Staff(_) => None,
     })
+  }
+
+  #[must_use]
+  pub fn get_section_by_name(&self, name: &str) -> Option<&Section> {
+    self.content.iter().find_map(|item| match item {
+      SectionContent::Section(section) if section.get_name() == name => Some(section),
+      SectionContent::Section(section) => section.get_section_by_name(name),
+      SectionContent::Staff(_) => None,
+    })
+  }
+
+  #[must_use]
+  pub fn get_section_mut_by_name(&mut self, name: &str) -> Option<&mut Section> {
+    self.content.iter_mut().find_map(|item| match item {
+      SectionContent::Section(section) => {
+        if section.get_name() == name {
+          Some(section)
+        } else {
+          section.get_section_mut_by_name(name)
+        }
+      }
+      SectionContent::Staff(_) => None,
+    })
+  }
+
+  #[must_use]
+  pub fn get_chord(&self, id: usize) -> Option<&Chord> {
+    self.content.iter().find_map(|item| match item {
+      SectionContent::Staff(staff) => staff.get_chord(id),
+      SectionContent::Section(section) => section.get_chord(id),
+    })
+  }
+
+  #[must_use]
+  pub fn get_chord_mut(&mut self, id: usize) -> Option<&mut Chord> {
+    self.content.iter_mut().find_map(|item| match item {
+      SectionContent::Staff(staff) => staff.get_chord_mut(id),
+      SectionContent::Section(section) => section.get_chord_mut(id),
+    })
+  }
+
+  #[must_use]
+  pub fn get_multivoice(&self, id: usize) -> Option<&MultiVoice> {
+    self.content.iter().find_map(|item| match item {
+      SectionContent::Staff(staff) => staff.get_multivoice(id),
+      SectionContent::Section(section) => section.get_multivoice(id),
+    })
+  }
+
+  #[must_use]
+  pub fn get_multivoice_mut(&mut self, id: usize) -> Option<&mut MultiVoice> {
+    self.content.iter_mut().find_map(|item| match item {
+      SectionContent::Staff(staff) => staff.get_multivoice_mut(id),
+      SectionContent::Section(section) => section.get_multivoice_mut(id),
+    })
+  }
+
+  #[must_use]
+  pub fn get_note(&self, id: usize) -> Option<&Note> {
+    self.content.iter().find_map(|item| match item {
+      SectionContent::Staff(staff) => staff.get_note(id),
+      SectionContent::Section(section) => section.get_note(id),
+    })
+  }
+
+  #[must_use]
+  pub fn get_note_mut(&mut self, id: usize) -> Option<&mut Note> {
+    self.content.iter_mut().find_map(|item| match item {
+      SectionContent::Staff(staff) => staff.get_note_mut(id),
+      SectionContent::Section(section) => section.get_note_mut(id),
+    })
+  }
+
+  #[must_use]
+  pub fn get_phrase(&self, id: usize) -> Option<&Phrase> {
+    self.content.iter().find_map(|item| match item {
+      SectionContent::Staff(staff) => staff.get_phrase(id),
+      SectionContent::Section(section) => section.get_phrase(id),
+    })
+  }
+
+  #[must_use]
+  pub fn get_phrase_mut(&mut self, id: usize) -> Option<&mut Phrase> {
+    self.content.iter_mut().find_map(|item| match item {
+      SectionContent::Staff(staff) => staff.get_phrase_mut(id),
+      SectionContent::Section(section) => section.get_phrase_mut(id),
+    })
+  }
+
+  #[must_use]
+  pub fn get_modification(&self, id: usize) -> Option<&SectionModification> {
+    self
+      .modifications
+      .iter()
+      .find(|modification| modification.get_id() == id)
+  }
+
+  #[must_use]
+  pub fn get_modification_mut(&mut self, id: usize) -> Option<&mut SectionModification> {
+    self
+      .modifications
+      .iter_mut()
+      .find(|modification| modification.get_id() == id)
   }
 
   #[must_use]
@@ -298,7 +361,7 @@ impl Section {
     self
       .modifications
       .iter()
-      .find_map(|item| match item.borrow().r#type {
+      .find_map(|item| match item.r#type {
         SectionModificationType::Repeat { num_times } => Some(num_times),
         _ => None,
       })
@@ -310,25 +373,22 @@ impl Section {
     self
       .modifications
       .iter()
-      .find_map(|item| match &item.borrow().r#type {
+      .find_map(|item| match &item.r#type {
         SectionModificationType::OnlyPlay { iterations } => Some(iterations.clone()),
         _ => None,
       })
-      .unwrap_or_else(Vec::new)
+      .unwrap_or_default()
   }
 
   #[must_use]
   pub fn get_section_tempo(&self) -> Option<Tempo> {
-    self
-      .modifications
-      .iter()
-      .find_map(|item| match item.borrow().r#type {
-        SectionModificationType::TempoExplicit { tempo } => Some(tempo),
-        SectionModificationType::TempoImplicit { tempo } => {
-          Some(Tempo::new(Duration::new(DurationType::Quarter, 0), tempo.value()))
-        }
-        _ => None,
-      })
+    self.modifications.iter().find_map(|item| match item.r#type {
+      SectionModificationType::TempoExplicit { tempo } => Some(tempo),
+      SectionModificationType::TempoImplicit { tempo } => {
+        Some(Tempo::new(Duration::new(DurationType::Quarter, 0), tempo.value()))
+      }
+      _ => None,
+    })
   }
 
   #[must_use]
@@ -346,16 +406,16 @@ impl Section {
         SectionContent::Staff(staff) => {
           // Staves should all have the same duration, so just return the first one
           if !staff_found {
-            beats += staff.borrow().get_beats(&section_beat_base) * num_repeats;
+            beats += staff.get_beats(&section_beat_base) * num_repeats;
             staff_found = true;
           }
         }
         SectionContent::Section(section) => {
-          let num_iterations = match section.borrow().get_playable_iterations().len() {
+          let num_iterations = match section.get_playable_iterations().len() {
             0 => num_repeats,
             count => count as f64,
           };
-          beats += section.borrow().get_beats(&section_beat_base) * num_iterations;
+          beats += section.get_beats(&section_beat_base) * num_iterations;
           staff_found = false;
         }
       }
@@ -376,15 +436,15 @@ impl Section {
 
   pub fn remove_item(&mut self, id: usize) -> &mut Self {
     self.content.retain(|item| match item {
-      SectionContent::Staff(staff) => staff.borrow().get_id() != id,
-      SectionContent::Section(section) => section.borrow().get_id() != id,
+      SectionContent::Staff(staff) => staff.get_id() != id,
+      SectionContent::Section(section) => section.get_id() != id,
     });
-    self.content.iter().for_each(|item| match item {
+    self.content.iter_mut().for_each(|item| match item {
       SectionContent::Staff(staff) => {
-        staff.borrow_mut().remove_item(id);
+        staff.remove_item(id);
       }
       SectionContent::Section(section) => {
-        section.borrow_mut().remove_item(id);
+        section.remove_item(id);
       }
     });
     self
@@ -392,25 +452,29 @@ impl Section {
 
   pub fn remove_item_by_name(&mut self, name: &str) -> &mut Self {
     self.content.retain(|item| match item {
-      SectionContent::Staff(staff) => staff.borrow().get_name() != name,
-      SectionContent::Section(section) => section.borrow().get_name() != name,
+      SectionContent::Staff(staff) => staff.get_name() != name,
+      SectionContent::Section(section) => section.get_name() != name,
     });
     self
   }
 
   pub fn remove_modification(&mut self, id: usize) -> &mut Self {
-    self
-      .modifications
-      .retain(|modification| modification.borrow().get_id() != id);
+    self.modifications.retain(|modification| modification.get_id() != id);
     self
   }
 
+  #[must_use]
+  pub fn num_timeslices(&self) -> usize {
+    self.iter_timeslices().len()
+  }
+
+  #[must_use]
   pub fn iter(&self) -> Iter<'_, SectionContent> {
     self.content.iter()
   }
 
   #[must_use]
-  pub fn iter_modifications(&self) -> Iter<'_, Rc<RefCell<SectionModification>>> {
+  pub fn iter_modifications(&self) -> Iter<'_, SectionModification> {
     self.modifications.iter()
   }
 
@@ -423,35 +487,34 @@ impl Section {
       .any(|item| matches!(item, SectionContent::Section(_)))
     {
       // Create an implicit section for all naked staff groupings
+      let mut sections = Vec::new();
       let mut timeslices = Vec::new();
-      let mut sections: Vec<Rc<RefCell<Section>>> = Vec::new();
       let mut implicit_section = None;
       for item in &self.content {
-        unsafe {
-          match item {
-            SectionContent::Staff(staff) => {
-              if implicit_section.is_none() {
-                sections.push(Section::new("implicit"));
-                implicit_section = Some(sections.last().unwrap_unchecked());
-              }
+        match item {
+          SectionContent::Staff(staff) => {
+            if implicit_section.is_none() {
+              sections.push(Section::new("Implicit"));
+              implicit_section = sections.last_mut();
+            }
+            unsafe {
               implicit_section
+                .as_mut()
                 .unwrap_unchecked()
-                .borrow_mut()
                 .content
-                .push(SectionContent::Staff(Rc::clone(staff)));
+                .push(SectionContent::Staff(staff.clone()));
             }
-            SectionContent::Section(section) => {
-              sections.push(Rc::clone(section));
-              implicit_section = None;
-            }
+          }
+          SectionContent::Section(section) => {
+            sections.push(section.clone());
+            implicit_section = None;
           }
         }
       }
 
-      // Iterate in order through all sub-sections the correct number of times
-      for iteration in 1..=self.get_total_iterations() {
+      // Iterate through all sub-sections the correct number of times
+      for iteration in 0..self.get_total_iterations() {
         for section in &sections {
-          let section = section.borrow();
           if section.get_playable_iterations().is_empty() || section.get_playable_iterations().contains(&iteration) {
             timeslices.extend(section.iter_timeslices());
           }
@@ -460,39 +523,14 @@ impl Section {
       timeslices
     } else {
       // Iterate over all staves the correct number of times
-      let beat_base_note = Duration::new(DurationType::SixtyFourth, 0);
       let mut timeslices: Vec<(f64, Timeslice)> = Vec::new();
-      for _ in 1..=self.get_total_iterations() {
+      for _ in 0..self.get_total_iterations() {
         for item in &self.content {
           match item {
             SectionContent::Staff(staff) => {
               let (mut index, mut curr_time) = (0, 0.0);
-              for mut slice in staff.borrow().iter_timeslices() {
-                let slice_duration = slice.get_beats(&beat_base_note);
-                if let Some((mut slice_time, existing_slice)) = timeslices.get_mut(index) {
-                  let mut existing_slice = existing_slice;
-                  while (slice_time - curr_time).abs() > 0.000_001 && curr_time > slice_time {
-                    index += 1;
-                    (slice_time, existing_slice) = if let Some((start_time, slice)) = timeslices.get_mut(index) {
-                      (*start_time, slice)
-                    } else {
-                      unsafe {
-                        timeslices.push((curr_time, Timeslice::new()));
-                        let (start_time, slice) = timeslices.last_mut().unwrap_unchecked();
-                        (*start_time, slice)
-                      }
-                    };
-                  }
-                  if (slice_time - curr_time).abs() < 0.000_001 {
-                    existing_slice.combine_with(&mut slice);
-                  } else {
-                    timeslices.insert(index, (curr_time, slice));
-                  }
-                } else {
-                  timeslices.push((curr_time, slice));
-                }
-                curr_time += slice_duration;
-                index += 1;
+              for slice in staff.iter_timeslices() {
+                (index, curr_time) = place_and_merge_timeslice(&mut timeslices, slice, index, curr_time);
               }
             }
             SectionContent::Section(_) => unsafe { core::hint::unreachable_unchecked() },
@@ -520,21 +558,38 @@ impl<'a> IntoIterator for &'a Section {
   }
 }
 
+impl Clone for Section {
+  fn clone(&self) -> Self {
+    Self {
+      id: generate_id(),
+      name: self.name.clone(),
+      content: self.content.clone(),
+      modifications: self.modifications.clone(),
+    }
+  }
+}
+
+impl PartialEq for Section {
+  fn eq(&self, other: &Self) -> bool {
+    self.name == other.name && self.content == other.content && self.modifications == other.modifications
+  }
+}
+
 #[cfg(feature = "print")]
 impl core::fmt::Display for Section {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     let mods = self
       .modifications
       .iter()
-      .map(|modification| modification.borrow().to_string())
+      .map(ToString::to_string)
       .collect::<Vec<String>>()
       .join(", ");
     let items = self
       .content
       .iter()
       .map(|item| match item {
-        SectionContent::Staff(staff) => staff.borrow().to_string(),
-        SectionContent::Section(section) => section.borrow().to_string(),
+        SectionContent::Staff(staff) => staff.to_string(),
+        SectionContent::Section(section) => section.to_string(),
       })
       .collect::<Vec<_>>()
       .join(", ");

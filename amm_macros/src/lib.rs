@@ -14,7 +14,7 @@ fn serialize_enum_json(enum_type: &syn::Ident, data: &syn::DataEnum) -> TokenStr
     match &variant.fields {
       syn::Fields::Named(named_fields) => {
         let (mut fields, mut values) = (Vec::new(), Vec::new());
-        let mut key = alloc::format!("{{{{\"type\":\"{variant_type}\",");
+        let mut key = alloc::format!("{{{{\"_type\":\"{variant_type}\",");
         for (idx, field) in named_fields.named.iter().enumerate() {
           let field_name = field.ident.as_ref().unwrap();
           match &field.ty {
@@ -44,12 +44,12 @@ fn serialize_enum_json(enum_type: &syn::Ident, data: &syn::DataEnum) -> TokenStr
         syn::Type::Path(type_path) => {
           let field_details = type_path.path.segments.first().unwrap();
           match &field_details.ident {
-            field_type if field_type == "Rc" => {
-              enum_arms.push(quote! { #enum_type::#variant_type(el) => el.borrow().serialize_json() });
-            }
-            _ => {
+            field_type if field_type == "u8" => {
               let variant_type_string = alloc::format!("\"{variant_type}");
               enum_arms.push(quote! { #enum_type::#variant_type(el) => #variant_type_string.to_string() + "-" + el.serialize_json().as_str() + "\"" });
+            }
+            _ => {
+              enum_arms.push(quote! { #enum_type::#variant_type(el) => el.serialize_json() });
             }
           }
         }
@@ -136,10 +136,7 @@ fn deserialize_enum_json(enum_type: &syn::Ident, data: &syn::DataEnum) -> TokenS
         syn::Type::Path(type_path) => {
           let field_details = type_path.path.segments.first().unwrap();
           match &field_details.ident {
-            field_type if field_type == "Rc" => {
-              enum_arms.push(quote! { #variant_type_string => Self::#variant_type(Rc::new(RefCell::new(#variant_type::deserialize_json(json)?))) });
-            }
-            _ => {
+            field_type if field_type == "u8" => {
               let variant_type_string_dash = variant_type_string.clone() + "-";
               unit_enum_arms.push(quote! { x if x.contains(#variant_type_string_dash) => {
                   match json.find('-') {
@@ -148,6 +145,10 @@ fn deserialize_enum_json(enum_type: &syn::Ident, data: &syn::DataEnum) -> TokenS
                   }
                 }
               });
+            }
+            _ => {
+              enum_arms
+                .push(quote! { #variant_type_string => Self::#variant_type(#variant_type::deserialize_json(json)?) });
             }
           }
         }
@@ -192,28 +193,12 @@ fn serialize_struct_json(struct_type: &syn::Ident, fields: &syn::FieldsNamed) ->
         let field_details = type_path.path.segments.first().unwrap();
         match &field_details.ident {
           field_type if field_type == "Vec" => {
-            if let syn::PathArguments::AngleBracketed(details) = &field_details.arguments {
-              if let syn::GenericArgument::Type(syn::Type::Path(vec_path)) = details.args.first().unwrap() {
-                match &vec_path.path.segments.first().unwrap().ident {
-                  content_type if content_type == "Rc" => {
-                    let key = alloc::format!(
-                      "\"{}\":[{{}}]{}",
-                      format_ident!("{field_name}"),
-                      if idx + 1 < fields.named.len() { "," } else { "" }
-                    );
-                    serialized_fields.push(quote! { format!(#key, self.#field_name.iter().map(|el| el.borrow().serialize_json()).collect::<Vec<_>>().join(",")).as_str() });
-                  }
-                  _ => {
-                    let key = alloc::format!(
-                      "\"{}\":[{{}}]{}",
-                      format_ident!("{field_name}"),
-                      if idx + 1 < fields.named.len() { "," } else { "" }
-                    );
-                    serialized_fields.push(quote! { format!(#key, self.#field_name.iter().map(|el| el.serialize_json()).collect::<Vec<_>>().join(",")).as_str() });
-                  }
-                }
-              }
-            }
+            let key = alloc::format!(
+              "\"{}\":[{{}}]{}",
+              format_ident!("{field_name}"),
+              if idx + 1 < fields.named.len() { "," } else { "" }
+            );
+            serialized_fields.push(quote! { format!(#key, self.#field_name.iter().map(|el| el.serialize_json()).collect::<Vec<_>>().join(",")).as_str() });
           }
           field_type if field_type == "Option" => {
             let key = alloc::format!(
@@ -249,7 +234,7 @@ fn serialize_struct_json(struct_type: &syn::Ident, fields: &syn::FieldsNamed) ->
   TokenStream::from(quote! {
     impl JsonSerializer for #struct_type {
       fn serialize_json(&self) -> String {
-        String::from("{\"type\":\"") + #struct_type_string + "\"," + #(#serialized_fields)+* + "}"
+        String::from("{\"_type\":\"") + #struct_type_string + "\"," + #(#serialized_fields)+* + "}"
       }
     }
   })
@@ -268,40 +253,15 @@ fn deserialize_struct_json(struct_type: &syn::Ident, fields: &syn::FieldsNamed) 
           field_type if field_type == "Vec" => {
             if let syn::PathArguments::AngleBracketed(details) = &field_details.arguments {
               if let syn::GenericArgument::Type(syn::Type::Path(vec_path)) = details.args.first().unwrap() {
-                let field_details = vec_path.path.segments.first().unwrap();
-                match &field_details.ident {
-                  content_type if content_type == "Rc" => {
-                    if let syn::PathArguments::AngleBracketed(details) = &field_details.arguments {
-                      if let syn::GenericArgument::Type(syn::Type::Path(vec_path)) = details.args.first().unwrap() {
-                        if let syn::PathArguments::AngleBracketed(details) =
-                          &vec_path.path.segments.first().unwrap().arguments
-                        {
-                          if let syn::GenericArgument::Type(syn::Type::Path(vec_path)) = details.args.first().unwrap() {
-                            let content_type = &vec_path.path.segments.first().unwrap().ident;
-                            serialized_fields.push(quote! { #field_name_string => {
-                              let mut subdata = value;
-                              (subdata, value) = json_next_value(subdata);
-                              while !value.is_empty() {
-                                parsed.#field_name.push(Rc::new(RefCell::new(#content_type::deserialize_json(value)?)));
-                                (subdata, value) = json_next_value(subdata);
-                              }
-                            }});
-                          }
-                        }
-                      }
-                    }
+                let content_type = &vec_path.path.segments.first().unwrap().ident;
+                serialized_fields.push(quote! { #field_name_string => {
+                  let mut subdata = value;
+                  (subdata, value) = json_next_value(subdata);
+                  while !value.is_empty() {
+                    parsed.#field_name.push(#content_type::deserialize_json(value)?);
+                    (subdata, value) = json_next_value(subdata);
                   }
-                  content_type => {
-                    serialized_fields.push(quote! { #field_name_string => {
-                      let mut subdata = value;
-                      (subdata, value) = json_next_value(subdata);
-                      while !value.is_empty() {
-                        parsed.#field_name.push(#content_type::deserialize_json(value)?);
-                        (subdata, value) = json_next_value(subdata);
-                      }
-                    }});
-                  }
-                }
+                }});
               }
             }
           }
@@ -310,7 +270,7 @@ fn deserialize_struct_json(struct_type: &syn::Ident, fields: &syn::FieldsNamed) 
               if let syn::GenericArgument::Type(syn::Type::Path(option_path)) = details.args.first().unwrap() {
                 let content_type = &option_path.path.segments.first().unwrap().ident;
                 serialized_fields.push(
-                  quote! { #field_name_string => parsed.#field_name = Some(#content_type::deserialize_json(value)?) },
+                  quote! { #field_name_string => parsed.#field_name = if value.is_empty() { None } else { Some(#content_type::deserialize_json(value)?) } },
                 );
               }
             }

@@ -1,15 +1,9 @@
 use super::chord::ChordModificationType;
 use crate::context::{generate_id, Dynamic};
-use alloc::rc::Rc;
-use core::cell::RefCell;
-#[cfg(feature = "json")]
-use {
-  amm_internal::json_prelude::*,
-  amm_macros::{JsonDeserialize, JsonSerialize},
-};
+use amm_internal::amm_prelude::*;
+use amm_macros::{JsonDeserialize, JsonSerialize};
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum HandbellTechnique {
   Belltree,
   Damp,
@@ -25,8 +19,7 @@ pub enum HandbellTechnique {
   Swing,
 }
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum NoteModificationType {
   #[default]
   Accent,
@@ -108,8 +101,7 @@ pub enum NoteModificationType {
   UpBow,
 }
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, JsonDeserialize, JsonSerialize)]
 pub struct NoteModification {
   id: usize,
   pub r#type: NoteModificationType,
@@ -117,15 +109,15 @@ pub struct NoteModification {
 
 impl NoteModification {
   #[must_use]
-  pub fn new(r#type: NoteModificationType) -> Rc<RefCell<Self>> {
-    Rc::new(RefCell::new(Self {
+  pub fn new(r#type: NoteModificationType) -> Self {
+    Self {
       id: generate_id(),
       r#type,
-    }))
+    }
   }
 
   #[must_use]
-  pub fn from_chord_modification(r#type: &ChordModificationType) -> Option<Rc<RefCell<Self>>> {
+  pub fn from_chord_modification(r#type: &ChordModificationType) -> Option<Self> {
     match *r#type {
       ChordModificationType::Accent => Some(NoteModificationType::Accent),
       ChordModificationType::DetachedLegato => Some(NoteModificationType::DetachedLegato),
@@ -154,17 +146,30 @@ impl NoteModification {
       ChordModificationType::UpBow => Some(NoteModificationType::UpBow),
       _ => None,
     }
-    .map(|r#type| {
-      Rc::new(RefCell::new(Self {
-        id: generate_id(),
-        r#type,
-      }))
+    .map(|r#type| Self {
+      id: generate_id(),
+      r#type,
     })
   }
 
   #[must_use]
   pub fn get_id(&self) -> usize {
     self.id
+  }
+}
+
+impl Clone for NoteModification {
+  fn clone(&self) -> Self {
+    Self {
+      id: generate_id(),
+      r#type: self.r#type,
+    }
+  }
+}
+
+impl PartialEq for NoteModification {
+  fn eq(&self, other: &Self) -> bool {
+    self.r#type == other.r#type
   }
 }
 

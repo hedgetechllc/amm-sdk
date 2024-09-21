@@ -1,36 +1,26 @@
 use super::{Accidental, Duration, Pitch};
-use crate::context::Key;
+use crate::context::{generate_id, Key};
 use crate::modification::NoteModification;
-use alloc::{
-  rc::Rc,
-  string::{String, ToString},
-  vec::Vec,
-};
-use core::cell::RefCell;
+use amm_internal::amm_prelude::*;
+use amm_macros::{JsonDeserialize, JsonSerialize};
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
-#[cfg(feature = "json")]
-use {
-  amm_internal::json_prelude::*,
-  amm_macros::{JsonDeserialize, JsonSerialize},
-};
 
 const A4_FREQUENCY_HZ: f32 = 440.0;
-const MIDI_NUMBER_A4: i16 = 69;
+const MIDI_NUMBER_A4: i8 = 69;
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Debug, Default, Eq)]
+#[derive(Debug, Default, Eq, JsonDeserialize, JsonSerialize)]
 pub struct Note {
   pub id: usize,
   pub pitch: Pitch,
   pub duration: Duration,
   pub accidental: Accidental,
-  pub(crate) modifications: Vec<Rc<RefCell<NoteModification>>>,
+  pub(crate) modifications: Vec<NoteModification>,
 }
 
 impl Note {
   #[must_use]
-  fn semitone_distance(&self, key_accidentals: [Accidental; 8]) -> i16 {
+  fn semitone_distance(&self, key_accidentals: [Accidental; 8]) -> i8 {
     let (pitch_index, num_semitones) = self.pitch.value();
     num_semitones
       + if self.accidental == Accidental::None {
@@ -75,6 +65,19 @@ impl PartialEq for Note {
     let default_accidentals = Key::default().accidentals();
     (self.semitone_distance(default_accidentals) == other.semitone_distance(default_accidentals))
       && (self.beats(default_duration) == other.beats(default_duration))
+      && (self.modifications == other.modifications)
+  }
+}
+
+impl Clone for Note {
+  fn clone(&self) -> Self {
+    Self {
+      id: generate_id(),
+      pitch: self.pitch,
+      duration: self.duration,
+      accidental: self.accidental,
+      modifications: self.modifications.clone(),
+    }
   }
 }
 
@@ -84,7 +87,7 @@ impl core::fmt::Display for Note {
     let mods = self
       .modifications
       .iter()
-      .map(|modification| modification.borrow().to_string())
+      .map(ToString::to_string)
       .collect::<Vec<String>>()
       .join(", ");
     write!(

@@ -1,9 +1,7 @@
 use crate::context::{Key, Tempo, TimeSignature};
 use crate::modification::{Direction, PhraseModificationType};
-use crate::note::{Accidental, Duration, Pitch};
-use crate::structure::note::Note;
-use alloc::{collections::BTreeMap, rc::Rc, vec::Vec};
-use core::cell::RefCell;
+use crate::note::{Accidental, Duration, Note, Pitch};
+use alloc::{collections::BTreeMap, vec::Vec};
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct TimesliceContext {
@@ -42,15 +40,15 @@ impl core::fmt::Display for TimeslicePhraseDetails {
 
 #[derive(Debug)]
 pub struct TimesliceContent {
-  pub note: Rc<RefCell<Note>>,
+  pub note: Note,
   pub phrase_details: Vec<TimeslicePhraseDetails>,
 }
 
 impl TimesliceContent {
   #[must_use]
-  pub fn new(note: &Rc<RefCell<Note>>) -> Self {
+  pub fn new(note: Note) -> Self {
     Self {
-      note: Rc::clone(note),
+      note,
       phrase_details: Vec::new(),
     }
   }
@@ -68,7 +66,7 @@ impl TimesliceContent {
 
   #[must_use]
   pub fn get_beats(&self, beat_base: &Duration) -> f64 {
-    self.note.borrow().get_beats(
+    self.note.get_beats(
       beat_base,
       self.phrase_details.iter().find_map(|detail| {
         detail.modifications.iter().find_map(|modification| match modification {
@@ -104,7 +102,7 @@ impl core::fmt::Display for TimesliceContent {
     write!(
       f,
       "{}{}{}{}",
-      self.note.borrow(),
+      self.note,
       if self.phrase_details.is_empty() {
         ""
       } else {
@@ -120,7 +118,7 @@ impl core::fmt::Display for TimesliceContent {
 pub struct Timeslice {
   pub arpeggiated: bool,
   pub content: Vec<TimesliceContent>,
-  pub directions: Vec<Rc<RefCell<Direction>>>,
+  pub directions: Vec<Direction>,
 }
 
 impl Timeslice {
@@ -133,13 +131,13 @@ impl Timeslice {
     }
   }
 
-  pub fn add_note(&mut self, note: &Rc<RefCell<Note>>) -> &mut Self {
+  pub fn add_note(&mut self, note: Note) -> &mut Self {
     self.content.push(TimesliceContent::new(note));
     self
   }
 
-  pub fn add_direction(&mut self, direction: &Rc<RefCell<Direction>>) -> &mut Self {
-    self.directions.push(Rc::clone(direction));
+  pub fn add_direction(&mut self, direction: Direction) -> &mut Self {
+    self.directions.push(direction);
     self
   }
 
@@ -172,7 +170,7 @@ impl core::fmt::Display for Timeslice {
     let directions_string = self
       .directions
       .iter()
-      .map(|direction| direction.borrow().to_string())
+      .map(ToString::to_string)
       .collect::<Vec<String>>()
       .join(", ");
     write!(
@@ -217,13 +215,13 @@ impl PartTimeslice {
     }
   }
 
-  pub fn add_timeslice(&mut self, name: &str, timeslice: Timeslice) -> &mut Self {
-    self.timeslices.insert(String::from(name), timeslice);
+  pub fn add_timeslice(&mut self, part_name: &str, timeslice: Timeslice) -> &mut Self {
+    self.timeslices.insert(String::from(part_name), timeslice);
     self
   }
 
   #[must_use]
-  pub fn get_timeslice(&self, name: &str) -> Option<&Timeslice> {
-    self.timeslices.get(name)
+  pub fn get_timeslice_for(&self, part_name: &str) -> Option<&Timeslice> {
+    self.timeslices.get(part_name)
   }
 }

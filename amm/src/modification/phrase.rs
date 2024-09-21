@@ -1,14 +1,8 @@
 use crate::context::{generate_id, Dynamic};
-use alloc::rc::Rc;
-use core::cell::RefCell;
-#[cfg(feature = "json")]
-use {
-  amm_internal::json_prelude::*,
-  amm_macros::{JsonDeserialize, JsonSerialize},
-};
+use amm_internal::amm_prelude::*;
+use amm_macros::{JsonDeserialize, JsonSerialize};
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum PedalType {
   #[default]
   Sustain,
@@ -16,8 +10,7 @@ pub enum PedalType {
   Soft,
 }
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum PhraseModificationType {
   Crescendo {
     final_dynamic: Option<Dynamic>,
@@ -47,8 +40,7 @@ pub enum PhraseModificationType {
   },
 }
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, JsonDeserialize, JsonSerialize)]
 pub struct PhraseModification {
   id: usize,
   pub r#type: PhraseModificationType,
@@ -56,16 +48,31 @@ pub struct PhraseModification {
 
 impl PhraseModification {
   #[must_use]
-  pub fn new(r#type: PhraseModificationType) -> Rc<RefCell<Self>> {
-    Rc::new(RefCell::new(Self {
+  pub fn new(r#type: PhraseModificationType) -> Self {
+    Self {
       id: generate_id(),
       r#type,
-    }))
+    }
   }
 
   #[must_use]
   pub fn get_id(&self) -> usize {
     self.id
+  }
+}
+
+impl Clone for PhraseModification {
+  fn clone(&self) -> Self {
+    Self {
+      id: generate_id(),
+      r#type: self.r#type,
+    }
+  }
+}
+
+impl PartialEq for PhraseModification {
+  fn eq(&self, other: &Self) -> bool {
+    self.r#type == other.r#type
   }
 }
 
