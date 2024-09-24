@@ -2,7 +2,7 @@ use crate::context::{generate_id, Tempo};
 use crate::modification::{NoteModification, NoteModificationType};
 use crate::note::{Accidental, Duration, Note, Pitch};
 use alloc::vec::Vec;
-use core::slice::Iter;
+use core::slice::{Iter, IterMut};
 
 impl Note {
   #[must_use]
@@ -60,5 +60,9 @@ impl Note {
 
   pub fn iter_modifications(&self) -> Iter<'_, NoteModification> {
     self.modifications.iter()
+  }
+
+  pub fn iter_modifications_mut(&mut self) -> IterMut<'_, NoteModification> {
+    self.modifications.iter_mut()
   }
 }

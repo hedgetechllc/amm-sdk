@@ -4,7 +4,7 @@ use crate::modification::{PhraseModification, PhraseModificationType};
 use crate::note::{Accidental, Duration, Note, Pitch};
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize};
-use core::slice::Iter;
+use core::slice::{Iter, IterMut};
 
 #[derive(Clone, Debug, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum PhraseContent {
@@ -117,6 +117,38 @@ impl Phrase {
     unsafe { self.modifications.last_mut().unwrap_unchecked() }
   }
 
+  pub fn claim_note(&mut self, note: Note) -> &mut Note {
+    self.content.push(PhraseContent::Note(note));
+    match self.content.last_mut() {
+      Some(PhraseContent::Note(note)) => note,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
+  }
+
+  pub fn claim_chord(&mut self, chord: Chord) -> &mut Chord {
+    self.content.push(PhraseContent::Chord(chord));
+    match self.content.last_mut() {
+      Some(PhraseContent::Chord(chord)) => chord,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
+  }
+
+  pub fn claim_phrase(&mut self, phrase: Phrase) -> &mut Phrase {
+    self.content.push(PhraseContent::Phrase(phrase));
+    match self.content.last_mut() {
+      Some(PhraseContent::Phrase(phrase)) => phrase,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
+  }
+
+  pub fn claim_multivoice(&mut self, multivoice: MultiVoice) -> &mut MultiVoice {
+    self.content.push(PhraseContent::MultiVoice(multivoice));
+    match self.content.last_mut() {
+      Some(PhraseContent::MultiVoice(multivoice)) => multivoice,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
+  }
+
   pub fn insert_note(
     &mut self,
     index: usize,
@@ -197,25 +229,26 @@ impl Phrase {
 
   #[must_use]
   pub fn get_phrase(&self, id: usize) -> Option<&Phrase> {
-    self.content.iter().find_map(|item| match item {
-      PhraseContent::Phrase(phrase) if phrase.get_id() == id => Some(phrase),
-      PhraseContent::Phrase(phrase) => phrase.get_phrase(id),
-      _ => None,
-    })
+    if self.id == id {
+      Some(self)
+    } else {
+      self.content.iter().find_map(|item| match item {
+        PhraseContent::Phrase(phrase) => phrase.get_phrase(id),
+        _ => None,
+      })
+    }
   }
 
   #[must_use]
   pub fn get_phrase_mut(&mut self, id: usize) -> Option<&mut Phrase> {
-    self.content.iter_mut().find_map(|item| match item {
-      PhraseContent::Phrase(phrase) => {
-        if phrase.get_id() == id {
-          Some(phrase)
-        } else {
-          phrase.get_phrase_mut(id)
-        }
-      }
-      _ => None,
-    })
+    if self.id == id {
+      Some(self)
+    } else {
+      self.content.iter_mut().find_map(|item| match item {
+        PhraseContent::Phrase(phrase) => phrase.get_phrase_mut(id),
+        _ => None,
+      })
+    }
   }
 
   #[must_use]
@@ -376,8 +409,16 @@ impl Phrase {
     self.content.iter()
   }
 
+  pub fn iter_mut(&mut self) -> IterMut<'_, PhraseContent> {
+    self.content.iter_mut()
+  }
+
   pub fn iter_modifications(&self) -> Iter<'_, PhraseModification> {
     self.modifications.iter()
+  }
+
+  pub fn iter_modifications_mut(&mut self) -> IterMut<'_, PhraseModification> {
+    self.modifications.iter_mut()
   }
 
   #[must_use]

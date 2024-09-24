@@ -5,7 +5,7 @@ use crate::context::{generate_id, Tempo};
 use crate::note::{Duration, Note};
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize};
-use core::slice::Iter;
+use core::slice::{Iter, IterMut};
 
 #[derive(Clone, Debug, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum PartContent {
@@ -84,21 +84,24 @@ impl Part {
   }
 
   pub fn add_section(&mut self, name: &str) -> &mut Section {
-    if !self.content.iter().any(|item| match item {
-      PartContent::Section(section) => section.get_name() == name,
-    }) {
-      self.content.push(PartContent::Section(Section::new(name)));
+    self.content.push(PartContent::Section(Section::new(name)));
+    match self.content.last_mut() {
+      Some(PartContent::Section(section)) => section,
+      _ => unsafe { core::hint::unreachable_unchecked() },
     }
-    unsafe { self.get_section_mut_by_name(name).unwrap_unchecked() }
   }
 
-  pub fn add_default_section(&mut self) -> &mut Section {
-    self.add_section("default")
+  pub fn claim_section(&mut self, section: Section) -> &mut Section {
+    self.content.push(PartContent::Section(section));
+    match self.content.last_mut() {
+      Some(PartContent::Section(section)) => section,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
   }
 
   #[must_use]
   pub fn get_section_names(&self, recurse: bool) -> Vec<String> {
-    // Section names are not necessarily unique when nested, so using `recurse` might generate misleading results
+    // Section names are not necessarily unique, so this function might generate misleading results
     // It is recommended to directly iterate over the sections themselves instead
     let mut section_names = BTreeSet::new();
     self.content.iter().for_each(|item| match item {
@@ -144,32 +147,6 @@ impl Part {
         }
       }
     })
-  }
-
-  #[must_use]
-  pub fn get_section_by_name(&self, name: &str) -> Option<&Section> {
-    self.content.iter().find_map(|item| match item {
-      PartContent::Section(section) if section.get_name() == name => Some(section),
-      PartContent::Section(_) => None,
-    })
-  }
-
-  #[must_use]
-  pub fn get_section_mut_by_name(&mut self, name: &str) -> Option<&mut Section> {
-    self.content.iter_mut().find_map(|item| match item {
-      PartContent::Section(section) if section.get_name() == name => Some(section),
-      PartContent::Section(_) => None,
-    })
-  }
-
-  #[must_use]
-  pub fn get_default_section(&self) -> Option<&Section> {
-    self.get_section_by_name("default")
-  }
-
-  #[must_use]
-  pub fn get_default_section_mut(&mut self) -> Option<&mut Section> {
-    self.get_section_mut_by_name("default")
   }
 
   #[must_use]
@@ -258,22 +235,11 @@ impl Part {
     self.get_beats(&tempo.base_note) * 60.0 / f64::from(tempo.beats_per_minute)
   }
 
-  pub fn remove_section_by_id(&mut self, id: usize) -> &mut Self {
+  pub fn remove_section(&mut self, id: usize) -> &mut Self {
     self.content.retain(|item| match item {
       PartContent::Section(section) => section.get_id() != id,
     });
     self
-  }
-
-  pub fn remove_section_by_name(&mut self, name: &str) -> &mut Self {
-    self.content.retain(|item| match item {
-      PartContent::Section(section) => section.get_name() != name,
-    });
-    self
-  }
-
-  pub fn remove_default_section(&mut self) -> &mut Self {
-    self.remove_section_by_name("default")
   }
 
   pub fn remove_item(&mut self, id: usize) -> &mut Self {
@@ -301,6 +267,10 @@ impl Part {
 
   pub fn iter(&self) -> Iter<'_, PartContent> {
     self.content.iter()
+  }
+
+  pub fn iter_mut(&mut self) -> IterMut<'_, PartContent> {
+    self.content.iter_mut()
   }
 
   #[must_use]

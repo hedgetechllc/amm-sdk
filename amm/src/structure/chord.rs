@@ -4,7 +4,7 @@ use crate::modification::{ChordModification, ChordModificationType, NoteModifica
 use crate::note::{Accidental, Duration, Note, Pitch};
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize};
-use core::slice::Iter;
+use core::slice::{Iter, IterMut};
 
 #[derive(Clone, Debug, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum ChordContent {
@@ -14,7 +14,7 @@ pub enum ChordContent {
 #[derive(Debug, Default, Eq, JsonDeserialize, JsonSerialize)]
 pub struct Chord {
   id: usize,
-  pub(crate) content: Vec<ChordContent>,
+  content: Vec<ChordContent>,
   modifications: Vec<ChordModification>,
 }
 
@@ -34,6 +34,11 @@ impl Chord {
   }
 
   pub fn add_note(&mut self, pitch: Pitch, duration: Duration, accidental: Option<Accidental>) -> &mut Note {
+    self.content.retain(|item| match item {
+      ChordContent::Note(note) => {
+        note.pitch != pitch || note.duration != duration || note.accidental != accidental.unwrap_or_default()
+      }
+    });
     self
       .content
       .push(ChordContent::Note(Note::new(pitch, duration, accidental)));
@@ -47,6 +52,19 @@ impl Chord {
     self.modifications.retain(|mods| mods.r#type != mod_type);
     self.modifications.push(ChordModification::new(mod_type));
     unsafe { self.modifications.last_mut().unwrap_unchecked() }
+  }
+
+  pub fn claim_note(&mut self, note: Note) -> &mut Note {
+    self.content.retain(|item| match item {
+      ChordContent::Note(old_note) => {
+        note.pitch != old_note.pitch || note.duration != old_note.duration || note.accidental != old_note.accidental
+      }
+    });
+    self.content.push(ChordContent::Note(note));
+    match self.content.last_mut() {
+      Some(ChordContent::Note(note)) => note,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
   }
 
   #[must_use]
@@ -114,8 +132,16 @@ impl Chord {
     self.content.iter()
   }
 
+  pub fn iter_mut(&mut self) -> IterMut<'_, ChordContent> {
+    self.content.iter_mut()
+  }
+
   pub fn iter_modifications(&self) -> Iter<'_, ChordModification> {
     self.modifications.iter()
+  }
+
+  pub fn iter_modifications_mut(&mut self) -> IterMut<'_, ChordModification> {
+    self.modifications.iter_mut()
   }
 
   #[must_use]

@@ -4,7 +4,7 @@ use crate::modification::{Direction, DirectionType};
 use crate::note::{Accidental, Duration, Note, Pitch};
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize};
-use core::slice::Iter;
+use core::slice::{Iter, IterMut};
 
 #[derive(Clone, Debug, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum StaffContent {
@@ -102,6 +102,46 @@ impl Staff {
 
   pub fn add_direction(&mut self, direction: DirectionType) -> &mut Direction {
     self.content.push(StaffContent::Direction(Direction::new(direction)));
+    match self.content.last_mut() {
+      Some(StaffContent::Direction(direction)) => direction,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
+  }
+
+  pub fn claim_note(&mut self, note: Note) -> &mut Note {
+    self.content.push(StaffContent::Note(note));
+    match self.content.last_mut() {
+      Some(StaffContent::Note(note)) => note,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
+  }
+
+  pub fn claim_chord(&mut self, chord: Chord) -> &mut Chord {
+    self.content.push(StaffContent::Chord(chord));
+    match self.content.last_mut() {
+      Some(StaffContent::Chord(chord)) => chord,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
+  }
+
+  pub fn claim_phrase(&mut self, phrase: Phrase) -> &mut Phrase {
+    self.content.push(StaffContent::Phrase(phrase));
+    match self.content.last_mut() {
+      Some(StaffContent::Phrase(phrase)) => phrase,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
+  }
+
+  pub fn claim_multivoice(&mut self, multivoice: MultiVoice) -> &mut MultiVoice {
+    self.content.push(StaffContent::MultiVoice(multivoice));
+    match self.content.last_mut() {
+      Some(StaffContent::MultiVoice(multivoice)) => multivoice,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
+  }
+
+  pub fn claim_direction(&mut self, direction: Direction) -> &mut Direction {
+    self.content.push(StaffContent::Direction(direction));
     match self.content.last_mut() {
       Some(StaffContent::Direction(direction)) => direction,
       _ => unsafe { core::hint::unreachable_unchecked() },
@@ -334,6 +374,10 @@ impl Staff {
 
   pub fn iter(&self) -> Iter<'_, StaffContent> {
     self.content.iter()
+  }
+
+  pub fn iter_mut(&mut self) -> IterMut<'_, StaffContent> {
+    self.content.iter_mut()
   }
 
   #[must_use]

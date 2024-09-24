@@ -17,7 +17,7 @@ impl MidiConverter {
 
     // TODO: Implement construction of Composition from MIDI
     let part = composition.add_part("todo_part_name");
-    let section = part.add_default_section();
+    let section = part.add_section("Default");
     let staff = section.add_staff("todo_staff_name");
     staff.add_chord();
 

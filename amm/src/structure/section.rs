@@ -5,7 +5,7 @@ use crate::modification::{SectionModification, SectionModificationType};
 use crate::note::{Duration, DurationType, Note, Pitch};
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize};
-use core::slice::Iter;
+use core::slice::{Iter, IterMut};
 
 #[derive(Clone, Debug, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum SectionContent {
@@ -120,6 +120,10 @@ impl Section {
   }
 
   pub fn add_staff(&mut self, name: &str) -> &mut Staff {
+    self.content.retain(|item| match item {
+      SectionContent::Staff(staff) => staff.get_name() != name,
+      SectionContent::Section(_) => true,
+    });
     self.content.push(SectionContent::Staff(Staff::new(name)));
     match self.content.last_mut() {
       Some(SectionContent::Staff(staff)) => staff,
@@ -139,6 +143,26 @@ impl Section {
     self.modifications.retain(|mods| mods.r#type != mod_type);
     self.modifications.push(SectionModification::new(mod_type));
     unsafe { self.modifications.last_mut().unwrap_unchecked() }
+  }
+
+  pub fn claim_staff(&mut self, staff: Staff) -> &mut Staff {
+    self.content.retain(|item| match item {
+      SectionContent::Staff(old_staff) => staff.get_name() != old_staff.get_name(),
+      SectionContent::Section(_) => true,
+    });
+    self.content.push(SectionContent::Staff(staff));
+    match self.content.last_mut() {
+      Some(SectionContent::Staff(staff)) => staff,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
+  }
+
+  pub fn claim_section(&mut self, section: Section) -> &mut Section {
+    self.content.push(SectionContent::Section(section));
+    match self.content.last_mut() {
+      Some(SectionContent::Section(section)) => section,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
   }
 
   pub fn insert_staff(&mut self, index: usize, name: &str) -> &mut Staff {
@@ -232,48 +256,26 @@ impl Section {
 
   #[must_use]
   pub fn get_section(&self, id: usize) -> Option<&Section> {
-    self.content.iter().find_map(|item| match item {
-      SectionContent::Section(section) if section.get_id() == id => Some(section),
-      SectionContent::Section(section) => section.get_section(id),
-      SectionContent::Staff(_) => None,
-    })
+    if self.id == id {
+      Some(self)
+    } else {
+      self.content.iter().find_map(|item| match item {
+        SectionContent::Section(section) => section.get_section(id),
+        SectionContent::Staff(_) => None,
+      })
+    }
   }
 
   #[must_use]
   pub fn get_section_mut(&mut self, id: usize) -> Option<&mut Section> {
-    self.content.iter_mut().find_map(|item| match item {
-      SectionContent::Section(section) => {
-        if section.get_id() == id {
-          Some(section)
-        } else {
-          section.get_section_mut(id)
-        }
-      }
-      SectionContent::Staff(_) => None,
-    })
-  }
-
-  #[must_use]
-  pub fn get_section_by_name(&self, name: &str) -> Option<&Section> {
-    self.content.iter().find_map(|item| match item {
-      SectionContent::Section(section) if section.get_name() == name => Some(section),
-      SectionContent::Section(section) => section.get_section_by_name(name),
-      SectionContent::Staff(_) => None,
-    })
-  }
-
-  #[must_use]
-  pub fn get_section_mut_by_name(&mut self, name: &str) -> Option<&mut Section> {
-    self.content.iter_mut().find_map(|item| match item {
-      SectionContent::Section(section) => {
-        if section.get_name() == name {
-          Some(section)
-        } else {
-          section.get_section_mut_by_name(name)
-        }
-      }
-      SectionContent::Staff(_) => None,
-    })
+    if self.id == id {
+      Some(self)
+    } else {
+      self.content.iter_mut().find_map(|item| match item {
+        SectionContent::Section(section) => section.get_section_mut(id),
+        SectionContent::Staff(_) => None,
+      })
+    }
   }
 
   #[must_use]
@@ -450,14 +452,6 @@ impl Section {
     self
   }
 
-  pub fn remove_item_by_name(&mut self, name: &str) -> &mut Self {
-    self.content.retain(|item| match item {
-      SectionContent::Staff(staff) => staff.get_name() != name,
-      SectionContent::Section(section) => section.get_name() != name,
-    });
-    self
-  }
-
   pub fn remove_modification(&mut self, id: usize) -> &mut Self {
     self.modifications.retain(|modification| modification.get_id() != id);
     self
@@ -472,8 +466,16 @@ impl Section {
     self.content.iter()
   }
 
+  pub fn iter_mut(&mut self) -> IterMut<'_, SectionContent> {
+    self.content.iter_mut()
+  }
+
   pub fn iter_modifications(&self) -> Iter<'_, SectionModification> {
     self.modifications.iter()
+  }
+
+  pub fn iter_modifications_mut(&mut self) -> IterMut<'_, SectionModification> {
+    self.modifications.iter_mut()
   }
 
   #[must_use]

@@ -9,7 +9,7 @@ use crate::modification::{ChordModificationType, NoteModificationType, PhraseMod
 use crate::note::{Duration, DurationType, Note};
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize};
-use core::slice::Iter;
+use core::slice::{Iter, IterMut};
 
 #[derive(Clone, Debug, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum MultiVoiceContent {
@@ -149,7 +149,7 @@ impl MultiVoice {
                     note.duration = target_duration;
                   }
                   PhraseContent::Chord(chord) => {
-                    chord.content.iter_mut().for_each(|item| match item {
+                    chord.iter_mut().for_each(|item| match item {
                       ChordContent::Note(note) => {
                         note.duration = target_duration;
                       }
@@ -215,7 +215,7 @@ impl MultiVoice {
                       note.duration = target_duration;
                     }
                     PhraseContent::Chord(chord) => {
-                      chord.content.iter_mut().for_each(|item| match item {
+                      chord.iter_mut().for_each(|item| match item {
                         ChordContent::Note(note) => {
                           note.duration = target_duration;
                         }
@@ -334,10 +334,10 @@ impl MultiVoice {
       } else if let Some(content) = content.first() {
         match content {
           PhraseContent::Note(note) => {
-            phrase.content.push(PhraseContent::Note(note.clone()));
+            phrase.claim_note(note.clone());
           }
           PhraseContent::Chord(chord) => {
-            phrase.content.push(PhraseContent::Chord(chord.clone()));
+            phrase.claim_chord(chord.clone());
           }
           _ => unsafe { core::hint::unreachable_unchecked() },
         }
@@ -356,6 +356,14 @@ impl MultiVoice {
     match self.content.last_mut() {
       Some(MultiVoiceContent::Phrase(phrase)) => phrase,
       None => unsafe { core::hint::unreachable_unchecked() },
+    }
+  }
+
+  pub fn claim_phrase(&mut self, phrase: Phrase) -> &mut Phrase {
+    self.content.push(MultiVoiceContent::Phrase(phrase));
+    match self.content.last_mut() {
+      Some(MultiVoiceContent::Phrase(phrase)) => phrase,
+      _ => unsafe { core::hint::unreachable_unchecked() },
     }
   }
 
@@ -458,6 +466,10 @@ impl MultiVoice {
 
   pub fn iter(&self) -> Iter<'_, MultiVoiceContent> {
     self.content.iter()
+  }
+
+  pub fn iter_mut(&mut self) -> IterMut<'_, MultiVoiceContent> {
+    self.content.iter_mut()
   }
 
   #[must_use]
