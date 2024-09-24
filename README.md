@@ -12,8 +12,7 @@ Abstract Music Manipulation (AMM) SDK
 * Implement `get_pcm_samples()` on `Timeslice` to create audio buffer for note + mods to use in direct playback
 * Add option to `get_duration` to take into account tempo adjustments (e.g. accelerando, fermata, etc.) but ONLY when requested since internally this function is used to combine multivoice parts
 * Finish MusicXML Writer Implementation
-* Finish MIDI Reader Implementation
-* Finish MIDI Writer Implementation
+* Finish MIDI Reader/Writer Implementation
 * Make fully `no_std` compatible
 * MusicXML change to inline serialize/deserialize, remove Regex, implement ZIP transcoder
 * Create MusicXML WASM build

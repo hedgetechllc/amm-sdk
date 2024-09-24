@@ -1,7 +1,7 @@
-.PHONY: all clean setup lib wasm publish format checknostd check test testunit testmidi testwasm testweb
+.PHONY: all clean setup lib wasm publish publishweb format checknostd check test testunit testmidi testwasm testweb
 
 all:
-	$(error You must specify one of the following targets: clean setup lib wasm publish format checknostd test testunit testmidi testwasm testweb)
+	$(error You must specify one of the following targets: clean setup lib wasm publish publishweb format checknostd check test testunit testwasm testweb)
 
 clean:
 	cd ensure_no_std && cargo clean && rm -rf Cargo.lock
@@ -19,7 +19,12 @@ wasm:
 	wasm-pack build --target nodejs
 # wasm-opt -Os(or -Oz) add_bg.wasm -o add.wasm
 
-publish: wasm
+publish:
+	cargo publish -p amm_internal
+	cargo publish -p amm_macros
+	cargo publish -p amm
+
+publishweb: wasm
 	wasm-pack publish
 
 format:
@@ -36,9 +41,6 @@ test:
 
 testunit:
 	cargo test -- --nocapture
-
-testmidi:
-	cargo test -- --nocapture test_midi_
 
 testwasm:
 	wasm-pack test --node
