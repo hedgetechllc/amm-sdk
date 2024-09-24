@@ -1,7 +1,7 @@
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize};
 
-#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
+#[derive(Copy, Clone, Debug, Default, Ord, PartialOrd, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum Dynamic {
   Forte(u8),
   #[default]

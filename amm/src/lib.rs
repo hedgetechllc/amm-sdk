@@ -8,6 +8,7 @@ mod modification;
 mod note;
 mod storage;
 mod structure;
+mod util;
 
 #[cfg(target_arch = "wasm32")]
 pub mod wasm;
@@ -28,3 +29,4 @@ pub use structure::{
   Chord, ChordContent, MultiVoice, MultiVoiceContent, Part, PartContent, PartTimeslice, Phrase, PhraseContent, Section,
   SectionContent, Staff, StaffContent, Timeslice, TimesliceContent, TimesliceContext, TimeslicePhraseDetails,
 };
+pub use util::{MutSet, MutSetRef};

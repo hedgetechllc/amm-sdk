@@ -68,6 +68,19 @@ impl PartialEq for Note {
       && (self.modifications == other.modifications)
   }
 }
+impl PartialOrd for Note {
+  fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    Some(self.cmp(other))
+  }
+}
+impl Ord for Note {
+  fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    fn sort_key<'a>(v: &'a Note) -> (&'a Pitch, &'a Duration, &'a Accidental, &'a [NoteModification]) {
+      (&v.pitch, &v.duration, &v.accidental, &v.modifications)
+    }
+    sort_key(self).cmp(&sort_key(other))
+  }
+}
 
 impl Clone for Note {
   fn clone(&self) -> Self {

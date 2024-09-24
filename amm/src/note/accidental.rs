@@ -4,7 +4,7 @@ use amm_macros::{JsonDeserialize, JsonSerialize};
 use wasm_bindgen::prelude::*;
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
+#[derive(Copy, Clone, Debug, Default, Ord, PartialOrd, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum Accidental {
   #[default]
   None,

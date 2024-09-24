@@ -2,11 +2,12 @@ use super::timeslice::Timeslice;
 use crate::context::{generate_id, Tempo};
 use crate::modification::{ChordModification, ChordModificationType, NoteModification};
 use crate::note::{Accidental, Duration, Note, Pitch};
+use crate::util::{MutSet, MutSetRef, MapRef, MappedRef};
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize};
 use core::slice::{Iter, IterMut};
 
-#[derive(Clone, Debug, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
+#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum ChordContent {
   Note(Note),
 }
@@ -14,7 +15,7 @@ pub enum ChordContent {
 #[derive(Debug, Default, Eq, JsonDeserialize, JsonSerialize)]
 pub struct Chord {
   id: usize,
-  content: Vec<ChordContent>,
+  content: BTreeSet<ChordContent>,
   modifications: Vec<ChordModification>,
 }
 
@@ -23,8 +24,8 @@ impl Chord {
   pub fn new() -> Self {
     Self {
       id: generate_id(),
-      content: Vec::new(),
-      modifications: Vec::new(),
+      content: Default::default(),
+      modifications: Default::default(),
     }
   }
 
@@ -33,19 +34,17 @@ impl Chord {
     self.id
   }
 
-  pub fn add_note(&mut self, pitch: Pitch, duration: Duration, accidental: Option<Accidental>) -> &mut Note {
-    self.content.retain(|item| match item {
-      ChordContent::Note(note) => {
-        note.pitch != pitch || note.duration != duration || note.accidental != accidental.unwrap_or_default()
+  pub fn add_note(&mut self, pitch: Pitch, duration: Duration, accidental: Option<Accidental>) -> MappedRef<MutSetRef<ChordContent>, Note> {
+    let note = ChordContent::Note(Note::new(pitch, duration, accidental));
+    self.content.insert(note.clone());
+    self.content.get_mut(&note).unwrap().map_ref(
+      |x| match x {
+        ChordContent::Note(note) => note,
+      },
+      |x| match x {
+        ChordContent::Note(note) => note,
       }
-    });
-    self
-      .content
-      .push(ChordContent::Note(Note::new(pitch, duration, accidental)));
-    match self.content.last_mut() {
-      Some(ChordContent::Note(note)) => note,
-      None => unsafe { core::hint::unreachable_unchecked() },
-    }
+    )
   }
 
   pub fn add_modification(&mut self, mod_type: ChordModificationType) -> &mut ChordModification {
@@ -55,6 +54,7 @@ impl Chord {
   }
 
   pub fn claim_note(&mut self, note: Note) -> &mut Note {
+    
     self.content.retain(|item| match item {
       ChordContent::Note(old_note) => {
         note.pitch != old_note.pitch || note.duration != old_note.duration || note.accidental != old_note.accidental
@@ -76,11 +76,14 @@ impl Chord {
   }
 
   #[must_use]
-  pub fn get_note_mut(&mut self, id: usize) -> Option<&mut Note> {
-    self.content.iter_mut().find_map(|item| match item {
+  pub fn get_note_mut(&mut self, id: usize) -> Option<MappedRef<MutSetRef<ChordContent>, Note>> {
+    self.content.iter().find_map(|item| match item {
       ChordContent::Note(note) if note.get_id() == id => Some(note),
       ChordContent::Note(_) => None,
-    })
+    });
+
+
+    ()
   }
 
   #[must_use]

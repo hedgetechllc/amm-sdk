@@ -3,7 +3,7 @@ use crate::context::{generate_id, Dynamic};
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize};
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
+#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum HandbellTechnique {
   Belltree,
   Damp,
@@ -19,7 +19,7 @@ pub enum HandbellTechnique {
   Swing,
 }
 
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
+#[derive(Clone, Copy, Debug, Default, Ord, PartialOrd, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum NoteModificationType {
   #[default]
   Accent,
@@ -170,6 +170,16 @@ impl Clone for NoteModification {
 impl PartialEq for NoteModification {
   fn eq(&self, other: &Self) -> bool {
     self.r#type == other.r#type
+  }
+}
+impl PartialOrd for NoteModification {
+  fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    Some(self.cmp(other))
+  }
+}
+impl Ord for NoteModification {
+  fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    self.r#type.cmp(&other.r#type)
   }
 }
 

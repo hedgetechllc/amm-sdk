@@ -306,7 +306,7 @@ impl MultiVoice {
             } else {
               note.duration
             };
-            let new_note = combined.add_note(note.pitch, duration, Some(note.accidental));
+            let mut new_note = combined.add_note(note.pitch, duration, Some(note.accidental));
             note.iter_modifications().for_each(|modification| {
               new_note.add_modification(modification.r#type);
             });
@@ -322,7 +322,7 @@ impl MultiVoice {
                 } else {
                   note.duration
                 };
-                let new_note = combined.add_note(note.pitch, duration, Some(note.accidental));
+                let mut new_note = combined.add_note(note.pitch, duration, Some(note.accidental));
                 note.iter_modifications().for_each(|modification| {
                   new_note.add_modification(modification.r#type);
                 });

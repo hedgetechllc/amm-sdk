@@ -21,28 +21,28 @@ const ONE_THOUSAND_TWENTY_FOURTH_VALUE: f64 = 0.000_976_562_5;
 const TWO_THOUSAND_FOURTH_EIGHTH_VALUE: f64 = 0.000_488_281_25;
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
+#[derive(Copy, Clone, Debug, Default, Ord, PartialOrd, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum DurationType {
-  Maxima,
-  Long,
-  Breve,
-  Whole,
-  Half,
+  TwoThousandFortyEighth,
+  OneThousandTwentyFourth,
+  FiveHundredTwelfth,
+  TwoHundredFiftySixth,
+  OneHundredTwentyEighth,
+  SixtyFourth,
+  ThirtySecond,
+  Sixteenth,
+  Eighth,
   #[default]
   Quarter,
-  Eighth,
-  Sixteenth,
-  ThirtySecond,
-  SixtyFourth,
-  OneHundredTwentyEighth,
-  TwoHundredFiftySixth,
-  FiveHundredTwelfth,
-  OneThousandTwentyFourth,
-  TwoThousandFortyEighth,
+  Half,
+  Whole,
+  Breve,
+  Long,
+  Maxima,
 }
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
+#[derive(Copy, Clone, Debug, Default, Ord, PartialOrd, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub struct Duration {
   pub value: DurationType,
   pub dots: u8,
