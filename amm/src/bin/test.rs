@@ -4,8 +4,11 @@ use amm::{Composition, Storage};
 fn test_iterating(composition: &mut Composition) {
   println!("{}", composition);
   for part_name in &composition.get_part_names() {
-    let part = unsafe { composition.get_part_by_name(part_name).unwrap_unchecked() };
-    println!("{}\n\n\n", part);
+    if let Some(part) = composition.get_part_by_name(part_name) {
+      println!("{part}\n\n\n");
+    } else {
+      println!("Part {part_name} not found");
+    }
   }
 }
 
@@ -13,11 +16,14 @@ fn test_iterating(composition: &mut Composition) {
 fn test_timeslices(composition: &mut Composition) {
   println!("{}", composition);
   for part_name in &composition.get_part_names() {
-    let part = unsafe { composition.get_part_by_name(part_name).unwrap_unchecked() };
-    println!("\nPart {part_name}:");
-    part.iter_timeslices().into_iter().for_each(|timeslice| {
-      println!("  {}", timeslice);
-    });
+    if let Some(part) = composition.get_part_by_name(part_name) {
+      println!("\nPart {part_name}:");
+      part.iter_timeslices().into_iter().for_each(|timeslice| {
+        println!("  {timeslice}");
+      });
+    } else {
+      println!("Part {part_name} not found");
+    }
   }
 }
 

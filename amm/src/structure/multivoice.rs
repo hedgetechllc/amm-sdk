@@ -81,53 +81,51 @@ impl MultiVoice {
             if phrase.get_id() != tuplet_phrase.get_id() {
               let num_additional_notes = num_beats - into_beats;
               updated_phrase.add_modification(tuplet_modification.r#type);
-              unsafe {
-                match &updated_phrase.content.pop().unwrap_unchecked() {
-                  PhraseContent::Note(note) => {
-                    let updated_duration = note.duration.split(into_beats);
-                    let mut new_note = updated_phrase.add_note(note.pitch, note.duration, Some(note.accidental));
-                    new_note.add_modification(NoteModificationType::Tie);
-                    note.iter_modifications().for_each(|modification| {
-                      new_note.add_modification(modification.r#type);
-                    });
-                    for index in 0..num_additional_notes {
-                      new_note = updated_phrase.add_note(note.pitch, updated_duration, Some(note.accidental));
-                      if index + 1 < num_additional_notes {
-                        new_note.add_modification(NoteModificationType::Tie);
-                      }
+              match &updated_phrase.content.pop() {
+                Some(PhraseContent::Note(note)) => {
+                  let updated_duration = note.duration.split(into_beats);
+                  let mut new_note = updated_phrase.add_note(note.pitch, note.duration, Some(note.accidental));
+                  new_note.add_modification(NoteModificationType::Tie);
+                  note.iter_modifications().for_each(|modification| {
+                    new_note.add_modification(modification.r#type);
+                  });
+                  for index in 0..num_additional_notes {
+                    new_note = updated_phrase.add_note(note.pitch, updated_duration, Some(note.accidental));
+                    if index + 1 < num_additional_notes {
+                      new_note.add_modification(NoteModificationType::Tie);
                     }
                   }
-                  PhraseContent::Chord(chord) => {
-                    let updated_duration = chord
-                      .iter()
-                      .map(|item| match item {
-                        ChordContent::Note(note) => note.duration.split(into_beats),
-                      })
-                      .reduce(|min, duration| if min.value() < duration.value() { min } else { duration })
-                      .unwrap_or(Duration::new(DurationType::Eighth, 0));
-                    let chord_notes = chord
-                      .iter()
-                      .map(|item| match item {
-                        ChordContent::Note(note) => note,
-                      })
-                      .collect::<Vec<_>>();
-                    let mut new_chord = updated_phrase.add_chord();
-                    new_chord.add_modification(ChordModificationType::Tie);
-                    chord.iter_modifications().for_each(|modification| {
-                      new_chord.add_modification(modification.r#type);
-                    });
-                    for index in 0..num_additional_notes {
-                      new_chord = updated_phrase.add_chord();
-                      for note in &chord_notes {
-                        new_chord.add_note(note.pitch, updated_duration, Some(note.accidental));
-                      }
-                      if index + 1 < num_additional_notes {
-                        new_chord.add_modification(ChordModificationType::Tie);
-                      }
-                    }
-                  }
-                  _ => core::hint::unreachable_unchecked(),
                 }
+                Some(PhraseContent::Chord(chord)) => {
+                  let updated_duration = chord
+                    .iter()
+                    .map(|item| match item {
+                      ChordContent::Note(note) => note.duration.split(into_beats),
+                    })
+                    .reduce(|min, duration| if min.value() < duration.value() { min } else { duration })
+                    .unwrap_or(Duration::new(DurationType::Eighth, 0));
+                  let chord_notes = chord
+                    .iter()
+                    .map(|item| match item {
+                      ChordContent::Note(note) => note,
+                    })
+                    .collect::<Vec<_>>();
+                  let mut new_chord = updated_phrase.add_chord();
+                  new_chord.add_modification(ChordModificationType::Tie);
+                  chord.iter_modifications().for_each(|modification| {
+                    new_chord.add_modification(modification.r#type);
+                  });
+                  for index in 0..num_additional_notes {
+                    new_chord = updated_phrase.add_chord();
+                    for note in &chord_notes {
+                      new_chord.add_note(note.pitch, updated_duration, Some(note.accidental));
+                    }
+                    if index + 1 < num_additional_notes {
+                      new_chord.add_modification(ChordModificationType::Tie);
+                    }
+                  }
+                }
+                _ => unsafe { core::hint::unreachable_unchecked() },
               }
             }
             updated_phrase
@@ -139,39 +137,37 @@ impl MultiVoice {
           .iter()
           .map(|phrase| {
             // Expand tuplet by only taking the first note and holding it for the full tuplet duration
-            unsafe {
-              let mut updated_phrase = phrase.clone();
-              if phrase.get_id() == tuplet_phrase.get_id() {
-                let target_duration =
-                  Duration::from_beats(&beat_base_note, updated_phrase.get_beats(&beat_base_note, None));
-                match updated_phrase.content.first_mut().unwrap_unchecked() {
-                  PhraseContent::Note(note) => {
-                    note.duration = target_duration;
-                  }
-                  PhraseContent::Chord(chord) => {
-                    chord.iter_mut().for_each(|item| match item {
-                      ChordContent::Note(note) => {
-                        note.duration = target_duration;
-                      }
-                    });
-                  }
-                  _ => core::hint::unreachable_unchecked(),
-                };
-                let mod_id = updated_phrase
-                  .iter_modifications()
-                  .find_map(|modification| {
-                    if matches!(modification.r#type, PhraseModificationType::Tuplet { .. }) {
-                      Some(modification.get_id())
-                    } else {
-                      None
+            let mut updated_phrase = phrase.clone();
+            if phrase.get_id() == tuplet_phrase.get_id() {
+              let target_duration =
+                Duration::from_beats(&beat_base_note, updated_phrase.get_beats(&beat_base_note, None));
+              match updated_phrase.content.first_mut() {
+                Some(PhraseContent::Note(note)) => {
+                  note.duration = target_duration;
+                }
+                Some(PhraseContent::Chord(chord)) => {
+                  chord.iter_mut().for_each(|item| match item {
+                    ChordContent::Note(note) => {
+                      note.duration = target_duration;
                     }
-                  })
-                  .unwrap_or_default();
-                updated_phrase.remove_modification(mod_id);
-                updated_phrase.content.drain(1..);
-              }
-              updated_phrase
+                  });
+                }
+                _ => unsafe { core::hint::unreachable_unchecked() },
+              };
+              let mod_id = updated_phrase
+                .iter_modifications()
+                .find_map(|modification| {
+                  if matches!(modification.r#type, PhraseModificationType::Tuplet { .. }) {
+                    Some(modification.get_id())
+                  } else {
+                    None
+                  }
+                })
+                .unwrap_or_default();
+              updated_phrase.remove_modification(mod_id);
+              updated_phrase.content.drain(1..);
             }
+            updated_phrase
           })
           .collect()
       }
@@ -207,25 +203,23 @@ impl MultiVoice {
               } = modification.r#type
               {
                 // Expand tuplet by only taking the first note and holding it for the full tuplet duration
-                unsafe {
-                  let target_duration =
-                    Duration::from_beats(&beat_base_note, updated_phrase.get_beats(&beat_base_note, None));
-                  match updated_phrase.content.first_mut().unwrap_unchecked() {
-                    PhraseContent::Note(note) => {
-                      note.duration = target_duration;
-                    }
-                    PhraseContent::Chord(chord) => {
-                      chord.iter_mut().for_each(|item| match item {
-                        ChordContent::Note(note) => {
-                          note.duration = target_duration;
-                        }
-                      });
-                    }
-                    _ => core::hint::unreachable_unchecked(),
-                  };
-                  updated_phrase.remove_modification(modification.get_id());
-                  updated_phrase.content.drain(1..);
-                }
+                let target_duration =
+                  Duration::from_beats(&beat_base_note, updated_phrase.get_beats(&beat_base_note, None));
+                match updated_phrase.content.first_mut() {
+                  Some(PhraseContent::Note(note)) => {
+                    note.duration = target_duration;
+                  }
+                  Some(PhraseContent::Chord(chord)) => {
+                    chord.iter_mut().for_each(|item| match item {
+                      ChordContent::Note(note) => {
+                        note.duration = target_duration;
+                      }
+                    });
+                  }
+                  _ => unsafe { core::hint::unreachable_unchecked() },
+                };
+                updated_phrase.remove_modification(modification.get_id());
+                updated_phrase.content.drain(1..);
               }
             });
             updated_phrase

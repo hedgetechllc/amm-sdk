@@ -36,28 +36,27 @@ impl Section {
   pub(crate) fn clone_with_single_staff(&self, retained_staff: &str) -> Self {
     // Create an implicit section for all naked staff groupings
     let mut sections = Vec::new();
-    let mut implicit_section = None;
+    let mut implicit_section: Option<&mut (Section, f64, bool)> = None;
     let beat_base_note = Duration::new(DurationType::Whole, 0);
     for item in &self.content {
       match item {
-        SectionContent::Staff(staff) => {
-          if implicit_section.is_none() {
-            sections.push((Section::new("Implicit Wrapper"), staff.get_beats(&beat_base_note)));
-            implicit_section = sections.last_mut();
-          }
-          if staff.get_name() == retained_staff {
-            unsafe {
-              implicit_section
-                .as_mut()
-                .unwrap_unchecked()
-                .0
-                .content
-                .push(SectionContent::Staff(staff.clone()));
+        SectionContent::Staff(staff) => match implicit_section {
+          Some((ref mut section, _, _)) => {
+            if staff.get_name() == retained_staff {
+              section.content.push(SectionContent::Staff(staff.clone()));
             }
           }
-        }
+          None => {
+            let mut section = Section::new("Implicit");
+            if staff.get_name() == retained_staff {
+              section.content.push(SectionContent::Staff(staff.clone()));
+            }
+            sections.push((section, staff.get_beats(&beat_base_note), true));
+            implicit_section = sections.last_mut();
+          }
+        },
         SectionContent::Section(section) => {
-          sections.push((section.clone_with_single_staff(retained_staff), 0.0));
+          sections.push((section.clone_with_single_staff(retained_staff), 0.0, false));
           implicit_section = None;
         }
       }
@@ -69,16 +68,19 @@ impl Section {
       name: self.name.clone(),
       content:
         // Ensure that all implicit sections contain at least one staff
-        sections.into_iter().map(|(mut section, beats)| {
-          if section.name == "Implicit Wrapper" {
-            if section.content.is_empty() {
-              let implicit_staff = section.add_staff(retained_staff);
-              let (note_type, num_notes) = Duration::get_minimum_divisible_notes(beats);
-              for _ in 0..num_notes {
-                implicit_staff.add_note(Pitch::new_rest(), Duration::new(note_type, 0), None);
+        sections.into_iter().map(|(mut section, beats, implicit)| {
+          if implicit {
+            match section.content.pop() {
+              Some(content) => content,
+              None => {
+                let mut implicit_staff = Staff::new(retained_staff);
+                let (note_type, num_notes) = Duration::get_minimum_divisible_notes(beats);
+                for _ in 0..num_notes {
+                  implicit_staff.add_note(Pitch::new_rest(), Duration::new(note_type, 0), None);
+                }
+                SectionContent::Staff(implicit_staff)
               }
             }
-            unsafe { section.content.pop().unwrap_unchecked() }
           } else {
             SectionContent::Section(section)
           }
@@ -489,22 +491,18 @@ impl Section {
       // Create an implicit section for all naked staff groupings
       let mut sections = Vec::new();
       let mut timeslices = Vec::new();
-      let mut implicit_section = None;
+      let mut implicit_section: Option<&mut Section> = None;
       for item in &self.content {
         match item {
-          SectionContent::Staff(staff) => {
-            if implicit_section.is_none() {
+          SectionContent::Staff(staff) => match implicit_section {
+            Some(ref mut section) => {
+              section.content.push(SectionContent::Staff(staff.clone()));
+            }
+            None => {
               sections.push(Section::new("Implicit"));
               implicit_section = sections.last_mut();
             }
-            unsafe {
-              implicit_section
-                .as_mut()
-                .unwrap_unchecked()
-                .content
-                .push(SectionContent::Staff(staff.clone()));
-            }
-          }
+          },
           SectionContent::Section(section) => {
             sections.push(section.clone());
             implicit_section = None;
