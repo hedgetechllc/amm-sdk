@@ -114,15 +114,15 @@ mod test {
     });
     assert_eq!(
       JsonSerializer::serialize_json(&accel),
-      "{\"id\":1,\"modification\":\"Accelerando\"}"
+      "{\"_type\":\"SectionModification\",\"id\":1,\"r#type\":\"Accelerando\"}"
     );
     assert_eq!(
       JsonSerializer::serialize_json(&only_play),
-      "{\"id\":2,\"modification\":{\"type\":\"OnlyPlay\",\"iterations\":[1,3,4]}}"
+      "{\"_type\":\"SectionModification\",\"id\":2,\"r#type\":{\"_type\":\"OnlyPlay\",\"iterations\":[1,3,4]}}"
     );
     assert_eq!(
       JsonSerializer::serialize_json(&tempo_explicit),
-      "{\"id\":3,\"modification\":{\"type\":\"TempoExplicit\",\"tempo\":{\"base_note\":{\"type\":\"Half\",\"dots\":0},\"beats_per_minute\":135}}}"
+      "{\"_type\":\"SectionModification\",\"id\":3,\"r#type\":{\"_type\":\"TempoExplicit\",\"tempo\":{\"_type\":\"Tempo\",\"base_note\":{\"_type\":\"Duration\",\"value\":\"Half\",\"dots\":0},\"beats_per_minute\":135}}}"
     );
   }
 }

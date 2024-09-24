@@ -268,7 +268,7 @@ mod test {
     let tempo = Tempo::new(Duration::new(DurationType::Quarter, 1), 130);
     assert_eq!(
       JsonSerializer::serialize_json(&tempo),
-      "{\"base_note\":{\"type\":\"Quarter\",\"dots\":1},\"beats_per_minute\":130}"
+      "{\"_type\":\"Tempo\",\"base_note\":{\"_type\":\"Duration\",\"value\":\"Quarter\",\"dots\":1},\"beats_per_minute\":130}"
     );
   }
 }
