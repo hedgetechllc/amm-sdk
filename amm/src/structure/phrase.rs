@@ -195,7 +195,8 @@ impl Phrase {
       PhraseContent::Note(note) if note.get_id() == id => Some(note),
       PhraseContent::Chord(chord) => chord.get_note(id),
       PhraseContent::Phrase(phrase) => phrase.get_note(id),
-      _ => None,
+      PhraseContent::MultiVoice(multivoice) => multivoice.get_note(id),
+      PhraseContent::Note(_) => None,
     })
   }
 
@@ -205,7 +206,8 @@ impl Phrase {
       PhraseContent::Note(note) if note.get_id() == id => Some(note),
       PhraseContent::Chord(chord) => chord.get_note_mut(id),
       PhraseContent::Phrase(phrase) => phrase.get_note_mut(id),
-      _ => None,
+      PhraseContent::MultiVoice(multivoice) => multivoice.get_note_mut(id),
+      PhraseContent::Note(_) => None,
     })
   }
 
@@ -214,6 +216,7 @@ impl Phrase {
     self.content.iter().find_map(|item| match item {
       PhraseContent::Chord(chord) if chord.get_id() == id => Some(chord),
       PhraseContent::Phrase(phrase) => phrase.get_chord(id),
+      PhraseContent::MultiVoice(multivoice) => multivoice.get_chord(id),
       _ => None,
     })
   }
@@ -223,6 +226,7 @@ impl Phrase {
     self.content.iter_mut().find_map(|item| match item {
       PhraseContent::Chord(chord) if chord.get_id() == id => Some(chord),
       PhraseContent::Phrase(phrase) => phrase.get_chord_mut(id),
+      PhraseContent::MultiVoice(multivoice) => multivoice.get_chord_mut(id),
       _ => None,
     })
   }
@@ -234,6 +238,7 @@ impl Phrase {
     } else {
       self.content.iter().find_map(|item| match item {
         PhraseContent::Phrase(phrase) => phrase.get_phrase(id),
+        PhraseContent::MultiVoice(multivoice) => multivoice.get_phrase(id),
         _ => None,
       })
     }
@@ -246,6 +251,7 @@ impl Phrase {
     } else {
       self.content.iter_mut().find_map(|item| match item {
         PhraseContent::Phrase(phrase) => phrase.get_phrase_mut(id),
+        PhraseContent::MultiVoice(multivoice) => multivoice.get_phrase_mut(id),
         _ => None,
       })
     }
@@ -256,6 +262,7 @@ impl Phrase {
     self.content.iter().find_map(|item| match item {
       PhraseContent::MultiVoice(multivoice) if multivoice.get_id() == id => Some(multivoice),
       PhraseContent::MultiVoice(multivoice) => multivoice.get_multivoice(id),
+      PhraseContent::Phrase(phrase) => phrase.get_multivoice(id),
       _ => None,
     })
   }
@@ -270,6 +277,7 @@ impl Phrase {
           multivoice.get_multivoice_mut(id)
         }
       }
+      PhraseContent::Phrase(phrase) => phrase.get_multivoice_mut(id),
       _ => None,
     })
   }
