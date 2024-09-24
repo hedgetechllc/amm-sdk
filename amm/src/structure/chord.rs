@@ -34,10 +34,8 @@ impl Chord {
     self.id
   }
 
-  pub fn add_note(&mut self, pitch: Pitch, duration: Duration, accidental: Option<Accidental>) -> MappedRef<MutSetRef<ChordContent>, Note> {
-    let note = ChordContent::Note(Note::new(pitch, duration, accidental));
-    self.content.insert(note.clone());
-    self.content.get_mut(&note).unwrap().map_ref(
+  fn map_ref_note(v: MutSetRef<ChordContent>) -> MappedRef<MutSetRef<ChordContent>, Note> {
+    v.map_ref(
       |x| match x {
         ChordContent::Note(note) => note,
       },
@@ -47,24 +45,27 @@ impl Chord {
     )
   }
 
+  pub fn add_note(&mut self, pitch: Pitch, duration: Duration, accidental: Option<Accidental>) -> MappedRef<MutSetRef<ChordContent>, Note> {
+    let note = ChordContent::Note(Note::new(pitch, duration, accidental));
+    self.content.insert(note.clone());
+    Self::map_ref_note(self.content.get_mut(&note).unwrap())
+  }
+
   pub fn add_modification(&mut self, mod_type: ChordModificationType) -> &mut ChordModification {
     self.modifications.retain(|mods| mods.r#type != mod_type);
     self.modifications.push(ChordModification::new(mod_type));
     unsafe { self.modifications.last_mut().unwrap_unchecked() }
   }
 
-  pub fn claim_note(&mut self, note: Note) -> &mut Note {
-    
+  pub fn claim_note(&mut self, note: Note) -> MappedRef<MutSetRef<ChordContent>, Note> {
     self.content.retain(|item| match item {
       ChordContent::Note(old_note) => {
         note.pitch != old_note.pitch || note.duration != old_note.duration || note.accidental != old_note.accidental
       }
     });
-    self.content.push(ChordContent::Note(note));
-    match self.content.last_mut() {
-      Some(ChordContent::Note(note)) => note,
-      _ => unsafe { core::hint::unreachable_unchecked() },
-    }
+    let note = ChordContent::Note(note);
+    self.content.insert(note.clone());
+    Self::map_ref_note(self.content.get_mut(&note).unwrap())
   }
 
   #[must_use]
@@ -77,13 +78,10 @@ impl Chord {
 
   #[must_use]
   pub fn get_note_mut(&mut self, id: usize) -> Option<MappedRef<MutSetRef<ChordContent>, Note>> {
-    self.content.iter().find_map(|item| match item {
-      ChordContent::Note(note) if note.get_id() == id => Some(note),
-      ChordContent::Note(_) => None,
-    });
-
-
-    ()
+    let note = self.content.iter().find(|v| match v {
+      ChordContent::Note(note) => note.get_id() == id,
+    })?.clone();
+    Some(Self::map_ref_note(self.content.get_mut(&note).unwrap()))
   }
 
   #[must_use]
@@ -131,12 +129,8 @@ impl Chord {
     self
   }
 
-  pub fn iter(&self) -> Iter<'_, ChordContent> {
+  pub fn iter(&self) -> alloc::collections::btree_set::Iter<ChordContent> {
     self.content.iter()
-  }
-
-  pub fn iter_mut(&mut self) -> IterMut<'_, ChordContent> {
-    self.content.iter_mut()
   }
 
   pub fn iter_modifications(&self) -> Iter<'_, ChordModification> {
@@ -174,7 +168,7 @@ impl Chord {
 
 impl IntoIterator for Chord {
   type Item = ChordContent;
-  type IntoIter = alloc::vec::IntoIter<Self::Item>;
+  type IntoIter = alloc::collections::btree_set::IntoIter<Self::Item>;
   fn into_iter(self) -> Self::IntoIter {
     self.content.into_iter()
   }
@@ -182,7 +176,7 @@ impl IntoIterator for Chord {
 
 impl<'a> IntoIterator for &'a Chord {
   type Item = &'a ChordContent;
-  type IntoIter = Iter<'a, ChordContent>;
+  type IntoIter = alloc::collections::btree_set::Iter<'a, ChordContent>;
   fn into_iter(self) -> Self::IntoIter {
     self.iter()
   }
