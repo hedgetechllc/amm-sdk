@@ -1,4 +1,4 @@
-use super::Convert;
+use super::Load;
 use crate::Composition;
 use alloc::string::String;
 use midly::Smf;
@@ -26,7 +26,7 @@ impl MidiConverter {
   }
 }
 
-impl Convert for MidiConverter {
+impl Load for MidiConverter {
   fn load(path: &str) -> Result<Composition, String> {
     let data = fs::read(path).map_err(|err| err.to_string())?;
     MidiConverter::load_from_midi(&data)
@@ -35,16 +35,4 @@ impl Convert for MidiConverter {
   fn load_data(data: &[u8]) -> Result<Composition, String> {
     MidiConverter::load_from_midi(data)
   }
-
-  fn save(_path: &str, _composition: &Composition) -> Result<usize, String> {
-    todo!(); // TODO: Implement
-  }
-}
-
-#[cfg(test)]
-mod test {
-  //use super::*;
-
-  #[test]
-  fn test_midi_whatever() {}
 }

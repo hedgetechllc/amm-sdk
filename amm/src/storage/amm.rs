@@ -1,4 +1,4 @@
-use super::Convert;
+use super::{Load, Store};
 use crate::Composition;
 use alloc::string::String;
 use amm_internal::{JsonDeserializer, JsonSerializer};
@@ -17,7 +17,7 @@ impl AmmStorage {
   }
 }
 
-impl Convert for AmmStorage {
+impl Load for AmmStorage {
   fn load(path: &str) -> Result<Composition, String> {
     let data = fs::read(path).map_err(|err| err.to_string())?;
     AmmStorage::load_from_amm(&data)
@@ -26,7 +26,9 @@ impl Convert for AmmStorage {
   fn load_data(data: &[u8]) -> Result<Composition, String> {
     AmmStorage::load_from_amm(data)
   }
+}
 
+impl Store for AmmStorage {
   fn save(path: &str, composition: &Composition) -> Result<usize, String> {
     let amm = AmmStorage::save_to_amm(composition);
     fs::write(path, amm.as_bytes()).map_err(|err| err.to_string())?;

@@ -1,4 +1,4 @@
-use super::Convert;
+use super::Load;
 use crate::{
   Accidental, Chord, ChordContent, ChordModification, ChordModificationType, Clef, ClefSymbol, ClefType, Composition,
   DirectionType, Duration, DurationType, Dynamic, HandbellTechnique, Key, KeyMode, Note, NoteModification,
@@ -2160,13 +2160,9 @@ impl MusicXmlConverter {
 
     Ok(composition)
   }
-
-  fn save_to_musicxml(_composition: &Composition) -> Result<String, String> {
-    todo!() // TODO: Implement
-  }
 }
 
-impl Convert for MusicXmlConverter {
+impl Load for MusicXmlConverter {
   fn load(path: &str) -> Result<Composition, String> {
     let score = musicxml::read_score_partwise(path)?;
     MusicXmlConverter::load_from_musicxml(&score)
@@ -2177,11 +2173,5 @@ impl Convert for MusicXmlConverter {
     let score = musicxml::parser::parse_from_xml_str(data).map_err(|err| err.to_string())?;
     MusicXmlConverter::load_from_musicxml(&score)
     // TODO: "Update MusicXML parser library to parse from raw data so we can do the partwise conversion if necessary"
-  }
-
-  fn save(path: &str, composition: &Composition) -> Result<usize, String> {
-    let musicxml = MusicXmlConverter::save_to_musicxml(composition).map_err(|err| err.to_string())?;
-    std::fs::write(path, musicxml.as_bytes()).map_err(|err| err.to_string())?;
-    Ok(musicxml.as_bytes().len())
   }
 }

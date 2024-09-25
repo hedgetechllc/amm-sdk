@@ -9,9 +9,12 @@ mod amm;
 mod midi;
 mod musicxml;
 
-pub(crate) trait Convert {
+pub(crate) trait Load {
   fn load(path: &str) -> Result<Composition, String>;
   fn load_data(data: &[u8]) -> Result<Composition, String>;
+}
+
+pub(crate) trait Store {
   fn save(path: &str, composition: &Composition) -> Result<usize, String>;
 }
 
@@ -55,8 +58,8 @@ impl Storage {
   pub fn save(&self, path: &str, composition: &Composition) -> Result<usize, String> {
     match self {
       Self::AMM => AmmStorage::save(path, composition),
-      Self::MusicXML => MusicXmlConverter::save(path, composition),
-      Self::MIDI => MidiConverter::save(path, composition),
+      Self::MusicXML => Err(String::from("Cannot write to MusicXML")),
+      Self::MIDI => Err(String::from("Cannot write to MIDI")),
     }
   }
 }

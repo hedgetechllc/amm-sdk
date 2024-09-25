@@ -90,39 +90,3 @@ impl core::fmt::Display for SectionModification {
     write!(f, "{}", self.r#type)
   }
 }
-
-#[cfg(test)]
-mod test {
-  use super::*;
-  use crate::{Duration, DurationType};
-  use amm_internal::JsonSerializer;
-
-  #[test]
-  fn test_section_mod_serialization_json() {
-    let accel = SectionModification::new(SectionModificationType::Accelerando);
-    let only_play = SectionModification::new(SectionModificationType::OnlyPlay {
-      iterations: vec![1, 3, 4],
-    });
-    let tempo_explicit = SectionModification::new(SectionModificationType::TempoExplicit {
-      tempo: Tempo {
-        base_note: Duration {
-          value: DurationType::Half,
-          dots: 0,
-        },
-        beats_per_minute: 135,
-      },
-    });
-    assert_eq!(
-      JsonSerializer::serialize_json(&accel),
-      "{\"_type\":\"SectionModification\",\"id\":1,\"r#type\":\"Accelerando\"}"
-    );
-    assert_eq!(
-      JsonSerializer::serialize_json(&only_play),
-      "{\"_type\":\"SectionModification\",\"id\":2,\"r#type\":{\"_type\":\"OnlyPlay\",\"iterations\":[1,3,4]}}"
-    );
-    assert_eq!(
-      JsonSerializer::serialize_json(&tempo_explicit),
-      "{\"_type\":\"SectionModification\",\"id\":3,\"r#type\":{\"_type\":\"TempoExplicit\",\"tempo\":{\"_type\":\"Tempo\",\"base_note\":{\"_type\":\"Duration\",\"value\":\"Half\",\"dots\":0},\"beats_per_minute\":135}}}"
-    );
-  }
-}

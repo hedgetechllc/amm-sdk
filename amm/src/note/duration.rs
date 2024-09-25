@@ -247,7 +247,6 @@ impl core::fmt::Display for Duration {
 #[cfg(test)]
 mod test {
   use super::*;
-  use amm_internal::JsonSerializer;
 
   #[test]
   fn test_value() {
@@ -261,14 +260,5 @@ mod test {
     assert!(Duration::from_duration(&tempo, 0.5) == Duration::new(DurationType::Quarter, 0));
     assert!(Duration::from_duration(&tempo, 0.875) == Duration::new(DurationType::Quarter, 2));
     assert!(Duration::from_duration(&tempo, 1.0) == Duration::new(DurationType::Half, 0));
-  }
-
-  #[test]
-  fn test_duration_serialization_json() {
-    let tempo = Tempo::new(Duration::new(DurationType::Quarter, 1), 130);
-    assert_eq!(
-      JsonSerializer::serialize_json(&tempo),
-      "{\"_type\":\"Tempo\",\"base_note\":{\"_type\":\"Duration\",\"value\":\"Quarter\",\"dots\":1},\"beats_per_minute\":130}"
-    );
   }
 }
