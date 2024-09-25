@@ -87,8 +87,8 @@ impl core::fmt::Display for NoteDetails {
       if self.pitch.is_rest() { "" } else { " " },
       self.duration,
       if self.voice.is_some() { " Voice=" } else { "" },
-      if self.voice.is_some() {
-        unsafe { self.voice.clone().unwrap_unchecked() }
+      if let Some(voice) = &self.voice {
+        voice.clone()
       } else {
         String::new()
       },
@@ -1427,7 +1427,7 @@ impl MusicXmlConverter {
     let item = NoteDetails {
       pitch,
       duration,
-      accidental: accidental.unwrap_or(Accidental::None),
+      accidental: accidental.unwrap_or_default(),
       voice,
       arpeggiated: arpeggiate,
       non_arpeggiated: non_arpeggiate,
@@ -1857,22 +1857,12 @@ impl MusicXmlConverter {
                 .add_staff(&staff_name);
             }
           }
-          println!(
-            "\nTime Slice: {time_slice_idx} -> {}",
-            master_section
-              .get_section(current_section_idx)
-              .unwrap()
-              .get_staff_by_name(&staff_name)
-              .unwrap()
-          );
-          println!("Delayed: {:?}, {:?}", delayed_phrase_starts, delayed_phrase_ends);
 
           // Parse notes and chords and separate them by voice
           let items_by_voice = Self::get_musical_elements_by_voice(time_slice.notes, time_slice.chord_modification);
 
           // Handle global phrase modification endings
           for item in time_slice.phrase_modification_end {
-            println!("Phrase End: {:?}", item);
             if local_phrases.is_empty() {
               multivoice_phrases.clear();
               global_phrases.pop();
@@ -1887,7 +1877,6 @@ impl MusicXmlConverter {
             multivoice_phrases.clear();
             global_phrases.clear();
             for item in time_slice.direction {
-              println!("New Direction: {:?}", item);
               master_section
                 .get_section_mut(current_section_idx)
                 .unwrap()
@@ -1900,7 +1889,6 @@ impl MusicXmlConverter {
           // Handle new global phrase modifications
           for item in time_slice.phrase_modification_start {
             if local_phrases.is_empty() {
-              println!("New Phrase: {:?}", item);
               multivoice_phrases.clear();
               let new_phrase = if let Some(&phrase_id) = global_phrases.last() {
                 master_section.get_phrase_mut(phrase_id).unwrap().add_phrase()
@@ -1915,7 +1903,6 @@ impl MusicXmlConverter {
               new_phrase.add_modification(item.modification);
               global_phrases.push(new_phrase.get_id());
             } else {
-              println!("New Phrase (Delayed): {:?}", item);
               delayed_phrase_starts.push((item.number, item.modification));
             }
           }
@@ -2012,7 +1999,6 @@ impl MusicXmlConverter {
                 } else if let Some(chord) = voice_items.chord {
                   new_voice.claim_chord(chord);
                 }
-                println!("1: Inserting {}", new_voice.get_id());
                 multivoice_phrases.insert(voice.clone(), new_voice.get_id());
               }
             }
@@ -2037,15 +2023,27 @@ impl MusicXmlConverter {
                     local_phrases.insert(voice.clone(), Vec::from([new_phrase.get_id()]));
                   }
                 } else if let Some(note) = voice_items.note {
-                  println!("Moving {phrase_id}");
-                  master_section.get_phrase_mut(phrase_id).unwrap().claim_note(note);
+                  if let Some(local_phrase_ids) = local_phrases.get_mut(&voice) {
+                    master_section
+                      .get_phrase_mut(*local_phrase_ids.last().unwrap())
+                      .unwrap()
+                      .claim_note(note);
+                  } else {
+                    master_section.get_phrase_mut(phrase_id).unwrap().claim_note(note);
+                  }
                 } else if let Some(chord) = voice_items.chord {
-                  master_section.get_phrase_mut(phrase_id).unwrap().claim_chord(chord);
+                  if let Some(local_phrase_ids) = local_phrases.get_mut(&voice) {
+                    master_section
+                      .get_phrase_mut(*local_phrase_ids.last().unwrap())
+                      .unwrap()
+                      .claim_chord(chord);
+                  } else {
+                    master_section.get_phrase_mut(phrase_id).unwrap().claim_chord(chord);
+                  }
                 }
               }
             }
           } else {
-            println!("5: Clear");
             local_phrases.clear();
             multivoice_phrases.clear();
             if items_by_voice.len() <= 1 {
@@ -2125,7 +2123,6 @@ impl MusicXmlConverter {
                 } else if let Some(chord) = voice_items.chord {
                   new_voice.claim_chord(chord);
                 }
-                println!("2: Inserting {}", new_voice.get_id());
                 multivoice_phrases.insert(voice.clone(), new_voice.get_id());
               }
             }
@@ -2145,7 +2142,13 @@ impl MusicXmlConverter {
             for item in to_remove {
               local_phrases.remove(&item);
             }
-            // TODO: Delayed global phrase ends
+
+            // Handle delayed global phrase modification endings
+            if local_phrases.is_empty() && !delayed_phrase_ends.is_empty() {
+              delayed_phrase_ends.clear();
+              multivoice_phrases.clear();
+              global_phrases.pop();
+            }
             // TODO: Delayed global phrase starts
             // TODO: Delayed legatos
           }
