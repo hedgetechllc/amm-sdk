@@ -4,7 +4,7 @@ use crate::structure::place_and_merge_part_timeslice;
 use crate::structure::{Chord, MultiVoice, Part, PartTimeslice, Phrase, Section, Staff};
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize};
-use core::slice::Iter;
+use core::slice::{Iter, IterMut};
 
 #[derive(Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub struct Composition {
@@ -334,6 +334,10 @@ impl Composition {
     self.parts.iter()
   }
 
+  pub fn iter_mut(&mut self) -> IterMut<'_, Part> {
+    self.parts.iter_mut()
+  }
+
   #[must_use]
   pub fn iter_timeslices(&self) -> impl IntoIterator<Item = PartTimeslice> {
     // Return PartTimeslices where each slice contains a map of parts and their current timeslice
@@ -363,6 +367,14 @@ impl<'a> IntoIterator for &'a Composition {
   type IntoIter = Iter<'a, Part>;
   fn into_iter(self) -> Self::IntoIter {
     self.iter()
+  }
+}
+
+impl<'a> IntoIterator for &'a mut Composition {
+  type Item = &'a mut Part;
+  type IntoIter = IterMut<'a, Part>;
+  fn into_iter(self) -> Self::IntoIter {
+    self.iter_mut()
   }
 }
 

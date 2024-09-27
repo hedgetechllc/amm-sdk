@@ -38,14 +38,11 @@ impl Staff {
       id: generate_id(),
       name: self.name.clone(),
       content: self
-        .content
         .iter()
         .map(|item| match item {
-          StaffContent::Note(note) => StaffContent::Note(note.clone()),
-          StaffContent::Chord(chord) => StaffContent::Chord(chord.clone()),
           StaffContent::Phrase(phrase) => StaffContent::Phrase(phrase.flatten(false)),
           StaffContent::MultiVoice(multivoice) => StaffContent::Phrase(multivoice.flatten()),
-          StaffContent::Direction(direction) => StaffContent::Direction(direction.clone()),
+          _ => item.clone(),
         })
         .collect(),
     }
@@ -158,7 +155,7 @@ impl Staff {
     self
       .content
       .insert(index, StaffContent::Note(Note::new(pitch, duration, accidental)));
-    match self.content.last_mut() {
+    match self.content.get_mut(index) {
       Some(StaffContent::Note(note)) => note,
       _ => unsafe { core::hint::unreachable_unchecked() },
     }
@@ -166,7 +163,7 @@ impl Staff {
 
   pub fn insert_chord(&mut self, index: usize) -> &mut Chord {
     self.content.insert(index, StaffContent::Chord(Chord::new()));
-    match self.content.last_mut() {
+    match self.content.get_mut(index) {
       Some(StaffContent::Chord(chord)) => chord,
       _ => unsafe { core::hint::unreachable_unchecked() },
     }
@@ -174,7 +171,7 @@ impl Staff {
 
   pub fn insert_phrase(&mut self, index: usize) -> &mut Phrase {
     self.content.insert(index, StaffContent::Phrase(Phrase::new()));
-    match self.content.last_mut() {
+    match self.content.get_mut(index) {
       Some(StaffContent::Phrase(phrase)) => phrase,
       _ => unsafe { core::hint::unreachable_unchecked() },
     }
@@ -182,7 +179,7 @@ impl Staff {
 
   pub fn insert_multivoice(&mut self, index: usize) -> &mut MultiVoice {
     self.content.insert(index, StaffContent::MultiVoice(MultiVoice::new()));
-    match self.content.last_mut() {
+    match self.content.get_mut(index) {
       Some(StaffContent::MultiVoice(multivoice)) => multivoice,
       _ => unsafe { core::hint::unreachable_unchecked() },
     }
@@ -192,7 +189,7 @@ impl Staff {
     self
       .content
       .insert(index, StaffContent::Direction(Direction::new(direction)));
-    match self.content.last_mut() {
+    match self.content.get_mut(index) {
       Some(StaffContent::Direction(direction)) => direction,
       _ => unsafe { core::hint::unreachable_unchecked() },
     }
@@ -200,7 +197,7 @@ impl Staff {
 
   #[must_use]
   pub fn get_note(&self, id: usize) -> Option<&Note> {
-    self.content.iter().find_map(|item| match item {
+    self.iter().find_map(|item| match item {
       StaffContent::Note(note) if note.get_id() == id => Some(note),
       StaffContent::Chord(chord) => chord.get_note(id),
       StaffContent::Phrase(phrase) => phrase.get_note(id),
@@ -211,7 +208,7 @@ impl Staff {
 
   #[must_use]
   pub fn get_note_mut(&mut self, id: usize) -> Option<&mut Note> {
-    self.content.iter_mut().find_map(|item| match item {
+    self.iter_mut().find_map(|item| match item {
       StaffContent::Note(note) if note.get_id() == id => Some(note),
       StaffContent::Chord(chord) => chord.get_note_mut(id),
       StaffContent::Phrase(phrase) => phrase.get_note_mut(id),
@@ -222,7 +219,7 @@ impl Staff {
 
   #[must_use]
   pub fn get_chord(&self, id: usize) -> Option<&Chord> {
-    self.content.iter().find_map(|item| match item {
+    self.iter().find_map(|item| match item {
       StaffContent::Chord(chord) if chord.get_id() == id => Some(chord),
       StaffContent::Phrase(phrase) => phrase.get_chord(id),
       StaffContent::MultiVoice(multivoice) => multivoice.get_chord(id),
@@ -232,7 +229,7 @@ impl Staff {
 
   #[must_use]
   pub fn get_chord_mut(&mut self, id: usize) -> Option<&mut Chord> {
-    self.content.iter_mut().find_map(|item| match item {
+    self.iter_mut().find_map(|item| match item {
       StaffContent::Chord(chord) if chord.get_id() == id => Some(chord),
       StaffContent::Phrase(phrase) => phrase.get_chord_mut(id),
       StaffContent::MultiVoice(multivoice) => multivoice.get_chord_mut(id),
@@ -242,8 +239,7 @@ impl Staff {
 
   #[must_use]
   pub fn get_phrase(&self, id: usize) -> Option<&Phrase> {
-    self.content.iter().find_map(|item| match item {
-      StaffContent::Phrase(phrase) if phrase.get_id() == id => Some(phrase),
+    self.iter().find_map(|item| match item {
       StaffContent::Phrase(phrase) => phrase.get_phrase(id),
       StaffContent::MultiVoice(multivoice) => multivoice.get_phrase(id),
       _ => None,
@@ -252,14 +248,8 @@ impl Staff {
 
   #[must_use]
   pub fn get_phrase_mut(&mut self, id: usize) -> Option<&mut Phrase> {
-    self.content.iter_mut().find_map(|item| match item {
-      StaffContent::Phrase(phrase) => {
-        if phrase.get_id() == id {
-          Some(phrase)
-        } else {
-          phrase.get_phrase_mut(id)
-        }
-      }
+    self.iter_mut().find_map(|item| match item {
+      StaffContent::Phrase(phrase) => phrase.get_phrase_mut(id),
       StaffContent::MultiVoice(multivoice) => multivoice.get_phrase_mut(id),
       _ => None,
     })
@@ -267,8 +257,7 @@ impl Staff {
 
   #[must_use]
   pub fn get_multivoice(&self, id: usize) -> Option<&MultiVoice> {
-    self.content.iter().find_map(|item| match item {
-      StaffContent::MultiVoice(multivoice) if multivoice.get_id() == id => Some(multivoice),
+    self.iter().find_map(|item| match item {
       StaffContent::MultiVoice(multivoice) => multivoice.get_multivoice(id),
       _ => None,
     })
@@ -276,21 +265,15 @@ impl Staff {
 
   #[must_use]
   pub fn get_multivoice_mut(&mut self, id: usize) -> Option<&mut MultiVoice> {
-    self.content.iter_mut().find_map(|item| match item {
-      StaffContent::MultiVoice(multivoice) => {
-        if multivoice.get_id() == id {
-          Some(multivoice)
-        } else {
-          multivoice.get_multivoice_mut(id)
-        }
-      }
+    self.iter_mut().find_map(|item| match item {
+      StaffContent::MultiVoice(multivoice) => multivoice.get_multivoice_mut(id),
       _ => None,
     })
   }
 
   #[must_use]
   pub fn get_direction(&self, id: usize) -> Option<&Direction> {
-    self.content.iter().find_map(|item| match item {
+    self.iter().find_map(|item| match item {
       StaffContent::Direction(direction) if direction.get_id() == id => Some(direction),
       _ => None,
     })
@@ -298,7 +281,7 @@ impl Staff {
 
   #[must_use]
   pub fn get_direction_mut(&mut self, id: usize) -> Option<&mut Direction> {
-    self.content.iter_mut().find_map(|item| match item {
+    self.iter_mut().find_map(|item| match item {
       StaffContent::Direction(direction) if direction.get_id() == id => Some(direction),
       _ => None,
     })
@@ -306,7 +289,7 @@ impl Staff {
 
   #[must_use]
   pub fn get_index_of_item(&self, id: usize) -> Option<usize> {
-    self.content.iter().position(|item| match item {
+    self.iter().position(|item| match item {
       StaffContent::Note(note) => note.get_id() == id,
       StaffContent::Chord(chord) => chord.get_id() == id,
       StaffContent::Phrase(phrase) => phrase.get_id() == id,
@@ -318,7 +301,6 @@ impl Staff {
   #[must_use]
   pub fn get_beats(&self, beat_base: &Duration) -> f64 {
     self
-      .content
       .iter()
       .map(|content| match &content {
         StaffContent::Note(note) => note.get_beats(beat_base, None),
@@ -343,7 +325,7 @@ impl Staff {
       StaffContent::MultiVoice(multivoice) => multivoice.get_id() != id,
       StaffContent::Direction(direction) => direction.get_id() != id,
     });
-    self.content.iter_mut().for_each(|item| match item {
+    self.iter_mut().for_each(|item| match item {
       StaffContent::Chord(chord) => {
         chord.remove_item(id);
       }
@@ -361,13 +343,11 @@ impl Staff {
   #[must_use]
   pub fn num_timeslices(&self) -> usize {
     self
-      .content
       .iter()
       .map(|item| match item {
-        StaffContent::Note(_) | StaffContent::Chord(_) => 1,
         StaffContent::Phrase(phrase) => phrase.num_timeslices(),
         StaffContent::MultiVoice(multivoice) => multivoice.num_timeslices(),
-        StaffContent::Direction(_) => 0,
+        _ => 1,
       })
       .sum()
   }
@@ -383,7 +363,7 @@ impl Staff {
   #[must_use]
   pub fn iter_timeslices(&self) -> Vec<Timeslice> {
     let mut timeslices = Vec::new();
-    self.content.iter().for_each(|item| match item {
+    self.iter().for_each(|item| match item {
       StaffContent::Note(note) => {
         let mut timeslice = Timeslice::new();
         timeslice.add_note(note.clone());
@@ -424,6 +404,14 @@ impl<'a> IntoIterator for &'a Staff {
   }
 }
 
+impl<'a> IntoIterator for &'a mut Staff {
+  type Item = &'a mut StaffContent;
+  type IntoIter = IterMut<'a, StaffContent>;
+  fn into_iter(self) -> Self::IntoIter {
+    self.iter_mut()
+  }
+}
+
 impl Clone for Staff {
   fn clone(&self) -> Self {
     Self {
@@ -444,7 +432,6 @@ impl PartialEq for Staff {
 impl core::fmt::Display for Staff {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     let items = self
-      .content
       .iter()
       .map(|item| match item {
         StaffContent::Note(note) => note.to_string(),

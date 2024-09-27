@@ -839,7 +839,7 @@ impl MusicXmlConverter {
           .attributes
           .number
           .split(&[',', ' '][..])
-          .map(|item| item.parse().unwrap())
+          .map(|item| item.parse::<u8>().unwrap() - 1)
           .collect(),
       );
       for slice in time_slice.values_mut() {
@@ -850,7 +850,7 @@ impl MusicXmlConverter {
       let item = (
         repeat.attributes.direction == musicxml::datatypes::BackwardForward::Forward,
         #[allow(clippy::cast_possible_truncation)]
-        repeat.attributes.times.as_ref().map_or(1, |item| **item as u8),
+        repeat.attributes.times.as_ref().map_or(1, |item| (**item as u8) - 1),
       );
       for slice in time_slice.values_mut() {
         slice[cursor].repeat.push(item);

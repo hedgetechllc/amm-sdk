@@ -30,16 +30,14 @@ impl Note {
   #[must_use]
   pub fn get_modification(&self, id: usize) -> Option<&NoteModification> {
     self
-      .modifications
-      .iter()
+      .iter_modifications()
       .find(|modification| modification.get_id() == id)
   }
 
   #[must_use]
   pub fn get_modification_mut(&mut self, id: usize) -> Option<&mut NoteModification> {
     self
-      .modifications
-      .iter_mut()
+      .iter_modifications_mut()
       .find(|modification| modification.get_id() == id)
   }
 

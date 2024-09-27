@@ -35,39 +35,23 @@ impl Phrase {
   pub fn flatten(&self, fully: bool) -> Self {
     // Removes all multivoice layers (flattens multivoices into a single phrase)
     // The "fully" parameter determines whether sub-phrases will also be flattened into a single phrase of notes and chords
-    let mut flat_phrase;
+    let mut flat_phrase = Self {
+      id: generate_id(),
+      content: Vec::new(),
+      modifications: self.modifications.clone(),
+    };
     if fully {
-      flat_phrase = Self {
-        id: generate_id(),
-        content: Vec::new(),
-        modifications: self.modifications.clone(),
-      };
-      self.content.iter().for_each(|item| match item {
-        PhraseContent::Phrase(phrase) => phrase
-          .flatten(true)
-          .iter()
-          .for_each(|item| flat_phrase.content.push(item.clone())),
-        PhraseContent::MultiVoice(multivoice) => multivoice
-          .flatten()
-          .iter()
-          .for_each(|item| flat_phrase.content.push(item.clone())),
+      self.iter().for_each(|item| match item {
+        PhraseContent::Phrase(phrase) => flat_phrase.content.append(&mut phrase.flatten(true).content),
+        PhraseContent::MultiVoice(multivoice) => flat_phrase.content.append(&mut multivoice.flatten().content),
         _ => flat_phrase.content.push(item.clone()),
       });
     } else {
-      flat_phrase = Self {
-        id: generate_id(),
-        content: self
-          .content
-          .iter()
-          .map(|item| match item {
-            PhraseContent::Note(note) => PhraseContent::Note(note.clone()),
-            PhraseContent::Chord(chord) => PhraseContent::Chord(chord.clone()),
-            PhraseContent::Phrase(phrase) => PhraseContent::Phrase(phrase.flatten(false)),
-            PhraseContent::MultiVoice(multivoice) => PhraseContent::Phrase(multivoice.flatten()),
-          })
-          .collect(),
-        modifications: self.modifications.clone(),
-      };
+      flat_phrase.content.extend(self.content.iter().map(|item| match item {
+        PhraseContent::Phrase(phrase) => PhraseContent::Phrase(phrase.flatten(false)),
+        PhraseContent::MultiVoice(multivoice) => PhraseContent::Phrase(multivoice.flatten()),
+        _ => item.clone(),
+      }));
     }
     flat_phrase
   }
@@ -159,7 +143,7 @@ impl Phrase {
     self
       .content
       .insert(index, PhraseContent::Note(Note::new(pitch, duration, accidental)));
-    match self.content.last_mut() {
+    match self.content.get_mut(index) {
       Some(PhraseContent::Note(note)) => note,
       _ => unsafe { core::hint::unreachable_unchecked() },
     }
@@ -167,7 +151,7 @@ impl Phrase {
 
   pub fn insert_chord(&mut self, index: usize) -> &mut Chord {
     self.content.insert(index, PhraseContent::Chord(Chord::new()));
-    match self.content.last_mut() {
+    match self.content.get_mut(index) {
       Some(PhraseContent::Chord(chord)) => chord,
       _ => unsafe { core::hint::unreachable_unchecked() },
     }
@@ -175,7 +159,7 @@ impl Phrase {
 
   pub fn insert_phrase(&mut self, index: usize) -> &mut Phrase {
     self.content.insert(index, PhraseContent::Phrase(Phrase::new()));
-    match self.content.last_mut() {
+    match self.content.get_mut(index) {
       Some(PhraseContent::Phrase(phrase)) => phrase,
       _ => unsafe { core::hint::unreachable_unchecked() },
     }
@@ -183,7 +167,7 @@ impl Phrase {
 
   pub fn insert_multivoice(&mut self, index: usize) -> &mut MultiVoice {
     self.content.insert(index, PhraseContent::MultiVoice(MultiVoice::new()));
-    match self.content.last_mut() {
+    match self.content.get_mut(index) {
       Some(PhraseContent::MultiVoice(multivoice)) => multivoice,
       _ => unsafe { core::hint::unreachable_unchecked() },
     }
@@ -191,7 +175,7 @@ impl Phrase {
 
   #[must_use]
   pub fn get_note(&self, id: usize) -> Option<&Note> {
-    self.content.iter().find_map(|item| match item {
+    self.iter().find_map(|item| match item {
       PhraseContent::Note(note) if note.get_id() == id => Some(note),
       PhraseContent::Chord(chord) => chord.get_note(id),
       PhraseContent::Phrase(phrase) => phrase.get_note(id),
@@ -202,7 +186,7 @@ impl Phrase {
 
   #[must_use]
   pub fn get_note_mut(&mut self, id: usize) -> Option<&mut Note> {
-    self.content.iter_mut().find_map(|item| match item {
+    self.iter_mut().find_map(|item| match item {
       PhraseContent::Note(note) if note.get_id() == id => Some(note),
       PhraseContent::Chord(chord) => chord.get_note_mut(id),
       PhraseContent::Phrase(phrase) => phrase.get_note_mut(id),
@@ -213,7 +197,7 @@ impl Phrase {
 
   #[must_use]
   pub fn get_chord(&self, id: usize) -> Option<&Chord> {
-    self.content.iter().find_map(|item| match item {
+    self.iter().find_map(|item| match item {
       PhraseContent::Chord(chord) if chord.get_id() == id => Some(chord),
       PhraseContent::Phrase(phrase) => phrase.get_chord(id),
       PhraseContent::MultiVoice(multivoice) => multivoice.get_chord(id),
@@ -223,7 +207,7 @@ impl Phrase {
 
   #[must_use]
   pub fn get_chord_mut(&mut self, id: usize) -> Option<&mut Chord> {
-    self.content.iter_mut().find_map(|item| match item {
+    self.iter_mut().find_map(|item| match item {
       PhraseContent::Chord(chord) if chord.get_id() == id => Some(chord),
       PhraseContent::Phrase(phrase) => phrase.get_chord_mut(id),
       PhraseContent::MultiVoice(multivoice) => multivoice.get_chord_mut(id),
@@ -236,7 +220,7 @@ impl Phrase {
     if self.id == id {
       Some(self)
     } else {
-      self.content.iter().find_map(|item| match item {
+      self.iter().find_map(|item| match item {
         PhraseContent::Phrase(phrase) => phrase.get_phrase(id),
         PhraseContent::MultiVoice(multivoice) => multivoice.get_phrase(id),
         _ => None,
@@ -249,7 +233,7 @@ impl Phrase {
     if self.id == id {
       Some(self)
     } else {
-      self.content.iter_mut().find_map(|item| match item {
+      self.iter_mut().find_map(|item| match item {
         PhraseContent::Phrase(phrase) => phrase.get_phrase_mut(id),
         PhraseContent::MultiVoice(multivoice) => multivoice.get_phrase_mut(id),
         _ => None,
@@ -259,8 +243,7 @@ impl Phrase {
 
   #[must_use]
   pub fn get_multivoice(&self, id: usize) -> Option<&MultiVoice> {
-    self.content.iter().find_map(|item| match item {
-      PhraseContent::MultiVoice(multivoice) if multivoice.get_id() == id => Some(multivoice),
+    self.iter().find_map(|item| match item {
       PhraseContent::MultiVoice(multivoice) => multivoice.get_multivoice(id),
       PhraseContent::Phrase(phrase) => phrase.get_multivoice(id),
       _ => None,
@@ -269,14 +252,8 @@ impl Phrase {
 
   #[must_use]
   pub fn get_multivoice_mut(&mut self, id: usize) -> Option<&mut MultiVoice> {
-    self.content.iter_mut().find_map(|item| match item {
-      PhraseContent::MultiVoice(multivoice) => {
-        if multivoice.get_id() == id {
-          Some(multivoice)
-        } else {
-          multivoice.get_multivoice_mut(id)
-        }
-      }
+    self.iter_mut().find_map(|item| match item {
+      PhraseContent::MultiVoice(multivoice) => multivoice.get_multivoice_mut(id),
       PhraseContent::Phrase(phrase) => phrase.get_multivoice_mut(id),
       _ => None,
     })
@@ -285,16 +262,14 @@ impl Phrase {
   #[must_use]
   pub fn get_modification(&self, id: usize) -> Option<&PhraseModification> {
     self
-      .modifications
-      .iter()
+      .iter_modifications()
       .find(|modification| modification.get_id() == id)
   }
 
   #[must_use]
   pub fn get_modification_mut(&mut self, id: usize) -> Option<&mut PhraseModification> {
     self
-      .modifications
-      .iter_mut()
+      .iter_modifications_mut()
       .find(|modification| modification.get_id() == id)
   }
 
@@ -311,7 +286,7 @@ impl Phrase {
   #[must_use]
   pub fn get_beats(&self, beat_base: &Duration, tuplet_ratio: Option<f64>) -> f64 {
     // Determine if this phrase creates a tuplet
-    let new_tuplet_ratio = self.modifications.iter().find_map(|item| match item.r#type {
+    let new_tuplet_ratio = self.iter_modifications().find_map(|item| match item.r#type {
       PhraseModificationType::Tuplet { num_beats, into_beats } => Some(f64::from(into_beats) / f64::from(num_beats)),
       _ => None,
     });
@@ -325,7 +300,6 @@ impl Phrase {
 
     // Calculate the sum of all phrase component durations
     self
-      .content
       .iter()
       .map(|content| match &content {
         PhraseContent::Note(note) => note.get_beats(beat_base, tuplet_ratio),
@@ -348,7 +322,7 @@ impl Phrase {
       PhraseContent::Phrase(phrase) => phrase.get_id() != id,
       PhraseContent::MultiVoice(multivoice) => multivoice.get_id() != id,
     });
-    self.content.iter_mut().for_each(|item| match item {
+    self.iter_mut().for_each(|item| match item {
       PhraseContent::Chord(chord) => {
         chord.remove_item(id);
       }
@@ -376,7 +350,6 @@ impl Phrase {
   #[must_use]
   pub fn num_timeslices(&self) -> usize {
     self
-      .content
       .iter()
       .map(|item| match item {
         PhraseContent::Note(_) | PhraseContent::Chord(_) => 1,
@@ -396,7 +369,7 @@ impl Phrase {
     if !self.modifications.is_empty() {
       for content in &mut timeslice.content {
         let details = content.add_phrase_details(index, num_timeslices);
-        self.modifications.iter().for_each(|modification| {
+        self.iter_modifications().for_each(|modification| {
           details.modifications.push(modification.r#type);
         });
         if let Some(previous_timeslice) = timeslices.last_mut() {
@@ -434,7 +407,7 @@ impl Phrase {
     let mut index = 0;
     let mut timeslices = Vec::new();
     let num_timeslices = self.num_timeslices();
-    self.content.iter().for_each(|item| match item {
+    self.iter().for_each(|item| match item {
       PhraseContent::Note(note) => {
         let mut timeslice = Timeslice::new();
         timeslice.add_note(note.clone());
@@ -475,6 +448,14 @@ impl<'a> IntoIterator for &'a Phrase {
   }
 }
 
+impl<'a> IntoIterator for &'a mut Phrase {
+  type Item = &'a mut PhraseContent;
+  type IntoIter = IterMut<'a, PhraseContent>;
+  fn into_iter(self) -> Self::IntoIter {
+    self.iter_mut()
+  }
+}
+
 impl Clone for Phrase {
   fn clone(&self) -> Self {
     Self {
@@ -495,13 +476,11 @@ impl PartialEq for Phrase {
 impl core::fmt::Display for Phrase {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     let mods = self
-      .modifications
-      .iter()
+      .iter_modifications()
       .map(ToString::to_string)
       .collect::<Vec<String>>()
       .join(", ");
     let items = self
-      .content
       .iter()
       .map(|item| match item {
         PhraseContent::Note(note) => note.to_string(),

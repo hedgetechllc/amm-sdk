@@ -11,7 +11,7 @@ pub enum SectionModificationType {
   },
   Rallentando, // Gradual tempo reduction leading to context change
   Repeat {
-    num_times: u8,
+    num_times: u8, // Number of times to repeat the section (repeat 1 means play twice, repeat 2 means play 3x)
   },
   Ritardando, // Gradual tempo reduction leading to complete stop
   Ritenuto,   // Immediate tempo reduction

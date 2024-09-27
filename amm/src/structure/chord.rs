@@ -34,10 +34,8 @@ impl Chord {
   }
 
   pub fn add_note(&mut self, pitch: Pitch, duration: Duration, accidental: Option<Accidental>) -> &mut Note {
-    self.content.retain(|item| match item {
-      ChordContent::Note(note) => {
-        note.pitch != pitch || note.duration != duration || note.accidental != accidental.unwrap_or_default()
-      }
+    self.content.retain(|ChordContent::Note(note)| {
+      note.pitch != pitch || note.duration != duration || note.accidental != accidental.unwrap_or_default()
     });
     self
       .content
@@ -55,10 +53,8 @@ impl Chord {
   }
 
   pub fn claim_note(&mut self, note: Note) -> &mut Note {
-    self.content.retain(|item| match item {
-      ChordContent::Note(old_note) => {
-        note.pitch != old_note.pitch || note.duration != old_note.duration || note.accidental != old_note.accidental
-      }
+    self.content.retain(|ChordContent::Note(old_note)| {
+      note.pitch != old_note.pitch || note.duration != old_note.duration || note.accidental != old_note.accidental
     });
     self.content.push(ChordContent::Note(note));
     match self.content.last_mut() {
@@ -69,44 +65,37 @@ impl Chord {
 
   #[must_use]
   pub fn get_note(&self, id: usize) -> Option<&Note> {
-    self.content.iter().find_map(|item| match item {
-      ChordContent::Note(note) if note.get_id() == id => Some(note),
-      ChordContent::Note(_) => None,
-    })
+    self
+      .iter()
+      .find_map(|ChordContent::Note(note)| if note.get_id() == id { Some(note) } else { None })
   }
 
   #[must_use]
   pub fn get_note_mut(&mut self, id: usize) -> Option<&mut Note> {
-    self.content.iter_mut().find_map(|item| match item {
-      ChordContent::Note(note) if note.get_id() == id => Some(note),
-      ChordContent::Note(_) => None,
-    })
+    self
+      .iter_mut()
+      .find_map(|ChordContent::Note(note)| if note.get_id() == id { Some(note) } else { None })
   }
 
   #[must_use]
   pub fn get_modification(&self, id: usize) -> Option<&ChordModification> {
     self
-      .modifications
-      .iter()
+      .iter_modifications()
       .find(|modification| modification.get_id() == id)
   }
 
   #[must_use]
   pub fn get_modification_mut(&mut self, id: usize) -> Option<&mut ChordModification> {
     self
-      .modifications
-      .iter_mut()
+      .iter_modifications_mut()
       .find(|modification| modification.get_id() == id)
   }
 
   #[must_use]
   pub fn get_beats(&self, beat_base: &Duration, tuplet_ratio: Option<f64>) -> f64 {
     self
-      .content
       .iter()
-      .map(|content| match content {
-        ChordContent::Note(note) => note.get_beats(beat_base, tuplet_ratio),
-      })
+      .map(|ChordContent::Note(note)| note.get_beats(beat_base, tuplet_ratio))
       .reduce(f64::min)
       .unwrap_or_default()
   }
@@ -117,9 +106,7 @@ impl Chord {
   }
 
   pub fn remove_item(&mut self, id: usize) -> &mut Self {
-    self.content.retain(|item| match item {
-      ChordContent::Note(note) => note.get_id() != id,
-    });
+    self.content.retain(|ChordContent::Note(note)| note.get_id() != id);
     self
   }
 
@@ -148,22 +135,18 @@ impl Chord {
   pub fn to_timeslice(&self) -> Timeslice {
     let mut timeslice = Timeslice::new();
     timeslice.arpeggiated = self
-      .modifications
-      .iter()
+      .iter_modifications()
       .any(|modification| modification.r#type == ChordModificationType::Arpeggiate);
     let transferrable_modifications = self
-      .modifications
-      .iter()
+      .iter_modifications()
       .filter_map(|modification| NoteModification::from_chord_modification(&modification.r#type))
       .collect::<Vec<_>>();
-    self.content.iter().for_each(|item| match item {
-      ChordContent::Note(note) => {
-        let mut chord_note = note.clone();
-        for modification in &transferrable_modifications {
-          chord_note.add_modification(modification.r#type);
-        }
-        timeslice.add_note(chord_note);
+    self.iter().for_each(|ChordContent::Note(note)| {
+      let mut chord_note = note.clone();
+      for modification in &transferrable_modifications {
+        chord_note.add_modification(modification.r#type);
       }
+      timeslice.add_note(chord_note);
     });
     timeslice
   }
@@ -182,6 +165,14 @@ impl<'a> IntoIterator for &'a Chord {
   type IntoIter = Iter<'a, ChordContent>;
   fn into_iter(self) -> Self::IntoIter {
     self.iter()
+  }
+}
+
+impl<'a> IntoIterator for &'a mut Chord {
+  type Item = &'a mut ChordContent;
+  type IntoIter = IterMut<'a, ChordContent>;
+  fn into_iter(self) -> Self::IntoIter {
+    self.iter_mut()
   }
 }
 
@@ -205,17 +196,13 @@ impl PartialEq for Chord {
 impl core::fmt::Display for Chord {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     let mods = self
-      .modifications
-      .iter()
+      .iter_modifications()
       .map(ToString::to_string)
       .collect::<Vec<String>>()
       .join(", ");
     let notes = self
-      .content
       .iter()
-      .map(|item| match &item {
-        ChordContent::Note(note) => note.to_string(),
-      })
+      .map(|ChordContent::Note(note)| note.to_string())
       .collect::<Vec<_>>()
       .join(", ");
     write!(
