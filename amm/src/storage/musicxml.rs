@@ -1545,35 +1545,50 @@ impl MusicXmlConverter {
     let mut last_closed_index = 0;
     let mut parent_sections = Vec::new();
     let mut current_section_id = top_level_section.get_id();
+    let (mut current_section_repeats, mut current_section_number) = (false, 0);
     let mut section_structure = BTreeMap::from([(0, top_level_section.get_id())]);
-    for (&index, details) in section_details {
-      for _ in 0..details.ending_sections.len() {
-        last_closed_index = index;
-        if let Some(new_current_section_id) = parent_sections.pop() {
-          current_section_id = new_current_section_id;
-          section_structure.insert(index, current_section_id);
+    unsafe {
+      for (&index, details) in section_details {
+        for &ending_section_number in &details.ending_sections {
+          if ending_section_number == current_section_number {
+            if let Some((parent_section_number, parent_section_id, parent_section_repeats)) = parent_sections.pop() {
+              last_closed_index = index;
+              current_section_id = parent_section_id;
+              current_section_number = parent_section_number;
+              current_section_repeats = parent_section_repeats;
+              section_structure.insert(index, current_section_id);
+            }
+          }
         }
-      }
-      for starting_section in details.starting_sections.values() {
-        if last_closed_index != index {
-          section_structure.insert(last_closed_index, unsafe {
-            top_level_section
+        for (&new_section_number, new_section) in &details.starting_sections {
+          let is_ending_section = new_section
+            .iter_modifications()
+            .any(|modification| matches!(modification.r#type, SectionModificationType::OnlyPlay { .. }));
+          if last_closed_index != index {
+            section_structure.insert(
+              last_closed_index,
+              top_level_section
+                .get_section_mut(current_section_id)
+                .unwrap_unchecked()
+                .add_section("Implicit Section")
+                .get_id(),
+            );
+            last_closed_index = index;
+          }
+          if !is_ending_section || current_section_repeats {
+            parent_sections.push((current_section_number, current_section_id, current_section_repeats));
+            current_section_number = new_section_number;
+            current_section_repeats = new_section
+              .iter_modifications()
+              .any(|modification| matches!(modification.r#type, SectionModificationType::Repeat { .. }));
+            current_section_id = top_level_section
               .get_section_mut(current_section_id)
               .unwrap_unchecked()
-              .add_section("Implicit Section")
-              .get_id()
-          });
-          last_closed_index = index;
+              .claim_section(new_section.clone())
+              .get_id();
+            section_structure.insert(index, current_section_id);
+          }
         }
-        parent_sections.push(current_section_id);
-        current_section_id = unsafe {
-          top_level_section
-            .get_section_mut(current_section_id)
-            .unwrap_unchecked()
-            .claim_section(starting_section.clone())
-            .get_id()
-        };
-        section_structure.insert(index, current_section_id);
       }
     }
     section_structure
@@ -1825,7 +1840,7 @@ impl MusicXmlConverter {
       BTreeMap::new()
     };
     // TODO: DELETE THIS
-    /*for (idx, details) in &section_structure {
+    /*for (idx, details) in &section_details {
       println!("[{idx}]:\n{details}");
     }*/
 
@@ -1849,6 +1864,14 @@ impl MusicXmlConverter {
         for (time_slice_idx, time_slice) in time_slices.into_iter().enumerate() {
           // Handle section delineations
           if let Some(&new_section_idx) = section_structure.get(&time_slice_idx) {
+            // New sections require that all existing phrases be closed
+            delayed_phrase_ends.clear();
+            delayed_phrase_starts.clear();
+            local_phrases.clear();
+            global_phrases.clear();
+            multivoice_phrases.clear();
+
+            // Move to the new section
             unsafe {
               current_section_idx = new_section_idx;
               master_section
