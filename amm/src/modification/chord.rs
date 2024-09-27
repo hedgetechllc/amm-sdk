@@ -58,38 +58,38 @@ impl ChordModification {
   }
 
   #[must_use]
-  pub fn from_note_modification(r#type: &NoteModificationType) -> Self {
-    Self {
-      id: generate_id(),
-      r#type: match *r#type {
-        NoteModificationType::Accent => ChordModificationType::Accent,
-        NoteModificationType::DetachedLegato => ChordModificationType::DetachedLegato,
-        NoteModificationType::DownBow => ChordModificationType::DownBow,
-        NoteModificationType::Dynamic { dynamic } => ChordModificationType::Dynamic { dynamic },
-        NoteModificationType::Fermata => ChordModificationType::Fermata,
-        NoteModificationType::Fingernails => ChordModificationType::Fingernails,
-        NoteModificationType::HalfMuted => ChordModificationType::HalfMuted,
-        NoteModificationType::HarmonMute { open, half } => ChordModificationType::HarmonMute { open, half },
-        NoteModificationType::Heel => ChordModificationType::Heel,
-        NoteModificationType::Marcato => ChordModificationType::Marcato,
-        NoteModificationType::Open => ChordModificationType::Open,
-        NoteModificationType::Pizzicato => ChordModificationType::Pizzicato,
-        NoteModificationType::Sforzando => ChordModificationType::Sforzando,
-        NoteModificationType::Smear => ChordModificationType::Smear,
-        NoteModificationType::SoftAccent => ChordModificationType::SoftAccent,
-        NoteModificationType::Spiccato => ChordModificationType::Spiccato,
-        NoteModificationType::Staccato => ChordModificationType::Staccato,
-        NoteModificationType::Staccatissimo => ChordModificationType::Staccatissimo,
-        NoteModificationType::Stress => ChordModificationType::Stress,
-        NoteModificationType::Tenuto => ChordModificationType::Tenuto,
-        NoteModificationType::Tie => ChordModificationType::Tie,
-        NoteModificationType::Toe => ChordModificationType::Toe,
-        NoteModificationType::Tremolo { relative_speed } => ChordModificationType::Tremolo { relative_speed },
-        NoteModificationType::Unstress => ChordModificationType::Unstress,
-        NoteModificationType::UpBow => ChordModificationType::UpBow,
-        _ => unsafe { core::hint::unreachable_unchecked() },
-      },
+  pub fn from_note_modification(r#type: &NoteModificationType) -> Option<Self> {
+    match *r#type {
+      NoteModificationType::Accent => Some(ChordModificationType::Accent),
+      NoteModificationType::DetachedLegato => Some(ChordModificationType::DetachedLegato),
+      NoteModificationType::DownBow => Some(ChordModificationType::DownBow),
+      NoteModificationType::Dynamic { dynamic } => Some(ChordModificationType::Dynamic { dynamic }),
+      NoteModificationType::Fermata => Some(ChordModificationType::Fermata),
+      NoteModificationType::Fingernails => Some(ChordModificationType::Fingernails),
+      NoteModificationType::HalfMuted => Some(ChordModificationType::HalfMuted),
+      NoteModificationType::HarmonMute { open, half } => Some(ChordModificationType::HarmonMute { open, half }),
+      NoteModificationType::Heel => Some(ChordModificationType::Heel),
+      NoteModificationType::Marcato => Some(ChordModificationType::Marcato),
+      NoteModificationType::Open => Some(ChordModificationType::Open),
+      NoteModificationType::Pizzicato => Some(ChordModificationType::Pizzicato),
+      NoteModificationType::Sforzando => Some(ChordModificationType::Sforzando),
+      NoteModificationType::Smear => Some(ChordModificationType::Smear),
+      NoteModificationType::SoftAccent => Some(ChordModificationType::SoftAccent),
+      NoteModificationType::Spiccato => Some(ChordModificationType::Spiccato),
+      NoteModificationType::Staccato => Some(ChordModificationType::Staccato),
+      NoteModificationType::Staccatissimo => Some(ChordModificationType::Staccatissimo),
+      NoteModificationType::Stress => Some(ChordModificationType::Stress),
+      NoteModificationType::Tenuto => Some(ChordModificationType::Tenuto),
+      NoteModificationType::Toe => Some(ChordModificationType::Toe),
+      NoteModificationType::Tremolo { relative_speed } => Some(ChordModificationType::Tremolo { relative_speed }),
+      NoteModificationType::Unstress => Some(ChordModificationType::Unstress),
+      NoteModificationType::UpBow => Some(ChordModificationType::UpBow),
+      _ => None,
     }
+    .map(|mod_type| Self {
+      id: generate_id(),
+      r#type: mod_type,
+    })
   }
 
   #[must_use]

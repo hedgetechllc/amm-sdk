@@ -1,9 +1,9 @@
 use super::Load;
 use crate::{
-  Accidental, Chord, ChordContent, ChordModification, ChordModificationType, Clef, ClefSymbol, ClefType, Composition,
-  DirectionType, Duration, DurationType, Dynamic, HandbellTechnique, Key, KeyMode, Note, NoteModification,
-  NoteModificationType, PedalType, PhraseModificationType, Pitch, PitchName, Section, SectionModificationType, Tempo,
-  TempoMarking, TempoSuggestion, TimeSignature, TimeSignatureType,
+  Accidental, Chord, ChordModification, ChordModificationType, Clef, ClefSymbol, ClefType, Composition, DirectionType,
+  Duration, DurationType, Dynamic, HandbellTechnique, Key, KeyMode, Note, NoteModification, NoteModificationType,
+  PedalType, PhraseModificationType, Pitch, PitchName, Section, SectionModificationType, Tempo, TempoMarking,
+  TempoSuggestion, TimeSignature, TimeSignatureType,
 };
 use alloc::{
   collections::BTreeMap,
@@ -1446,7 +1446,7 @@ impl MusicXmlConverter {
     }
   }
 
-  fn gather_section_structure_details(time_slices: &Vec<TimeSliceContainer>) -> BTreeMap<usize, SectionDetails> {
+  fn gather_section_structure_details(time_slices: &[TimeSliceContainer]) -> BTreeMap<usize, SectionDetails> {
     let mut section_details = BTreeMap::new();
     let (mut open_endings, mut open_repeats) = (Vec::new(), Vec::new());
     let (mut open_sections, mut open_tempos) = (Vec::new(), Vec::new());
@@ -1596,7 +1596,7 @@ impl MusicXmlConverter {
 
   fn get_musical_elements_by_voice(
     note_details: Vec<NoteDetails>,
-    chord_mods: Vec<ChordModificationType>,
+    chord_mods: &[ChordModificationType],
   ) -> BTreeMap<String, MusicalItem> {
     // Parse notes and separate them by voice
     let mut voicewide_mods = BTreeMap::new();
@@ -1613,27 +1613,10 @@ impl MusicXmlConverter {
       };
       let mut note = Note::new(item.pitch, item.duration, Some(item.accidental));
       for modification in &item.note_modifications {
-        match modification {
-          NoteModificationType::Accent
-          | NoteModificationType::DownBow
-          | NoteModificationType::Dynamic { dynamic: _ }
-          | NoteModificationType::Fermata
-          | NoteModificationType::HalfMuted
-          | NoteModificationType::Marcato
-          | NoteModificationType::Open
-          | NoteModificationType::Pizzicato
-          | NoteModificationType::Sforzando
-          | NoteModificationType::SoftAccent
-          | NoteModificationType::Spiccato
-          | NoteModificationType::Stress
-          | NoteModificationType::Tenuto
-          | NoteModificationType::Unstress
-          | NoteModificationType::UpBow => {
-            voice_mods.push(ChordModification::from_note_modification(modification).r#type)
-          }
-          _ => {
-            note.add_modification(*modification);
-          }
+        if let Some(chord_mod) = ChordModification::from_note_modification(modification) {
+          voice_mods.push(chord_mod.r#type);
+        } else {
+          note.add_modification(*modification);
         }
       }
       if item.arpeggiated {
@@ -1661,7 +1644,7 @@ impl MusicXmlConverter {
               }
             }
           }
-          for modification in &chord_mods {
+          for modification in chord_mods {
             if let Some(note_mod) = NoteModification::from_chord_modification(modification) {
               note.add_modification(note_mod.r#type);
             }
@@ -1692,7 +1675,7 @@ impl MusicXmlConverter {
             chord.add_modification(*modification);
           }
         }
-        for modification in &chord_mods {
+        for modification in chord_mods {
           chord.add_modification(*modification);
         }
         for (note, details) in notes {
@@ -1882,7 +1865,7 @@ impl MusicXmlConverter {
           }
 
           // Parse notes and chords and separate them by voice
-          let items_by_voice = Self::get_musical_elements_by_voice(time_slice.notes, time_slice.chord_modification);
+          let items_by_voice = Self::get_musical_elements_by_voice(time_slice.notes, &time_slice.chord_modification);
 
           // Handle global phrase modification endings
           for item in time_slice.phrase_modification_end {
