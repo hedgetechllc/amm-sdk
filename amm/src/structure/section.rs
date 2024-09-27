@@ -238,8 +238,7 @@ impl Section {
   pub fn get_staff_by_name(&self, name: &str) -> Option<&Staff> {
     self.iter().find_map(|item| match item {
       SectionContent::Staff(staff) if staff.get_name() == name => Some(staff),
-      SectionContent::Section(section) => section.get_staff_by_name(name),
-      SectionContent::Staff(_) => None,
+      _ => None,
     })
   }
 
@@ -247,8 +246,7 @@ impl Section {
   pub fn get_staff_mut_by_name(&mut self, name: &str) -> Option<&mut Staff> {
     self.iter_mut().find_map(|item| match item {
       SectionContent::Staff(staff) if staff.get_name() == name => Some(staff),
-      SectionContent::Section(section) => section.get_staff_mut_by_name(name),
-      SectionContent::Staff(_) => None,
+      _ => None,
     })
   }
 
