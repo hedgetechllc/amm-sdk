@@ -372,16 +372,14 @@ pub fn modification_order(tokens: TokenStream) -> TokenStream {
   if let Ok(ast) = syn::parse::<syn::DeriveInput>(tokens) {
     match &ast.data {
       syn::Data::Enum(data) => {
-        let mut enum_value: usize = 0;
         let enum_type = &ast.ident;
         let mut enum_arms: Vec<proc_macro2::TokenStream> = Vec::new();
-        for variant in &data.variants {
+        for (enum_value, variant) in data.variants.iter().enumerate() {
           let variant_type = &variant.ident;
           match &variant.fields {
             syn::Fields::Named(_) => enum_arms.push(quote! { Self::#variant_type { .. } => #enum_value }),
             _ => enum_arms.push(quote! { Self::#variant_type => #enum_value }),
           }
-          enum_value += 1;
         }
         TokenStream::from(quote! {
           impl #enum_type {
