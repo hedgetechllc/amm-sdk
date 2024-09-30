@@ -1,8 +1,8 @@
 use crate::context::{generate_id, Tempo, TempoSuggestion};
 use amm_internal::amm_prelude::*;
-use amm_macros::{JsonDeserialize, JsonSerialize};
+use amm_macros::{JsonDeserialize, JsonSerialize, ModOrder};
 
-#[derive(Clone, Eq, Debug, Default, PartialEq, JsonDeserialize, JsonSerialize)]
+#[derive(Clone, Eq, Debug, Default, PartialEq, ModOrder, JsonDeserialize, JsonSerialize)]
 pub enum SectionModificationType {
   #[default]
   Accelerando, // Quick tempo acceleration over few notes or measures
@@ -57,6 +57,18 @@ impl Clone for SectionModification {
 impl PartialEq for SectionModification {
   fn eq(&self, other: &Self) -> bool {
     self.r#type == other.r#type
+  }
+}
+
+impl Ord for SectionModification {
+  fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+    self.r#type.cmp(&other.r#type)
+  }
+}
+
+impl PartialOrd for SectionModification {
+  fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+    Some(self.cmp(other))
   }
 }
 

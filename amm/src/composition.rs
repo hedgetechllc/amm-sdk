@@ -2,13 +2,8 @@ use crate::context::{Key, Tempo, TimeSignature};
 use crate::note::Note;
 use crate::structure::place_and_merge_part_timeslice;
 use crate::structure::{Chord, MultiVoice, Part, PartTimeslice, Phrase, Section, Staff};
-use alloc::vec::IntoIter;
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize};
-use core::{
-  iter::FusedIterator,
-  slice::{Iter, IterMut},
-};
 
 #[derive(Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub struct Composition {
@@ -334,16 +329,16 @@ impl Composition {
     self.parts.iter().map(Part::num_timeslices).max().unwrap_or_default()
   }
 
-  pub fn iter(&self) -> Iter<'_, Part> {
+  pub fn iter(&self) -> core::slice::Iter<'_, Part> {
     self.parts.iter()
   }
 
-  pub fn iter_mut(&mut self) -> IterMut<'_, Part> {
+  pub fn iter_mut(&mut self) -> core::slice::IterMut<'_, Part> {
     self.parts.iter_mut()
   }
 
   #[must_use]
-  pub fn iter_timeslices(&self) -> impl FusedIterator<Item = PartTimeslice> {
+  pub fn iter_timeslices(&self) -> impl core::iter::FusedIterator<Item = PartTimeslice> {
     // Return PartTimeslices where each slice contains a map of parts and their current timeslice
     // Note: If you want timeslices for a single part, call `iter_timeslices()` on the part directly
     let mut timeslices: Vec<(f64, PartTimeslice)> = Vec::new();
@@ -360,7 +355,7 @@ impl Composition {
 
 impl IntoIterator for Composition {
   type Item = Part;
-  type IntoIter = IntoIter<Self::Item>;
+  type IntoIter = alloc::vec::IntoIter<Self::Item>;
   fn into_iter(self) -> Self::IntoIter {
     self.parts.into_iter()
   }
@@ -368,7 +363,7 @@ impl IntoIterator for Composition {
 
 impl<'a> IntoIterator for &'a Composition {
   type Item = &'a Part;
-  type IntoIter = Iter<'a, Part>;
+  type IntoIter = core::slice::Iter<'a, Part>;
   fn into_iter(self) -> Self::IntoIter {
     self.iter()
   }
@@ -376,7 +371,7 @@ impl<'a> IntoIterator for &'a Composition {
 
 impl<'a> IntoIterator for &'a mut Composition {
   type Item = &'a mut Part;
-  type IntoIter = IterMut<'a, Part>;
+  type IntoIter = core::slice::IterMut<'a, Part>;
   fn into_iter(self) -> Self::IntoIter {
     self.iter_mut()
   }

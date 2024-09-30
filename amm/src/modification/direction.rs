@@ -1,9 +1,9 @@
 use crate::context::{generate_id, Clef, Dynamic, Key, TimeSignature};
 use crate::structure::Timeslice;
 use amm_internal::amm_prelude::*;
-use amm_macros::{JsonDeserialize, JsonSerialize};
+use amm_macros::{JsonDeserialize, JsonSerialize, ModOrder};
 
-#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, ModOrder, JsonDeserialize, JsonSerialize)]
 pub enum DirectionType {
   AccordionRegistration {
     high: bool,
@@ -70,6 +70,18 @@ impl Clone for Direction {
 impl PartialEq for Direction {
   fn eq(&self, other: &Self) -> bool {
     self.r#type == other.r#type
+  }
+}
+
+impl Ord for Direction {
+  fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+    self.r#type.cmp(&other.r#type)
+  }
+}
+
+impl PartialOrd for Direction {
+  fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+    Some(self.cmp(other))
   }
 }
 

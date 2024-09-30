@@ -7,13 +7,8 @@ use super::{
 use crate::context::{generate_id, Tempo};
 use crate::modification::{Direction, DirectionType};
 use crate::note::{Accidental, Duration, Note, Pitch};
-use alloc::vec::IntoIter;
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize};
-use core::{
-  iter::FusedIterator,
-  slice::{Iter, IterMut},
-};
 
 #[derive(Clone, Debug, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum StaffContent {
@@ -361,11 +356,11 @@ impl Staff {
       .sum()
   }
 
-  pub fn iter(&self) -> Iter<'_, StaffContent> {
+  pub fn iter(&self) -> core::slice::Iter<'_, StaffContent> {
     self.content.iter()
   }
 
-  pub fn iter_mut(&mut self) -> IterMut<'_, StaffContent> {
+  pub fn iter_mut(&mut self) -> core::slice::IterMut<'_, StaffContent> {
     self.content.iter_mut()
   }
 
@@ -381,7 +376,7 @@ impl Staff {
 
 impl IntoIterator for Staff {
   type Item = StaffContent;
-  type IntoIter = IntoIter<Self::Item>;
+  type IntoIter = alloc::vec::IntoIter<Self::Item>;
   fn into_iter(self) -> Self::IntoIter {
     self.content.into_iter()
   }
@@ -389,7 +384,7 @@ impl IntoIterator for Staff {
 
 impl<'a> IntoIterator for &'a Staff {
   type Item = &'a StaffContent;
-  type IntoIter = Iter<'a, StaffContent>;
+  type IntoIter = core::slice::Iter<'a, StaffContent>;
   fn into_iter(self) -> Self::IntoIter {
     self.iter()
   }
@@ -397,7 +392,7 @@ impl<'a> IntoIterator for &'a Staff {
 
 impl<'a> IntoIterator for &'a mut Staff {
   type Item = &'a mut StaffContent;
-  type IntoIter = IterMut<'a, StaffContent>;
+  type IntoIter = core::slice::IterMut<'a, StaffContent>;
   fn into_iter(self) -> Self::IntoIter {
     self.iter_mut()
   }
@@ -420,7 +415,7 @@ impl PartialEq for Staff {
 }
 
 pub struct StaffTimesliceIter<'a> {
-  content_iterator: Iter<'a, StaffContent>,
+  content_iterator: core::slice::Iter<'a, StaffContent>,
   child_phrase: Option<PhraseTimesliceIter<'a>>,
   child_multivoice: Option<MultiVoiceTimesliceIter<'a>>,
 }
@@ -473,7 +468,7 @@ impl Iterator for StaffTimesliceIter<'_> {
   }
 }
 
-impl FusedIterator for StaffTimesliceIter<'_> {}
+impl core::iter::FusedIterator for StaffTimesliceIter<'_> {}
 
 #[cfg(feature = "print")]
 impl core::fmt::Display for Staff {

@@ -1,8 +1,8 @@
 use crate::context::{generate_id, Dynamic};
 use amm_internal::amm_prelude::*;
-use amm_macros::{JsonDeserialize, JsonSerialize};
+use amm_macros::{JsonDeserialize, JsonSerialize, ModOrder};
 
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, ModOrder, JsonDeserialize, JsonSerialize)]
 pub enum PedalType {
   #[default]
   Sustain,
@@ -10,7 +10,7 @@ pub enum PedalType {
   Soft,
 }
 
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, ModOrder, JsonDeserialize, JsonSerialize)]
 pub enum PhraseModificationType {
   Crescendo {
     final_dynamic: Option<Dynamic>,
@@ -73,6 +73,18 @@ impl Clone for PhraseModification {
 impl PartialEq for PhraseModification {
   fn eq(&self, other: &Self) -> bool {
     self.r#type == other.r#type
+  }
+}
+
+impl Ord for PhraseModification {
+  fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+    self.r#type.cmp(&other.r#type)
+  }
+}
+
+impl PartialOrd for PhraseModification {
+  fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+    Some(self.cmp(other))
   }
 }
 

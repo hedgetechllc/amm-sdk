@@ -15,7 +15,7 @@ pub struct Note {
   pub pitch: Pitch,
   pub duration: Duration,
   pub accidental: Accidental,
-  pub(crate) modifications: Vec<NoteModification>,
+  pub(crate) modifications: BTreeSet<NoteModification>,
 }
 
 impl Note {

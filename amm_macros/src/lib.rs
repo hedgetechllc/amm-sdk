@@ -192,7 +192,7 @@ fn serialize_struct_json(struct_type: &syn::Ident, fields: &syn::FieldsNamed) ->
       syn::Type::Path(type_path) => {
         let field_details = type_path.path.segments.first().unwrap();
         match &field_details.ident {
-          field_type if field_type == "Vec" => {
+          field_type if field_type == "Vec" || field_type == "BTreeSet" => {
             let key = alloc::format!(
               "\"{}\":[{{}}]{}",
               format_ident!("{field_name}"),
@@ -259,6 +259,21 @@ fn deserialize_struct_json(struct_type: &syn::Ident, fields: &syn::FieldsNamed) 
                   (subdata, value) = json_next_value(subdata);
                   while !value.is_empty() {
                     parsed.#field_name.push(#content_type::deserialize_json(value)?);
+                    (subdata, value) = json_next_value(subdata);
+                  }
+                }});
+              }
+            }
+          }
+          field_type if field_type == "BTreeSet" => {
+            if let syn::PathArguments::AngleBracketed(details) = &field_details.arguments {
+              if let syn::GenericArgument::Type(syn::Type::Path(vec_path)) = details.args.first().unwrap() {
+                let content_type = &vec_path.path.segments.first().unwrap().ident;
+                serialized_fields.push(quote! { #field_name_string => {
+                  let mut subdata = value;
+                  (subdata, value) = json_next_value(subdata);
+                  while !value.is_empty() {
+                    parsed.#field_name.insert(#content_type::deserialize_json(value)?);
                     (subdata, value) = json_next_value(subdata);
                   }
                 }});
@@ -348,5 +363,49 @@ pub fn json_deserialize(tokens: TokenStream) -> TokenStream {
     }
   } else {
     panic!("Invalid input for AMM object deserialization");
+  }
+}
+
+#[allow(clippy::missing_panics_doc)]
+#[proc_macro_derive(ModOrder)]
+pub fn modification_order(tokens: TokenStream) -> TokenStream {
+  if let Ok(ast) = syn::parse::<syn::DeriveInput>(tokens) {
+    match &ast.data {
+      syn::Data::Enum(data) => {
+        let mut enum_value: usize = 0;
+        let enum_type = &ast.ident;
+        let mut enum_arms: Vec<proc_macro2::TokenStream> = Vec::new();
+        for variant in &data.variants {
+          let variant_type = &variant.ident;
+          match &variant.fields {
+            syn::Fields::Named(_) => enum_arms.push(quote! { Self::#variant_type { .. } => #enum_value }),
+            _ => enum_arms.push(quote! { Self::#variant_type => #enum_value }),
+          }
+          enum_value += 1;
+        }
+        TokenStream::from(quote! {
+          impl #enum_type {
+            fn get_unique_value(&self) -> usize {
+              match self { #(#enum_arms),* }
+            }
+          }
+
+          impl Ord for #enum_type {
+            fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+              self.get_unique_value().cmp(&other.get_unique_value())
+            }
+          }
+
+          impl PartialOrd for #enum_type {
+            fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+              Some(self.cmp(other))
+            }
+          }
+        })
+      }
+      _ => panic!("Only enums are supported for AMM modification ordering"),
+    }
+  } else {
+    panic!("Invalid input for AMM modification ordering");
   }
 }

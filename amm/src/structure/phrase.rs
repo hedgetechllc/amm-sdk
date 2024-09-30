@@ -6,14 +6,8 @@ use super::{
 use crate::context::{generate_id, Tempo};
 use crate::modification::{PhraseModification, PhraseModificationType};
 use crate::note::{Accidental, Duration, Note, Pitch};
-use alloc::vec::IntoIter;
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize};
-use core::{
-  iter::FusedIterator,
-  mem,
-  slice::{Iter, IterMut},
-};
 
 #[derive(Clone, Debug, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum PhraseContent {
@@ -27,7 +21,7 @@ pub enum PhraseContent {
 pub struct Phrase {
   id: usize,
   pub(crate) content: Vec<PhraseContent>,
-  modifications: Vec<PhraseModification>,
+  modifications: BTreeSet<PhraseModification>,
 }
 
 impl Phrase {
@@ -36,7 +30,7 @@ impl Phrase {
     Self {
       id: generate_id(),
       content: Vec::new(),
-      modifications: Vec::new(),
+      modifications: BTreeSet::new(),
     }
   }
 
@@ -104,10 +98,11 @@ impl Phrase {
     }
   }
 
-  pub fn add_modification(&mut self, mod_type: PhraseModificationType) -> &mut PhraseModification {
-    self.modifications.retain(|mods| mods.r#type != mod_type);
-    self.modifications.push(PhraseModification::new(mod_type));
-    unsafe { self.modifications.last_mut().unwrap_unchecked() }
+  pub fn add_modification(&mut self, mod_type: PhraseModificationType) -> usize {
+    let modification = PhraseModification::new(mod_type);
+    let modification_id = modification.get_id();
+    self.modifications.replace(modification);
+    modification_id
   }
 
   pub fn claim_note(&mut self, note: Note) -> &mut Note {
@@ -276,13 +271,6 @@ impl Phrase {
   }
 
   #[must_use]
-  pub fn get_modification_mut(&mut self, id: usize) -> Option<&mut PhraseModification> {
-    self
-      .iter_modifications_mut()
-      .find(|modification| modification.get_id() == id)
-  }
-
-  #[must_use]
   pub fn get_index_of_item(&self, id: usize) -> Option<usize> {
     self.content.iter().position(|item| match item {
       PhraseContent::Note(note) => note.get_id() == id,
@@ -368,20 +356,16 @@ impl Phrase {
       .sum()
   }
 
-  pub fn iter(&self) -> Iter<'_, PhraseContent> {
+  pub fn iter(&self) -> core::slice::Iter<'_, PhraseContent> {
     self.content.iter()
   }
 
-  pub fn iter_mut(&mut self) -> IterMut<'_, PhraseContent> {
+  pub fn iter_mut(&mut self) -> core::slice::IterMut<'_, PhraseContent> {
     self.content.iter_mut()
   }
 
-  pub fn iter_modifications(&self) -> Iter<'_, PhraseModification> {
+  pub fn iter_modifications(&self) -> alloc::collections::btree_set::Iter<'_, PhraseModification> {
     self.modifications.iter()
-  }
-
-  pub fn iter_modifications_mut(&mut self) -> IterMut<'_, PhraseModification> {
-    self.modifications.iter_mut()
   }
 
   #[must_use]
@@ -400,7 +384,7 @@ impl Phrase {
 
 impl IntoIterator for Phrase {
   type Item = PhraseContent;
-  type IntoIter = IntoIter<Self::Item>;
+  type IntoIter = alloc::vec::IntoIter<Self::Item>;
   fn into_iter(self) -> Self::IntoIter {
     self.content.into_iter()
   }
@@ -408,7 +392,7 @@ impl IntoIterator for Phrase {
 
 impl<'a> IntoIterator for &'a Phrase {
   type Item = &'a PhraseContent;
-  type IntoIter = Iter<'a, PhraseContent>;
+  type IntoIter = core::slice::Iter<'a, PhraseContent>;
   fn into_iter(self) -> Self::IntoIter {
     self.iter()
   }
@@ -416,7 +400,7 @@ impl<'a> IntoIterator for &'a Phrase {
 
 impl<'a> IntoIterator for &'a mut Phrase {
   type Item = &'a mut PhraseContent;
-  type IntoIter = IterMut<'a, PhraseContent>;
+  type IntoIter = core::slice::IterMut<'a, PhraseContent>;
   fn into_iter(self) -> Self::IntoIter {
     self.iter_mut()
   }
@@ -442,10 +426,10 @@ pub struct PhraseTimesliceIter<'a> {
   index: usize,
   num_timeslices: usize,
   pending_timeslice: Option<Timeslice>,
-  content_iterator: Iter<'a, PhraseContent>,
+  content_iterator: core::slice::Iter<'a, PhraseContent>,
   child_phrase_iterator: Option<Box<PhraseTimesliceIter<'a>>>,
   child_multivoice_iterator: Option<MultiVoiceTimesliceIter<'a>>,
-  modifications: &'a [PhraseModification],
+  modifications: &'a BTreeSet<PhraseModification>,
 }
 
 fn update_timeslice_details(iterator: &mut PhraseTimesliceIter, mut timeslice: Timeslice) -> Option<Timeslice> {
@@ -471,7 +455,7 @@ fn update_timeslice_details(iterator: &mut PhraseTimesliceIter, mut timeslice: T
   });
   iterator.index += 1;
   let mut return_slice = Some(timeslice);
-  mem::swap(&mut iterator.pending_timeslice, &mut return_slice);
+  core::mem::swap(&mut iterator.pending_timeslice, &mut return_slice);
   return_slice
 }
 
@@ -534,7 +518,7 @@ impl Iterator for PhraseTimesliceIter<'_> {
   }
 }
 
-impl FusedIterator for PhraseTimesliceIter<'_> {}
+impl core::iter::FusedIterator for PhraseTimesliceIter<'_> {}
 
 #[cfg(feature = "print")]
 impl core::fmt::Display for Phrase {

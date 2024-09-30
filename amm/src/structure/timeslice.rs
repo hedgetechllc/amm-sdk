@@ -2,6 +2,7 @@ use crate::context::{Key, Tempo, TimeSignature};
 use crate::modification::{Direction, PhraseModificationType, SectionModificationType};
 use crate::note::{Accidental, Duration, Note, Pitch};
 use alloc::{collections::BTreeMap, vec::Vec};
+use amm_internal::amm_prelude::*;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct TimesliceContext {
@@ -118,8 +119,8 @@ impl core::fmt::Display for TimesliceContent {
 pub struct Timeslice {
   pub arpeggiated: bool,
   pub content: Vec<TimesliceContent>,
-  pub directions: Vec<Direction>,
-  pub tempo_details: Vec<SectionModificationType>,
+  pub directions: BTreeSet<Direction>,
+  pub tempo_details: BTreeSet<SectionModificationType>,
 }
 
 impl Timeslice {
@@ -128,8 +129,8 @@ impl Timeslice {
     Self {
       arpeggiated: false,
       content: Vec::new(),
-      directions: Vec::new(),
-      tempo_details: Vec::new(),
+      directions: BTreeSet::new(),
+      tempo_details: BTreeSet::new(),
     }
   }
 
@@ -139,7 +140,7 @@ impl Timeslice {
   }
 
   pub fn add_direction(&mut self, direction: Direction) -> &mut Self {
-    self.directions.push(direction);
+    self.directions.replace(direction);
     self
   }
 
@@ -147,21 +148,17 @@ impl Timeslice {
     if !matches!(
       tempo_details,
       SectionModificationType::OnlyPlay { .. } | SectionModificationType::Repeat { .. }
-    ) && !self
-      .tempo_details
-      .iter()
-      .any(|detail| core::mem::discriminant(detail) == core::mem::discriminant(tempo_details))
-    {
-      self.tempo_details.push(tempo_details.clone());
+    ) {
+      self.tempo_details.insert(tempo_details.clone());
     }
     self
   }
 
   pub fn combine_with(&mut self, other: &mut Self) -> &mut Self {
     self.arpeggiated = self.arpeggiated || other.arpeggiated;
-    self.content.append(other.content.as_mut());
-    self.directions.append(other.directions.as_mut());
-    self.tempo_details.append(other.tempo_details.as_mut());
+    self.content.append(&mut other.content);
+    self.directions.append(&mut other.directions);
+    self.tempo_details.append(&mut other.tempo_details);
     self
   }
 

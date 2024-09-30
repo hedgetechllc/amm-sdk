@@ -6,13 +6,8 @@ use super::{
 use crate::context::{generate_id, Tempo};
 use crate::modification::{ChordModificationType, NoteModificationType, PhraseModification, PhraseModificationType};
 use crate::note::{Duration, DurationType, Note};
-use alloc::vec::IntoIter;
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize};
-use core::{
-  iter::FusedIterator,
-  slice::{Iter, IterMut},
-};
 
 #[derive(Clone, Debug, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum MultiVoiceContent {
@@ -454,11 +449,11 @@ impl MultiVoice {
     self.iter_timeslices().count()
   }
 
-  pub fn iter(&self) -> Iter<'_, MultiVoiceContent> {
+  pub fn iter(&self) -> core::slice::Iter<'_, MultiVoiceContent> {
     self.content.iter()
   }
 
-  pub fn iter_mut(&mut self) -> IterMut<'_, MultiVoiceContent> {
+  pub fn iter_mut(&mut self) -> core::slice::IterMut<'_, MultiVoiceContent> {
     self.content.iter_mut()
   }
 
@@ -476,7 +471,7 @@ impl MultiVoice {
 
 impl IntoIterator for MultiVoice {
   type Item = MultiVoiceContent;
-  type IntoIter = IntoIter<Self::Item>;
+  type IntoIter = alloc::vec::IntoIter<Self::Item>;
   fn into_iter(self) -> Self::IntoIter {
     self.content.into_iter()
   }
@@ -484,7 +479,7 @@ impl IntoIterator for MultiVoice {
 
 impl<'a> IntoIterator for &'a MultiVoice {
   type Item = &'a MultiVoiceContent;
-  type IntoIter = Iter<'a, MultiVoiceContent>;
+  type IntoIter = core::slice::Iter<'a, MultiVoiceContent>;
   fn into_iter(self) -> Self::IntoIter {
     self.iter()
   }
@@ -492,7 +487,7 @@ impl<'a> IntoIterator for &'a MultiVoice {
 
 impl<'a> IntoIterator for &'a mut MultiVoice {
   type Item = &'a mut MultiVoiceContent;
-  type IntoIter = IterMut<'a, MultiVoiceContent>;
+  type IntoIter = core::slice::IterMut<'a, MultiVoiceContent>;
   fn into_iter(self) -> Self::IntoIter {
     self.iter_mut()
   }
@@ -549,7 +544,7 @@ impl Iterator for MultiVoiceTimesliceIter<'_> {
   }
 }
 
-impl FusedIterator for MultiVoiceTimesliceIter<'_> {}
+impl core::iter::FusedIterator for MultiVoiceTimesliceIter<'_> {}
 
 #[cfg(feature = "print")]
 impl core::fmt::Display for MultiVoice {

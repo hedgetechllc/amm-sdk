@@ -8,13 +8,8 @@ use super::{
 use crate::context::{generate_id, Tempo};
 use crate::modification::{SectionModification, SectionModificationType};
 use crate::note::{Duration, DurationType, Note, Pitch};
-use alloc::vec::IntoIter;
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize};
-use core::{
-  iter::FusedIterator,
-  slice::{Iter, IterMut},
-};
 
 #[derive(Clone, Debug, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum SectionContent {
@@ -27,7 +22,7 @@ pub struct Section {
   id: usize,
   name: String,
   content: Vec<SectionContent>,
-  modifications: Vec<SectionModification>,
+  modifications: BTreeSet<SectionModification>,
 }
 
 impl Section {
@@ -37,7 +32,7 @@ impl Section {
       id: generate_id(),
       name: String::from(name),
       content: Vec::new(),
-      modifications: Vec::new(),
+      modifications: BTreeSet::new(),
     }
   }
 
@@ -147,10 +142,11 @@ impl Section {
     }
   }
 
-  pub fn add_modification(&mut self, mod_type: SectionModificationType) -> &mut SectionModification {
-    self.modifications.retain(|mods| mods.r#type != mod_type);
-    self.modifications.push(SectionModification::new(mod_type));
-    unsafe { self.modifications.last_mut().unwrap_unchecked() }
+  pub fn add_modification(&mut self, mod_type: SectionModificationType) -> usize {
+    let modification = SectionModification::new(mod_type);
+    let modification_id = modification.get_id();
+    self.modifications.replace(modification);
+    modification_id
   }
 
   pub fn claim_staff(&mut self, staff: Staff) -> &mut Staff {
@@ -355,13 +351,6 @@ impl Section {
   }
 
   #[must_use]
-  pub fn get_modification_mut(&mut self, id: usize) -> Option<&mut SectionModification> {
-    self
-      .iter_modifications_mut()
-      .find(|modification| modification.get_id() == id)
-  }
-
-  #[must_use]
   pub fn get_total_iterations(&self) -> u8 {
     self
       .iter_modifications()
@@ -463,20 +452,16 @@ impl Section {
     self.iter_timeslices().count()
   }
 
-  pub fn iter(&self) -> Iter<'_, SectionContent> {
+  pub fn iter(&self) -> core::slice::Iter<'_, SectionContent> {
     self.content.iter()
   }
 
-  pub fn iter_mut(&mut self) -> IterMut<'_, SectionContent> {
+  pub fn iter_mut(&mut self) -> core::slice::IterMut<'_, SectionContent> {
     self.content.iter_mut()
   }
 
-  pub fn iter_modifications(&self) -> Iter<'_, SectionModification> {
+  pub fn iter_modifications(&self) -> alloc::collections::btree_set::Iter<'_, SectionModification> {
     self.modifications.iter()
-  }
-
-  pub fn iter_modifications_mut(&mut self) -> IterMut<'_, SectionModification> {
-    self.modifications.iter_mut()
   }
 
   #[must_use]
@@ -497,7 +482,7 @@ impl Section {
 
 impl IntoIterator for Section {
   type Item = SectionContent;
-  type IntoIter = IntoIter<Self::Item>;
+  type IntoIter = alloc::vec::IntoIter<Self::Item>;
   fn into_iter(self) -> Self::IntoIter {
     self.content.into_iter()
   }
@@ -505,7 +490,7 @@ impl IntoIterator for Section {
 
 impl<'a> IntoIterator for &'a Section {
   type Item = &'a SectionContent;
-  type IntoIter = Iter<'a, SectionContent>;
+  type IntoIter = core::slice::Iter<'a, SectionContent>;
   fn into_iter(self) -> Self::IntoIter {
     self.iter()
   }
@@ -513,7 +498,7 @@ impl<'a> IntoIterator for &'a Section {
 
 impl<'a> IntoIterator for &'a mut Section {
   type Item = &'a mut SectionContent;
-  type IntoIter = IterMut<'a, SectionContent>;
+  type IntoIter = core::slice::IterMut<'a, SectionContent>;
   fn into_iter(self) -> Self::IntoIter {
     self.iter_mut()
   }
@@ -541,10 +526,10 @@ pub struct SectionTimesliceIter<'a> {
   num_iterations: u8,
   base_duration: Duration,
   content: &'a [SectionContent],
-  content_iterator: Iter<'a, SectionContent>,
+  content_iterator: core::slice::Iter<'a, SectionContent>,
   section_iterator: Option<Box<SectionTimesliceIter<'a>>>,
   staff_iterators: Vec<(f64, StaffTimesliceIter<'a>)>,
-  modifications: &'a [SectionModification],
+  modifications: &'a BTreeSet<SectionModification>,
   processing_staves: bool,
 }
 
@@ -620,7 +605,7 @@ impl Iterator for SectionTimesliceIter<'_> {
   }
 }
 
-impl FusedIterator for SectionTimesliceIter<'_> {}
+impl core::iter::FusedIterator for SectionTimesliceIter<'_> {}
 
 #[cfg(feature = "print")]
 impl core::fmt::Display for Section {

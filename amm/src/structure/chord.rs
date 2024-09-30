@@ -2,10 +2,8 @@ use super::timeslice::Timeslice;
 use crate::context::{generate_id, Tempo};
 use crate::modification::{ChordModification, ChordModificationType, NoteModification};
 use crate::note::{Accidental, Duration, Note, Pitch};
-use alloc::vec::IntoIter;
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize};
-use core::slice::{Iter, IterMut};
 
 #[derive(Clone, Debug, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum ChordContent {
@@ -16,7 +14,7 @@ pub enum ChordContent {
 pub struct Chord {
   id: usize,
   content: Vec<ChordContent>,
-  modifications: Vec<ChordModification>,
+  modifications: BTreeSet<ChordModification>,
 }
 
 impl Chord {
@@ -25,7 +23,7 @@ impl Chord {
     Self {
       id: generate_id(),
       content: Vec::new(),
-      modifications: Vec::new(),
+      modifications: BTreeSet::new(),
     }
   }
 
@@ -47,10 +45,11 @@ impl Chord {
     }
   }
 
-  pub fn add_modification(&mut self, mod_type: ChordModificationType) -> &mut ChordModification {
-    self.modifications.retain(|mods| mods.r#type != mod_type);
-    self.modifications.push(ChordModification::new(mod_type));
-    unsafe { self.modifications.last_mut().unwrap_unchecked() }
+  pub fn add_modification(&mut self, mod_type: ChordModificationType) -> usize {
+    let modification = ChordModification::new(mod_type);
+    let modification_id = modification.get_id();
+    self.modifications.replace(modification);
+    modification_id
   }
 
   pub fn claim_note(&mut self, note: Note) -> &mut Note {
@@ -86,13 +85,6 @@ impl Chord {
   }
 
   #[must_use]
-  pub fn get_modification_mut(&mut self, id: usize) -> Option<&mut ChordModification> {
-    self
-      .iter_modifications_mut()
-      .find(|modification| modification.get_id() == id)
-  }
-
-  #[must_use]
   pub fn get_beats(&self, beat_base: &Duration, tuplet_ratio: Option<f64>) -> f64 {
     self
       .iter()
@@ -116,20 +108,16 @@ impl Chord {
     self
   }
 
-  pub fn iter(&self) -> Iter<'_, ChordContent> {
+  pub fn iter(&self) -> core::slice::Iter<'_, ChordContent> {
     self.content.iter()
   }
 
-  pub fn iter_mut(&mut self) -> IterMut<'_, ChordContent> {
+  pub fn iter_mut(&mut self) -> core::slice::IterMut<'_, ChordContent> {
     self.content.iter_mut()
   }
 
-  pub fn iter_modifications(&self) -> Iter<'_, ChordModification> {
+  pub fn iter_modifications(&self) -> alloc::collections::btree_set::Iter<'_, ChordModification> {
     self.modifications.iter()
-  }
-
-  pub fn iter_modifications_mut(&mut self) -> IterMut<'_, ChordModification> {
-    self.modifications.iter_mut()
   }
 
   #[must_use]
@@ -155,7 +143,7 @@ impl Chord {
 
 impl IntoIterator for Chord {
   type Item = ChordContent;
-  type IntoIter = IntoIter<Self::Item>;
+  type IntoIter = alloc::vec::IntoIter<Self::Item>;
   fn into_iter(self) -> Self::IntoIter {
     self.content.into_iter()
   }
@@ -163,7 +151,7 @@ impl IntoIterator for Chord {
 
 impl<'a> IntoIterator for &'a Chord {
   type Item = &'a ChordContent;
-  type IntoIter = Iter<'a, ChordContent>;
+  type IntoIter = core::slice::Iter<'a, ChordContent>;
   fn into_iter(self) -> Self::IntoIter {
     self.iter()
   }
@@ -171,7 +159,7 @@ impl<'a> IntoIterator for &'a Chord {
 
 impl<'a> IntoIterator for &'a mut Chord {
   type Item = &'a mut ChordContent;
-  type IntoIter = IterMut<'a, ChordContent>;
+  type IntoIter = core::slice::IterMut<'a, ChordContent>;
   fn into_iter(self) -> Self::IntoIter {
     self.iter_mut()
   }

@@ -3,13 +3,8 @@ use super::{
 };
 use crate::context::{generate_id, Tempo};
 use crate::note::{Duration, Note};
-use alloc::vec::IntoIter;
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize};
-use core::{
-  iter::FusedIterator,
-  slice::{Iter, IterMut},
-};
 
 #[derive(Clone, Debug, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum PartContent {
@@ -244,16 +239,16 @@ impl Part {
       .sum()
   }
 
-  pub fn iter(&self) -> Iter<'_, PartContent> {
+  pub fn iter(&self) -> core::slice::Iter<'_, PartContent> {
     self.content.iter()
   }
 
-  pub fn iter_mut(&mut self) -> IterMut<'_, PartContent> {
+  pub fn iter_mut(&mut self) -> core::slice::IterMut<'_, PartContent> {
     self.content.iter_mut()
   }
 
   #[must_use]
-  pub fn iter_timeslices(&self) -> impl FusedIterator<Item = Timeslice> + '_ {
+  pub fn iter_timeslices(&self) -> impl core::iter::FusedIterator<Item = Timeslice> + '_ {
     // Note: use this to return timeslices for a single part
     self
       .iter()
@@ -263,7 +258,7 @@ impl Part {
 
 impl IntoIterator for Part {
   type Item = PartContent;
-  type IntoIter = IntoIter<Self::Item>;
+  type IntoIter = alloc::vec::IntoIter<Self::Item>;
   fn into_iter(self) -> Self::IntoIter {
     self.content.into_iter()
   }
@@ -271,7 +266,7 @@ impl IntoIterator for Part {
 
 impl<'a> IntoIterator for &'a Part {
   type Item = &'a PartContent;
-  type IntoIter = Iter<'a, PartContent>;
+  type IntoIter = core::slice::Iter<'a, PartContent>;
   fn into_iter(self) -> Self::IntoIter {
     self.iter()
   }
@@ -279,7 +274,7 @@ impl<'a> IntoIterator for &'a Part {
 
 impl<'a> IntoIterator for &'a mut Part {
   type Item = &'a mut PartContent;
-  type IntoIter = IterMut<'a, PartContent>;
+  type IntoIter = core::slice::IterMut<'a, PartContent>;
   fn into_iter(self) -> Self::IntoIter {
     self.iter_mut()
   }
