@@ -1,8 +1,7 @@
-use super::{
-  chord::Chord, multivoice::MultiVoice, phrase::Phrase, section::Section, staff::Staff, timeslice::Timeslice,
-};
+use super::{chord::Chord, multivoice::MultiVoice, phrase::Phrase, section::Section, staff::Staff};
 use crate::context::{generate_id, Tempo};
 use crate::note::{Duration, Note};
+use crate::temporal::Timeslice;
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize};
 

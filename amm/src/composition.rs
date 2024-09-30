@@ -1,7 +1,7 @@
 use crate::context::{Key, Tempo, TimeSignature};
 use crate::note::Note;
-use crate::structure::place_and_merge_part_timeslice;
-use crate::structure::{Chord, MultiVoice, Part, PartTimeslice, Phrase, Section, Staff};
+use crate::structure::{Chord, MultiVoice, Part, Phrase, Section, Staff};
+use crate::temporal::{place_and_merge_part_timeslice, PartTimeslice};
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize};
 

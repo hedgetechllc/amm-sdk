@@ -1,11 +1,11 @@
 use super::{
   chord::Chord,
   multivoice::{MultiVoice, MultiVoiceTimesliceIter},
-  timeslice::Timeslice,
 };
 use crate::context::{generate_id, Tempo};
 use crate::modification::{PhraseModification, PhraseModificationType};
 use crate::note::{Accidental, Duration, Note, Pitch};
+use crate::temporal::Timeslice;
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize};
 

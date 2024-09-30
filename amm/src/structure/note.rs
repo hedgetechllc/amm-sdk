@@ -1,7 +1,7 @@
-use super::timeslice::Timeslice;
 use crate::context::{generate_id, Tempo};
 use crate::modification::{NoteModification, NoteModificationType};
 use crate::note::{Accidental, Duration, Note, Pitch};
+use crate::temporal::Timeslice;
 use amm_internal::amm_prelude::*;
 
 impl Note {

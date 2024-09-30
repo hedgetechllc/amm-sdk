@@ -1,5 +1,5 @@
 use crate::context::{generate_id, Clef, Dynamic, Key, TimeSignature};
-use crate::structure::Timeslice;
+use crate::temporal::Timeslice;
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize, ModOrder};
 
