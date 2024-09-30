@@ -1,3 +1,4 @@
+use super::timeslice::Timeslice;
 use crate::context::{generate_id, Tempo};
 use crate::modification::{NoteModification, NoteModificationType};
 use crate::note::{Accidental, Duration, Note, Pitch};
@@ -62,5 +63,12 @@ impl Note {
 
   pub fn iter_modifications_mut(&mut self) -> IterMut<'_, NoteModification> {
     self.modifications.iter_mut()
+  }
+
+  #[must_use]
+  pub fn to_timeslice(&self) -> Timeslice {
+    let mut timeslice = Timeslice::new();
+    timeslice.add_note(self.clone());
+    timeslice
   }
 }

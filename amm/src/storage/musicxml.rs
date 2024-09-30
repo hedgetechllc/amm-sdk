@@ -36,8 +36,8 @@ impl core::fmt::Display for PhraseModDetails {
       if self.is_start { "Start" } else { "End" },
       self.modification,
       self.number.unwrap_or(0),
-      match self.for_voice {
-        Some(ref voice) => format!(", Voice: {voice}"),
+      match self.for_voice.as_ref() {
+        Some(voice) => format!(", Voice: {voice}"),
         None => String::new(),
       }
     )

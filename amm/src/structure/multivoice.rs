@@ -1,15 +1,18 @@
 use super::{
   chord::{Chord, ChordContent},
-  phrase::{Phrase, PhraseContent},
-  place_and_merge_timeslice,
+  phrase::{Phrase, PhraseContent, PhraseTimesliceIter},
   timeslice::Timeslice,
 };
 use crate::context::{generate_id, Tempo};
 use crate::modification::{ChordModificationType, NoteModificationType, PhraseModification, PhraseModificationType};
 use crate::note::{Duration, DurationType, Note};
+use alloc::vec::IntoIter;
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize};
-use core::slice::{Iter, IterMut};
+use core::{
+  iter::FusedIterator,
+  slice::{Iter, IterMut},
+};
 
 #[derive(Clone, Debug, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum MultiVoiceContent {
@@ -36,7 +39,7 @@ impl MultiVoice {
   pub fn flatten(&self) -> Phrase {
     // Note: Loses any modifications on contained phrases
     // Flatten all multi-voice content into individual phrases containing only notes and chords
-    let beat_base_note = Duration::new(DurationType::SixtyFourth, 0);
+    let beat_base_note = Duration::new(DurationType::TwoThousandFortyEighth, 0);
     let phrases: Vec<Phrase> = self
       .iter()
       .map(|MultiVoiceContent::Phrase(phrase)| phrase.flatten(true))
@@ -448,7 +451,7 @@ impl MultiVoice {
 
   #[must_use]
   pub fn num_timeslices(&self) -> usize {
-    self.iter_timeslices().len()
+    self.iter_timeslices().count()
   }
 
   pub fn iter(&self) -> Iter<'_, MultiVoiceContent> {
@@ -460,21 +463,20 @@ impl MultiVoice {
   }
 
   #[must_use]
-  pub fn iter_timeslices(&self) -> Vec<Timeslice> {
-    let mut timeslices: Vec<(f64, Timeslice)> = Vec::new();
-    self.iter().for_each(|MultiVoiceContent::Phrase(phrase)| {
-      let (mut index, mut curr_time) = (0, 0.0);
-      for slice in phrase.iter_timeslices() {
-        (index, curr_time) = place_and_merge_timeslice(&mut timeslices, slice, index, curr_time);
-      }
-    });
-    timeslices.into_iter().map(|(_, slice)| slice).collect()
+  pub fn iter_timeslices(&self) -> MultiVoiceTimesliceIter<'_> {
+    MultiVoiceTimesliceIter {
+      base_duration: Duration::new(DurationType::TwoThousandFortyEighth, 0),
+      phrase_iterators: self
+        .iter()
+        .map(|MultiVoiceContent::Phrase(phrase)| (0.0, phrase.iter_timeslices()))
+        .collect(),
+    }
   }
 }
 
 impl IntoIterator for MultiVoice {
   type Item = MultiVoiceContent;
-  type IntoIter = alloc::vec::IntoIter<Self::Item>;
+  type IntoIter = IntoIter<Self::Item>;
   fn into_iter(self) -> Self::IntoIter {
     self.content.into_iter()
   }
@@ -510,6 +512,44 @@ impl PartialEq for MultiVoice {
     self.content == other.content
   }
 }
+
+pub struct MultiVoiceTimesliceIter<'a> {
+  base_duration: Duration,
+  phrase_iterators: Vec<(f64, PhraseTimesliceIter<'a>)>,
+}
+
+impl Iterator for MultiVoiceTimesliceIter<'_> {
+  type Item = Timeslice;
+  fn next(&mut self) -> Option<Self::Item> {
+    let mut next_start_time = f64::MAX;
+    let mut timeslice: Option<Timeslice> = None;
+    self.phrase_iterators.iter_mut().for_each(|(next_time, iterator)| {
+      if next_time.abs() <= 0.000_001 {
+        if let Some(mut slice) = iterator.next() {
+          *next_time = slice.get_beats(&self.base_duration);
+          if *next_time < next_start_time {
+            next_start_time = *next_time;
+          }
+          if let Some(timeslice) = timeslice.as_mut() {
+            timeslice.combine_with(&mut slice);
+          } else {
+            timeslice = Some(slice);
+          }
+        }
+      } else if *next_time >= 0.0 && *next_time < next_start_time {
+        next_start_time = *next_time;
+      }
+    });
+    if timeslice.is_some() {
+      self.phrase_iterators.iter_mut().for_each(|(next_time, _)| {
+        *next_time -= next_start_time;
+      });
+    }
+    timeslice
+  }
+}
+
+impl FusedIterator for MultiVoiceTimesliceIter<'_> {}
 
 #[cfg(feature = "print")]
 impl core::fmt::Display for MultiVoice {

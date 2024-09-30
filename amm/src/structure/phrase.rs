@@ -1,10 +1,19 @@
-use super::{chord::Chord, multivoice::MultiVoice, timeslice::Timeslice};
+use super::{
+  chord::Chord,
+  multivoice::{MultiVoice, MultiVoiceTimesliceIter},
+  timeslice::Timeslice,
+};
 use crate::context::{generate_id, Tempo};
 use crate::modification::{PhraseModification, PhraseModificationType};
 use crate::note::{Accidental, Duration, Note, Pitch};
+use alloc::vec::IntoIter;
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize};
-use core::slice::{Iter, IterMut};
+use core::{
+  iter::FusedIterator,
+  mem,
+  slice::{Iter, IterMut},
+};
 
 #[derive(Clone, Debug, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum PhraseContent {
@@ -359,33 +368,6 @@ impl Phrase {
       .sum()
   }
 
-  fn update_timeslice_details(
-    &self,
-    timeslices: &mut Vec<Timeslice>,
-    mut timeslice: Timeslice,
-    index: usize,
-    num_timeslices: usize,
-  ) -> usize {
-    if !self.modifications.is_empty() {
-      for content in &mut timeslice.content {
-        let details = content.add_phrase_details(index, num_timeslices);
-        self.iter_modifications().for_each(|modification| {
-          details.modifications.push(modification.r#type);
-        });
-        if let Some(previous_timeslice) = timeslices.last_mut() {
-          previous_timeslice.content.iter_mut().for_each(|note| {
-            note.phrase_details.iter_mut().for_each(|details| {
-              details.next_pitch = content.note.pitch;
-              details.next_accidental = content.note.accidental;
-            });
-          });
-        }
-      }
-    }
-    timeslices.push(timeslice);
-    index + 1
-  }
-
   pub fn iter(&self) -> Iter<'_, PhraseContent> {
     self.content.iter()
   }
@@ -403,38 +385,22 @@ impl Phrase {
   }
 
   #[must_use]
-  pub fn iter_timeslices(&self) -> Vec<Timeslice> {
-    let mut index = 0;
-    let mut timeslices = Vec::new();
-    let num_timeslices = self.num_timeslices();
-    self.iter().for_each(|item| match item {
-      PhraseContent::Note(note) => {
-        let mut timeslice = Timeslice::new();
-        timeslice.add_note(note.clone());
-        index = self.update_timeslice_details(&mut timeslices, timeslice, index, num_timeslices);
-      }
-      PhraseContent::Chord(chord) => {
-        let timeslice = chord.to_timeslice();
-        index = self.update_timeslice_details(&mut timeslices, timeslice, index, num_timeslices);
-      }
-      PhraseContent::Phrase(phrase) => {
-        phrase.iter_timeslices().into_iter().for_each(|timeslice| {
-          index = self.update_timeslice_details(&mut timeslices, timeslice, index, num_timeslices);
-        });
-      }
-      PhraseContent::MultiVoice(multivoice) => {
-        multivoice.iter_timeslices().into_iter().for_each(|timeslice| {
-          index = self.update_timeslice_details(&mut timeslices, timeslice, index, num_timeslices);
-        });
-      }
-    });
-    timeslices
+  pub fn iter_timeslices(&self) -> PhraseTimesliceIter<'_> {
+    PhraseTimesliceIter {
+      index: 0,
+      num_timeslices: self.num_timeslices(),
+      pending_timeslice: None,
+      content_iterator: self.iter(),
+      child_phrase_iterator: None,
+      child_multivoice_iterator: None,
+      modifications: &self.modifications,
+    }
   }
 }
 
 impl IntoIterator for Phrase {
   type Item = PhraseContent;
-  type IntoIter = alloc::vec::IntoIter<Self::Item>;
+  type IntoIter = IntoIter<Self::Item>;
   fn into_iter(self) -> Self::IntoIter {
     self.content.into_iter()
   }
@@ -471,6 +437,104 @@ impl PartialEq for Phrase {
     self.content == other.content && self.modifications == other.modifications
   }
 }
+
+pub struct PhraseTimesliceIter<'a> {
+  index: usize,
+  num_timeslices: usize,
+  pending_timeslice: Option<Timeslice>,
+  content_iterator: Iter<'a, PhraseContent>,
+  child_phrase_iterator: Option<Box<PhraseTimesliceIter<'a>>>,
+  child_multivoice_iterator: Option<MultiVoiceTimesliceIter<'a>>,
+  modifications: &'a [PhraseModification],
+}
+
+fn update_timeslice_details(iterator: &mut PhraseTimesliceIter, mut timeslice: Timeslice) -> Option<Timeslice> {
+  let mut pending_timeslice_updated = false;
+  timeslice.content.iter_mut().for_each(|content| {
+    if !iterator.modifications.is_empty() {
+      let details = content.add_phrase_details(iterator.index, iterator.num_timeslices);
+      iterator.modifications.iter().for_each(|modification| {
+        details.modifications.push(modification.r#type);
+      });
+    }
+    if !pending_timeslice_updated {
+      if let Some(pending_timeslice) = iterator.pending_timeslice.as_mut() {
+        pending_timeslice.content.iter_mut().for_each(|note| {
+          note.phrase_details.iter_mut().for_each(|details| {
+            details.next_pitch = content.note.pitch;
+            details.next_accidental = content.note.accidental;
+          });
+        });
+      }
+      pending_timeslice_updated = true;
+    }
+  });
+  iterator.index += 1;
+  let mut return_slice = Some(timeslice);
+  mem::swap(&mut iterator.pending_timeslice, &mut return_slice);
+  return_slice
+}
+
+impl Iterator for PhraseTimesliceIter<'_> {
+  type Item = Timeslice;
+  fn next(&mut self) -> Option<Self::Item> {
+    let (mut valid_timeslice, mut timeslice) = (false, None);
+    while !valid_timeslice {
+      if let Some(child_iterator) = &mut self.child_phrase_iterator {
+        match child_iterator.next() {
+          Some(timeslice) => return update_timeslice_details(self, timeslice),
+          None => self.child_phrase_iterator = None,
+        }
+      }
+      if let Some(child_iterator) = &mut self.child_multivoice_iterator {
+        match child_iterator.next() {
+          Some(timeslice) => return update_timeslice_details(self, timeslice),
+          None => self.child_multivoice_iterator = None,
+        }
+      }
+      (valid_timeslice, timeslice) = match self.content_iterator.next() {
+        Some(PhraseContent::Note(note)) => match update_timeslice_details(self, note.to_timeslice()) {
+          Some(timeslice) => (true, Some(timeslice)),
+          None => (false, None),
+        },
+        Some(PhraseContent::Chord(chord)) => match update_timeslice_details(self, chord.to_timeslice()) {
+          Some(timeslice) => (true, Some(timeslice)),
+          None => (false, None),
+        },
+        Some(PhraseContent::Phrase(phrase)) => {
+          let mut child_iterator = phrase.iter_timeslices();
+          match child_iterator.next() {
+            Some(timeslice) => {
+              self.child_phrase_iterator = Some(Box::new(child_iterator));
+              match update_timeslice_details(self, timeslice) {
+                Some(timeslice) => (true, Some(timeslice)),
+                None => (false, None),
+              }
+            }
+            None => (false, None),
+          }
+        }
+        Some(PhraseContent::MultiVoice(multivoice)) => {
+          let mut child_iterator = multivoice.iter_timeslices();
+          match child_iterator.next() {
+            Some(timeslice) => {
+              self.child_multivoice_iterator = Some(child_iterator);
+              match update_timeslice_details(self, timeslice) {
+                Some(timeslice) => (true, Some(timeslice)),
+                None => (false, None),
+              }
+            }
+            None => (false, None),
+          }
+        }
+        None => (true, self.pending_timeslice.take()),
+      };
+    }
+    timeslice
+  }
+}
+
+impl FusedIterator for PhraseTimesliceIter<'_> {}
 
 #[cfg(feature = "print")]
 impl core::fmt::Display for Phrase {

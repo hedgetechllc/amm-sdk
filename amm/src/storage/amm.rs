@@ -498,7 +498,7 @@ mod test {
       });
       section.add_modification(SectionModificationType::Accelerando);
       section.add_modification(SectionModificationType::OnlyPlay {
-        iterations: vec![1, 2, 4],
+        iterations: vec![0, 1, 3],
       });
       section.add_modification(SectionModificationType::Rallentando);
       section.add_modification(SectionModificationType::Repeat { num_times: 2 });
@@ -513,8 +513,8 @@ mod test {
       });
     }
     let serialized = composition.serialize_json();
-    match AmmStorage::load_data(serialized.as_bytes()) {
-      Ok(ref loaded) => {
+    match AmmStorage::load_data(serialized.as_bytes()).as_ref() {
+      Ok(loaded) => {
         let reserialized = loaded.serialize_json();
         assert_eq!(composition, *loaded);
         assert_eq!(serialized, reserialized);
@@ -526,12 +526,12 @@ mod test {
   #[test]
   fn test_json_serialization_fs() {
     let mut composition = Storage::MusicXML.load("examples/Grande Valse Brillante.musicxml");
-    match composition {
-      Ok(ref mut composition) => match Storage::AMM.save("../target/test_out.amm", composition) {
+    match composition.as_mut() {
+      Ok(composition) => match Storage::AMM.save("../target/test_out.amm", composition) {
         Ok(size) => {
           println!("Successfully stored AMM file containing {size} bytes");
-          match Storage::AMM.load("../target/test_out.amm") {
-            Ok(ref mut loaded) => {
+          match Storage::AMM.load("../target/test_out.amm").as_mut() {
+            Ok(loaded) => {
               println!("Re-imported file from AMM representation, comparing to original...");
               let original = composition.serialize_json();
               let new = loaded.serialize_json();

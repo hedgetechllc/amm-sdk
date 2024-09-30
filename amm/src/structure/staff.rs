@@ -1,10 +1,19 @@
-use super::{chord::Chord, multivoice::MultiVoice, phrase::Phrase, timeslice::Timeslice};
+use super::{
+  chord::Chord,
+  multivoice::{MultiVoice, MultiVoiceTimesliceIter},
+  phrase::{Phrase, PhraseTimesliceIter},
+  timeslice::Timeslice,
+};
 use crate::context::{generate_id, Tempo};
 use crate::modification::{Direction, DirectionType};
 use crate::note::{Accidental, Duration, Note, Pitch};
+use alloc::vec::IntoIter;
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize};
-use core::slice::{Iter, IterMut};
+use core::{
+  iter::FusedIterator,
+  slice::{Iter, IterMut},
+};
 
 #[derive(Clone, Debug, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum StaffContent {
@@ -361,36 +370,18 @@ impl Staff {
   }
 
   #[must_use]
-  pub fn iter_timeslices(&self) -> Vec<Timeslice> {
-    let mut timeslices = Vec::new();
-    self.iter().for_each(|item| match item {
-      StaffContent::Note(note) => {
-        let mut timeslice = Timeslice::new();
-        timeslice.add_note(note.clone());
-        timeslices.push(timeslice);
-      }
-      StaffContent::Chord(chord) => {
-        timeslices.push(chord.to_timeslice());
-      }
-      StaffContent::Phrase(phrase) => {
-        timeslices.append(&mut phrase.iter_timeslices());
-      }
-      StaffContent::MultiVoice(multivoice) => {
-        timeslices.append(&mut multivoice.iter_timeslices());
-      }
-      StaffContent::Direction(direction) => {
-        let mut timeslice = Timeslice::new();
-        timeslice.add_direction(direction.clone());
-        timeslices.push(timeslice);
-      }
-    });
-    timeslices
+  pub fn iter_timeslices(&self) -> StaffTimesliceIter<'_> {
+    StaffTimesliceIter {
+      content_iterator: self.iter(),
+      child_phrase: None,
+      child_multivoice: None,
+    }
   }
 }
 
 impl IntoIterator for Staff {
   type Item = StaffContent;
-  type IntoIter = alloc::vec::IntoIter<Self::Item>;
+  type IntoIter = IntoIter<Self::Item>;
   fn into_iter(self) -> Self::IntoIter {
     self.content.into_iter()
   }
@@ -427,6 +418,62 @@ impl PartialEq for Staff {
     self.content == other.content && self.name == other.name
   }
 }
+
+pub struct StaffTimesliceIter<'a> {
+  content_iterator: Iter<'a, StaffContent>,
+  child_phrase: Option<PhraseTimesliceIter<'a>>,
+  child_multivoice: Option<MultiVoiceTimesliceIter<'a>>,
+}
+
+impl Iterator for StaffTimesliceIter<'_> {
+  type Item = Timeslice;
+  fn next(&mut self) -> Option<Self::Item> {
+    if let Some(child_iterator) = &mut self.child_phrase {
+      match child_iterator.next() {
+        Some(timeslice) => return Some(timeslice),
+        None => self.child_phrase = None,
+      }
+    }
+    if let Some(child_iterator) = &mut self.child_multivoice {
+      match child_iterator.next() {
+        Some(timeslice) => return Some(timeslice),
+        None => self.child_multivoice = None,
+      }
+    }
+    let (mut valid_timeslice, mut timeslice) = (false, None);
+    while !valid_timeslice {
+      (valid_timeslice, timeslice) = match self.content_iterator.next() {
+        Some(StaffContent::Direction(direction)) => (true, Some(direction.to_timeslice())),
+        Some(StaffContent::Note(note)) => (true, Some(note.to_timeslice())),
+        Some(StaffContent::Chord(chord)) => (true, Some(chord.to_timeslice())),
+        Some(StaffContent::Phrase(phrase)) => {
+          let mut child_iterator = phrase.iter_timeslices();
+          match child_iterator.next() {
+            Some(timeslice) => {
+              self.child_phrase = Some(child_iterator);
+              (true, Some(timeslice))
+            }
+            None => (false, None),
+          }
+        }
+        Some(StaffContent::MultiVoice(multivoice)) => {
+          let mut child_iterator = multivoice.iter_timeslices();
+          match child_iterator.next() {
+            Some(timeslice) => {
+              self.child_multivoice = Some(child_iterator);
+              (true, Some(timeslice))
+            }
+            None => (false, None),
+          }
+        }
+        None => (true, None),
+      };
+    }
+    timeslice
+  }
+}
+
+impl FusedIterator for StaffTimesliceIter<'_> {}
 
 #[cfg(feature = "print")]
 impl core::fmt::Display for Staff {

@@ -3,9 +3,13 @@ use super::{
 };
 use crate::context::{generate_id, Tempo};
 use crate::note::{Duration, Note};
+use alloc::vec::IntoIter;
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize};
-use core::slice::{Iter, IterMut};
+use core::{
+  iter::FusedIterator,
+  slice::{Iter, IterMut},
+};
 
 #[derive(Clone, Debug, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum PartContent {
@@ -249,18 +253,17 @@ impl Part {
   }
 
   #[must_use]
-  pub fn iter_timeslices(&self) -> Vec<Timeslice> {
+  pub fn iter_timeslices(&self) -> impl FusedIterator<Item = Timeslice> + '_ {
     // Note: use this to return timeslices for a single part
     self
       .iter()
       .flat_map(|PartContent::Section(section)| section.iter_timeslices())
-      .collect()
   }
 }
 
 impl IntoIterator for Part {
   type Item = PartContent;
-  type IntoIter = alloc::vec::IntoIter<Self::Item>;
+  type IntoIter = IntoIter<Self::Item>;
   fn into_iter(self) -> Self::IntoIter {
     self.content.into_iter()
   }

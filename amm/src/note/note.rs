@@ -85,8 +85,7 @@ impl Clone for Note {
 impl core::fmt::Display for Note {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     let mods = self
-      .modifications
-      .iter()
+      .iter_modifications()
       .map(ToString::to_string)
       .collect::<Vec<String>>()
       .join(", ");

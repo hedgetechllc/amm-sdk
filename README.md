@@ -17,9 +17,9 @@ Abstract Music Manipulation (AMM) SDK
 * Create MusicXML WASM build
 
 * Add a test containing Glissandos and/or multi-note tremolos and/or implicit + explicit tempo changes
-* Try to make iterators truly streaming
 * Finish MusicXML Reader Implementation
   * Take into account `time-only` attributes
   * Scan text attributes for common items (rall., etc.)
   * Scan `sound` attributes for items maybe not recognized otherwise (rall., etc.)
 * Remove `pub(crate)` from Phrase and make `MultiVoice` okay with this
+* Make composition timeslice iterator a real iterator (and check that staff timeslices line up correctly)

@@ -2,6 +2,7 @@ use super::timeslice::Timeslice;
 use crate::context::{generate_id, Tempo};
 use crate::modification::{ChordModification, ChordModificationType, NoteModification};
 use crate::note::{Accidental, Duration, Note, Pitch};
+use alloc::vec::IntoIter;
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize};
 use core::slice::{Iter, IterMut};
@@ -154,7 +155,7 @@ impl Chord {
 
 impl IntoIterator for Chord {
   type Item = ChordContent;
-  type IntoIter = alloc::vec::IntoIter<Self::Item>;
+  type IntoIter = IntoIter<Self::Item>;
   fn into_iter(self) -> Self::IntoIter {
     self.content.into_iter()
   }

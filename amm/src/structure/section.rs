@@ -1,11 +1,20 @@
-use super::place_and_merge_timeslice;
-use super::{chord::Chord, multivoice::MultiVoice, phrase::Phrase, staff::Staff, timeslice::Timeslice};
+use super::{
+  chord::Chord,
+  multivoice::MultiVoice,
+  phrase::Phrase,
+  staff::{Staff, StaffTimesliceIter},
+  timeslice::Timeslice,
+};
 use crate::context::{generate_id, Tempo};
 use crate::modification::{SectionModification, SectionModificationType};
 use crate::note::{Duration, DurationType, Note, Pitch};
+use alloc::vec::IntoIter;
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize};
-use core::slice::{Iter, IterMut};
+use core::{
+  iter::FusedIterator,
+  slice::{Iter, IterMut},
+};
 
 #[derive(Clone, Debug, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum SectionContent {
@@ -41,7 +50,7 @@ impl Section {
     for item in &self.content {
       match item {
         SectionContent::Staff(staff) => {
-          if let Some((ref mut section, _, _)) = implicit_section {
+          if let Some((section, _, _)) = implicit_section.as_mut() {
             if staff.get_name() == retained_staff {
               section.content.push(SectionContent::Staff(staff.clone()));
             }
@@ -451,7 +460,7 @@ impl Section {
 
   #[must_use]
   pub fn num_timeslices(&self) -> usize {
-    self.iter_timeslices().len()
+    self.iter_timeslices().count()
   }
 
   pub fn iter(&self) -> Iter<'_, SectionContent> {
@@ -471,65 +480,24 @@ impl Section {
   }
 
   #[must_use]
-  pub fn iter_timeslices(&self) -> Vec<Timeslice> {
-    // Determine if this section contains sub-sections
-    if self.iter().any(|item| matches!(item, SectionContent::Section(_))) {
-      // Create an implicit section for all naked staff groupings
-      let mut sections = Vec::new();
-      let mut timeslices = Vec::new();
-      let mut implicit_section: Option<&mut Section> = None;
-      for item in &self.content {
-        match item {
-          SectionContent::Staff(staff) => {
-            if let Some(ref mut section) = implicit_section {
-              section.content.push(SectionContent::Staff(staff.clone()));
-            } else {
-              let mut section = Section::new("Implicit");
-              section.content.push(SectionContent::Staff(staff.clone()));
-              sections.push(section);
-              implicit_section = sections.last_mut();
-            }
-          }
-          SectionContent::Section(section) => {
-            sections.push(section.clone());
-            implicit_section = None;
-          }
-        }
-      }
-
-      // Iterate through all sub-sections the correct number of times
-      for iteration in 0..self.get_total_iterations() {
-        for section in &sections {
-          if section.get_playable_iterations().is_empty() || section.get_playable_iterations().contains(&iteration) {
-            timeslices.extend(section.iter_timeslices());
-          }
-        }
-      }
-      timeslices
-    } else {
-      // Iterate over all staves the correct number of times
-      let mut timeslices: Vec<(f64, Timeslice)> = Vec::new();
-      for _ in 0..self.get_total_iterations() {
-        for item in &self.content {
-          match item {
-            SectionContent::Staff(staff) => {
-              let (mut index, mut curr_time) = (0, 0.0);
-              for slice in staff.iter_timeslices() {
-                (index, curr_time) = place_and_merge_timeslice(&mut timeslices, slice, index, curr_time);
-              }
-            }
-            SectionContent::Section(_) => unsafe { core::hint::unreachable_unchecked() },
-          }
-        }
-      }
-      timeslices.into_iter().map(|(_, slice)| slice).collect()
+  pub fn iter_timeslices(&self) -> SectionTimesliceIter<'_> {
+    SectionTimesliceIter {
+      iteration: 0,
+      num_iterations: self.get_total_iterations(),
+      base_duration: Duration::new(DurationType::TwoThousandFortyEighth, 0),
+      content: &self.content,
+      content_iterator: self.iter(),
+      section_iterator: None,
+      staff_iterators: Vec::new(),
+      modifications: &self.modifications,
+      processing_staves: false,
     }
   }
 }
 
 impl IntoIterator for Section {
   type Item = SectionContent;
-  type IntoIter = alloc::vec::IntoIter<Self::Item>;
+  type IntoIter = IntoIter<Self::Item>;
   fn into_iter(self) -> Self::IntoIter {
     self.content.into_iter()
   }
@@ -567,6 +535,92 @@ impl PartialEq for Section {
     self.name == other.name && self.content == other.content && self.modifications == other.modifications
   }
 }
+
+pub struct SectionTimesliceIter<'a> {
+  iteration: u8,
+  num_iterations: u8,
+  base_duration: Duration,
+  content: &'a [SectionContent],
+  content_iterator: Iter<'a, SectionContent>,
+  section_iterator: Option<Box<SectionTimesliceIter<'a>>>,
+  staff_iterators: Vec<(f64, StaffTimesliceIter<'a>)>,
+  modifications: &'a [SectionModification],
+  processing_staves: bool,
+}
+
+impl Iterator for SectionTimesliceIter<'_> {
+  type Item = Timeslice;
+  fn next(&mut self) -> Option<Self::Item> {
+    while self.iteration < self.num_iterations {
+      if self.processing_staves {
+        let mut next_start_time = f64::MAX;
+        let mut timeslice: Option<Timeslice> = None;
+        self.staff_iterators.iter_mut().for_each(|(next_time, iterator)| {
+          if next_time.abs() <= 0.000_001 {
+            if let Some(mut slice) = iterator.next() {
+              *next_time = slice.get_beats(&self.base_duration);
+              if *next_time < next_start_time {
+                next_start_time = *next_time;
+              }
+              if let Some(timeslice) = timeslice.as_mut() {
+                timeslice.combine_with(&mut slice);
+              } else {
+                self.modifications.iter().for_each(|mod_type| {
+                  slice.add_tempo_details(&mod_type.r#type);
+                });
+                timeslice = Some(slice);
+              }
+            }
+          } else if *next_time >= 0.0 && *next_time < next_start_time {
+            next_start_time = *next_time;
+          }
+        });
+        if timeslice.is_some() {
+          self.staff_iterators.iter_mut().for_each(|(next_time, _)| {
+            *next_time -= next_start_time;
+          });
+          return timeslice;
+        }
+        self.staff_iterators.clear();
+        self.processing_staves = false;
+        self.iteration += 1;
+      }
+      if let Some(section_iterator) = &mut self.section_iterator {
+        match section_iterator.next() {
+          Some(mut timeslice) => {
+            self.modifications.iter().for_each(|mod_type| {
+              timeslice.add_tempo_details(&mod_type.r#type);
+            });
+            return Some(timeslice);
+          }
+          None => self.section_iterator = None,
+        }
+      }
+      if let Some(item) = self.content_iterator.next() {
+        match item {
+          SectionContent::Staff(staff) => self.staff_iterators.push((0.0, staff.iter_timeslices())),
+          SectionContent::Section(section) => {
+            self.processing_staves = !self.staff_iterators.is_empty();
+            if section.get_playable_iterations().is_empty()
+              || section.get_playable_iterations().contains(&self.iteration)
+            {
+              self.section_iterator = Some(Box::new(section.iter_timeslices()));
+            }
+          }
+        }
+      } else {
+        self.content_iterator = self.content.iter();
+        self.processing_staves = !self.staff_iterators.is_empty();
+        if !self.processing_staves {
+          self.iteration += 1;
+        }
+      }
+    }
+    None
+  }
+}
+
+impl FusedIterator for SectionTimesliceIter<'_> {}
 
 #[cfg(feature = "print")]
 impl core::fmt::Display for Section {

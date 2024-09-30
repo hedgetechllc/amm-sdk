@@ -1,5 +1,5 @@
 use crate::context::{Key, Tempo, TimeSignature};
-use crate::modification::{Direction, PhraseModificationType};
+use crate::modification::{Direction, PhraseModificationType, SectionModificationType};
 use crate::note::{Accidental, Duration, Note, Pitch};
 use alloc::{collections::BTreeMap, vec::Vec};
 
@@ -119,6 +119,7 @@ pub struct Timeslice {
   pub arpeggiated: bool,
   pub content: Vec<TimesliceContent>,
   pub directions: Vec<Direction>,
+  pub tempo_details: Vec<SectionModificationType>,
 }
 
 impl Timeslice {
@@ -128,6 +129,7 @@ impl Timeslice {
       arpeggiated: false,
       content: Vec::new(),
       directions: Vec::new(),
+      tempo_details: Vec::new(),
     }
   }
 
@@ -141,10 +143,25 @@ impl Timeslice {
     self
   }
 
+  pub fn add_tempo_details(&mut self, tempo_details: &SectionModificationType) -> &mut Self {
+    if !matches!(
+      tempo_details,
+      SectionModificationType::OnlyPlay { .. } | SectionModificationType::Repeat { .. }
+    ) && !self
+      .tempo_details
+      .iter()
+      .any(|detail| core::mem::discriminant(detail) == core::mem::discriminant(tempo_details))
+    {
+      self.tempo_details.push(tempo_details.clone());
+    }
+    self
+  }
+
   pub fn combine_with(&mut self, other: &mut Self) -> &mut Self {
     self.arpeggiated = self.arpeggiated || other.arpeggiated;
     self.content.append(other.content.as_mut());
     self.directions.append(other.directions.as_mut());
+    self.tempo_details.append(other.tempo_details.as_mut());
     self
   }
 
@@ -173,9 +190,15 @@ impl core::fmt::Display for Timeslice {
       .map(ToString::to_string)
       .collect::<Vec<String>>()
       .join(", ");
+    let tempo_details = self
+      .tempo_details
+      .iter()
+      .map(ToString::to_string)
+      .collect::<Vec<String>>()
+      .join(", ");
     write!(
       f,
-      "Timeslice: {}{}{}{}{}{}",
+      "Timeslice: {}{}{}{}{}{}{}{}{}",
       if self.directions.is_empty() {
         ""
       } else {
@@ -183,6 +206,13 @@ impl core::fmt::Display for Timeslice {
       },
       directions_string,
       if self.directions.is_empty() { "" } else { "], " },
+      if self.tempo_details.is_empty() {
+        ""
+      } else {
+        "Tempo Details: ["
+      },
+      tempo_details,
+      if self.tempo_details.is_empty() { "" } else { "], " },
       if self.content.is_empty() { "" } else { "Content: [" },
       self
         .content

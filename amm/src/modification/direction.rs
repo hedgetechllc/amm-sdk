@@ -1,4 +1,5 @@
 use crate::context::{generate_id, Clef, Dynamic, Key, TimeSignature};
+use crate::structure::Timeslice;
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize};
 
@@ -47,6 +48,13 @@ impl Direction {
   #[must_use]
   pub fn get_id(&self) -> usize {
     self.id
+  }
+
+  #[must_use]
+  pub fn to_timeslice(&self) -> Timeslice {
+    let mut timeslice = Timeslice::new();
+    timeslice.add_direction(self.clone());
+    timeslice
   }
 }
 
