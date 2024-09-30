@@ -444,6 +444,14 @@ impl Section {
 
   pub fn remove_modification(&mut self, id: usize) -> &mut Self {
     self.modifications.retain(|modification| modification.get_id() != id);
+    self.iter_mut().for_each(|item| match item {
+      SectionContent::Staff(staff) => {
+        staff.remove_modification(id);
+      }
+      SectionContent::Section(section) => {
+        section.remove_modification(id);
+      }
+    });
     self
   }
 

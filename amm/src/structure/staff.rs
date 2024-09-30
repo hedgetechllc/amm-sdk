@@ -344,6 +344,25 @@ impl Staff {
     self
   }
 
+  pub fn remove_modification(&mut self, id: usize) -> &mut Self {
+    self.iter_mut().for_each(|item| match item {
+      StaffContent::Note(note) => {
+        note.remove_modification(id);
+      }
+      StaffContent::Chord(chord) => {
+        chord.remove_modification(id);
+      }
+      StaffContent::Phrase(phrase) => {
+        phrase.remove_modification(id);
+      }
+      StaffContent::MultiVoice(multivoice) => {
+        multivoice.remove_modification(id);
+      }
+      _ => (),
+    });
+    self
+  }
+
   #[must_use]
   pub fn num_timeslices(&self) -> usize {
     self

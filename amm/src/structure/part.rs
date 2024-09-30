@@ -231,6 +231,13 @@ impl Part {
     self
   }
 
+  pub fn remove_modification(&mut self, id: usize) -> &mut Self {
+    self.iter_mut().for_each(|PartContent::Section(section)| {
+      section.remove_modification(id);
+    });
+    self
+  }
+
   #[must_use]
   pub fn num_timeslices(&self) -> usize {
     self

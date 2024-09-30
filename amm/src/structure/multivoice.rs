@@ -444,6 +444,13 @@ impl MultiVoice {
     self
   }
 
+  pub fn remove_modification(&mut self, id: usize) -> &mut Self {
+    self.iter_mut().for_each(|MultiVoiceContent::Phrase(phrase)| {
+      phrase.remove_modification(id);
+    });
+    self
+  }
+
   #[must_use]
   pub fn num_timeslices(&self) -> usize {
     self.iter_timeslices().count()

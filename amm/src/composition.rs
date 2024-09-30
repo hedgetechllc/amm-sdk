@@ -324,6 +324,13 @@ impl Composition {
     self
   }
 
+  pub fn remove_modification(&mut self, id: usize) -> &mut Self {
+    self.iter_mut().for_each(|part| {
+      part.remove_modification(id);
+    });
+    self
+  }
+
   #[must_use]
   pub fn num_timeslices(&self) -> usize {
     self.parts.iter().map(Part::num_timeslices).max().unwrap_or_default()

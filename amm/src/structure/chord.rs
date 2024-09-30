@@ -105,6 +105,9 @@ impl Chord {
 
   pub fn remove_modification(&mut self, id: usize) -> &mut Self {
     self.modifications.retain(|modification| modification.get_id() != id);
+    self.iter_mut().for_each(|ChordContent::Note(note)| {
+      note.remove_modification(id);
+    });
     self
   }
 

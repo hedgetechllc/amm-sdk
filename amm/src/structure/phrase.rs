@@ -336,6 +336,20 @@ impl Phrase {
 
   pub fn remove_modification(&mut self, id: usize) -> &mut Self {
     self.modifications.retain(|modification| modification.get_id() != id);
+    self.iter_mut().for_each(|item| match item {
+      PhraseContent::Note(note) => {
+        note.remove_modification(id);
+      }
+      PhraseContent::Chord(chord) => {
+        chord.remove_modification(id);
+      }
+      PhraseContent::Phrase(phrase) => {
+        phrase.remove_modification(id);
+      }
+      PhraseContent::MultiVoice(multivoice) => {
+        multivoice.remove_modification(id);
+      }
+    });
     self
   }
 
@@ -553,7 +567,7 @@ impl core::fmt::Display for Phrase {
 #[cfg(test)]
 mod test {
   use super::*;
-  use crate::{DurationType, PitchName};
+  use crate::note::{Accidental, DurationType, PitchName};
 
   fn create_phrase() -> Phrase {
     let mut phrase = Phrase::new();
