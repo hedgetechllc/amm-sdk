@@ -1,4 +1,5 @@
 use super::Load;
+#[allow(clippy::wildcard_imports)]
 use crate::{context::*, modification::*, note::*, structure::*, Composition};
 use alloc::{
   collections::BTreeMap,

@@ -358,7 +358,7 @@ impl Staff {
       StaffContent::MultiVoice(multivoice) => {
         multivoice.remove_modification(id);
       }
-      _ => (),
+      StaffContent::Direction(_) => (),
     });
     self
   }
