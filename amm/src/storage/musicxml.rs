@@ -1,10 +1,5 @@
 use super::Load;
-use crate::{
-  Accidental, Chord, ChordModification, ChordModificationType, Clef, ClefSymbol, ClefType, Composition, DirectionType,
-  Duration, DurationType, Dynamic, HandbellTechnique, Key, KeyMode, Note, NoteModification, NoteModificationType,
-  PedalType, PhraseModificationType, Pitch, PitchName, Section, SectionModificationType, Tempo, TempoMarking,
-  TempoSuggestion, TimeSignature, TimeSignatureType,
-};
+use crate::{context::*, modification::*, note::*, structure::*, Composition};
 use alloc::{
   collections::BTreeMap,
   string::{String, ToString},

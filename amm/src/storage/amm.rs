@@ -39,7 +39,7 @@ impl Store for AmmStorage {
 #[cfg(test)]
 mod test {
   use super::*;
-  use crate::*;
+  use crate::{context::*, modification::*, note::*, storage::Storage};
 
   #[test]
   fn test_json_serialization_direct() {

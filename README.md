@@ -2,6 +2,8 @@
 
 Abstract Music Manipulation (AMM) SDK
 
+Under heavy development - Updates forthcoming
+
 ## Under Development
 
 * Create WASM build
@@ -23,3 +25,4 @@ Abstract Music Manipulation (AMM) SDK
   * Scan `sound` attributes for items maybe not recognized otherwise (rall., etc.)
 * Remove `pub(crate)` from Phrase and make `MultiVoice` okay with this
 * Make composition timeslice iterator a real iterator (and check that staff timeslices line up correctly)
+* MusicXML parser: End multivoice phrase if there is a timeslice that is missing the next voice note when there should be one
