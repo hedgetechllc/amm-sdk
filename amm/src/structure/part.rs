@@ -1,33 +1,20 @@
-use super::{
-  chord::Chord, multivoice::MultiVoice, phrase::Phrase, section::Section, staff::Staff, timeslice::Timeslice,
-};
+use super::{chord::Chord, multivoice::MultiVoice, phrase::Phrase, section::Section, staff::Staff};
 use crate::context::{generate_id, Tempo};
 use crate::note::{Duration, Note};
-use alloc::{
-  collections::BTreeSet,
-  rc::Rc,
-  string::{String, ToString},
-  vec::Vec,
-};
-use core::{cell::RefCell, slice::Iter};
-#[cfg(feature = "json")]
-use {
-  amm_internal::json_prelude::*,
-  amm_macros::{JsonDeserialize, JsonSerialize},
-};
+use crate::temporal::Timeslice;
+use amm_internal::amm_prelude::*;
+use amm_macros::{JsonDeserialize, JsonSerialize};
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone)]
+#[derive(Clone, Debug, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum PartContent {
-  Section(Rc<RefCell<Section>>),
+  Section(Section),
 }
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Default)]
+#[derive(Debug, Default, Eq, JsonDeserialize, JsonSerialize)]
 pub struct Part {
-  pub(crate) id: usize,
-  pub(crate) name: String,
-  pub(crate) content: Vec<PartContent>,
+  id: usize,
+  name: String,
+  content: Vec<PartContent>,
 }
 
 impl Part {
@@ -43,14 +30,11 @@ impl Part {
   #[must_use]
   pub fn flatten(&self) -> Self {
     Self {
-      id: self.id,
+      id: generate_id(),
       name: self.name.clone(),
       content: self
-        .content
         .iter()
-        .map(|item| match item {
-          PartContent::Section(section) => PartContent::Section(section.borrow().flatten()),
-        })
+        .map(|PartContent::Section(section)| PartContent::Section(section.flatten()))
         .collect(),
     }
   }
@@ -67,13 +51,11 @@ impl Part {
         )
       })
       .collect();
-    self.content.iter().for_each(|item| match item {
-      PartContent::Section(section) => {
-        for (staff_name, part) in &mut staff_parts {
-          part
-            .content
-            .push(PartContent::Section(section.borrow().single_staff_clone(staff_name)));
-        }
+    self.iter().for_each(|PartContent::Section(section)| {
+      for (staff_name, part) in &mut staff_parts {
+        part
+          .content
+          .push(PartContent::Section(section.clone_with_single_staff(staff_name)));
       }
     });
     staff_parts.into_values().collect()
@@ -94,34 +76,31 @@ impl Part {
     self
   }
 
-  pub fn add_section(&mut self, name: &str) -> Rc<RefCell<Section>> {
-    if let Some(section) = self.get_section_by_name(name) {
-      section
-    } else {
-      unsafe {
-        self.content.push(PartContent::Section(Section::new(name)));
-        self.get_section_by_name(name).unwrap_unchecked()
-      }
+  pub fn add_section(&mut self, name: &str) -> &mut Section {
+    self.content.push(PartContent::Section(Section::new(name)));
+    match self.content.last_mut() {
+      Some(PartContent::Section(section)) => section,
+      _ => unsafe { core::hint::unreachable_unchecked() },
     }
   }
 
-  pub fn add_default_section(&mut self) -> Rc<RefCell<Section>> {
-    self.add_section("default")
+  pub fn claim_section(&mut self, section: Section) -> &mut Section {
+    self.content.push(PartContent::Section(section));
+    match self.content.last_mut() {
+      Some(PartContent::Section(section)) => section,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
   }
 
   #[must_use]
   pub fn get_section_names(&self, recurse: bool) -> Vec<String> {
-    // Section names are not necessarily unique when nested, so using `recurse` might generate misleading results
+    // Section names are not necessarily unique, so this function might generate misleading results
     // It is recommended to directly iterate over the sections themselves instead
     let mut section_names = BTreeSet::new();
-    self.content.iter().for_each(|item| match item {
-      PartContent::Section(section) => {
-        section_names.insert(String::from(section.borrow().get_name()));
-        if recurse {
-          section.borrow().get_section_names(true).into_iter().for_each(|name| {
-            section_names.insert(name);
-          });
-        }
+    self.iter().for_each(|PartContent::Section(section)| {
+      section_names.insert(String::from(section.get_name()));
+      if recurse {
+        section_names.extend(section.get_section_names(recurse));
       }
     });
     section_names.into_iter().collect()
@@ -130,80 +109,102 @@ impl Part {
   #[must_use]
   pub fn get_staff_names(&self) -> Vec<String> {
     self
-      .content
       .iter()
-      .flat_map(|item| match item {
-        PartContent::Section(section) => section.borrow().get_staff_names(true),
-      })
+      .flat_map(|PartContent::Section(section)| section.get_staff_names(true))
       .collect::<BTreeSet<String>>()
       .into_iter()
       .collect()
   }
 
   #[must_use]
-  pub fn get_section(&mut self, id: usize) -> Option<Rc<RefCell<Section>>> {
-    self.content.iter().find_map(|item| match item {
-      PartContent::Section(section) if section.borrow().get_id() == id => Some(Rc::clone(section)),
-      PartContent::Section(section) => section.borrow_mut().get_section(id),
-    })
+  pub fn get_section(&self, id: usize) -> Option<&Section> {
+    self
+      .iter()
+      .find_map(|PartContent::Section(section)| section.get_section(id))
   }
 
   #[must_use]
-  pub fn get_section_by_name(&mut self, name: &str) -> Option<Rc<RefCell<Section>>> {
-    self.content.iter().find_map(|item| match item {
-      PartContent::Section(section) if section.borrow().get_name() == name => Some(Rc::clone(section)),
-      PartContent::Section(_) => None,
-    })
+  pub fn get_section_mut(&mut self, id: usize) -> Option<&mut Section> {
+    self
+      .iter_mut()
+      .find_map(|PartContent::Section(section)| section.get_section_mut(id))
   }
 
   #[must_use]
-  pub fn get_default_section(&mut self) -> Option<Rc<RefCell<Section>>> {
-    self.get_section_by_name("default")
+  pub fn get_chord(&self, id: usize) -> Option<&Chord> {
+    self
+      .iter()
+      .find_map(|PartContent::Section(section)| section.get_chord(id))
   }
 
   #[must_use]
-  pub fn get_chord(&mut self, id: usize) -> Option<Rc<RefCell<Chord>>> {
-    self.content.iter().find_map(|item| match item {
-      PartContent::Section(section) => section.borrow_mut().get_chord(id),
-    })
+  pub fn get_chord_mut(&mut self, id: usize) -> Option<&mut Chord> {
+    self
+      .iter_mut()
+      .find_map(|PartContent::Section(section)| section.get_chord_mut(id))
   }
 
   #[must_use]
-  pub fn get_multivoice(&mut self, id: usize) -> Option<Rc<RefCell<MultiVoice>>> {
-    self.content.iter().find_map(|item| match item {
-      PartContent::Section(section) => section.borrow_mut().get_multivoice(id),
-    })
+  pub fn get_multivoice(&self, id: usize) -> Option<&MultiVoice> {
+    self
+      .iter()
+      .find_map(|PartContent::Section(section)| section.get_multivoice(id))
   }
 
   #[must_use]
-  pub fn get_note(&mut self, id: usize) -> Option<Rc<RefCell<Note>>> {
-    self.content.iter().find_map(|item| match item {
-      PartContent::Section(section) => section.borrow_mut().get_note(id),
-    })
+  pub fn get_multivoice_mut(&mut self, id: usize) -> Option<&mut MultiVoice> {
+    self
+      .iter_mut()
+      .find_map(|PartContent::Section(section)| section.get_multivoice_mut(id))
   }
 
   #[must_use]
-  pub fn get_phrase(&mut self, id: usize) -> Option<Rc<RefCell<Phrase>>> {
-    self.content.iter().find_map(|item| match item {
-      PartContent::Section(section) => section.borrow_mut().get_phrase(id),
-    })
+  pub fn get_note(&self, id: usize) -> Option<&Note> {
+    self
+      .iter()
+      .find_map(|PartContent::Section(section)| section.get_note(id))
   }
 
   #[must_use]
-  pub fn get_staff(&mut self, id: usize) -> Option<Rc<RefCell<Staff>>> {
-    self.content.iter().find_map(|item| match item {
-      PartContent::Section(section) => section.borrow_mut().get_staff(id),
-    })
+  pub fn get_note_mut(&mut self, id: usize) -> Option<&mut Note> {
+    self
+      .iter_mut()
+      .find_map(|PartContent::Section(section)| section.get_note_mut(id))
+  }
+
+  #[must_use]
+  pub fn get_phrase(&self, id: usize) -> Option<&Phrase> {
+    self
+      .iter()
+      .find_map(|PartContent::Section(section)| section.get_phrase(id))
+  }
+
+  #[must_use]
+  pub fn get_phrase_mut(&mut self, id: usize) -> Option<&mut Phrase> {
+    self
+      .iter_mut()
+      .find_map(|PartContent::Section(section)| section.get_phrase_mut(id))
+  }
+
+  #[must_use]
+  pub fn get_staff(&self, id: usize) -> Option<&Staff> {
+    self
+      .iter()
+      .find_map(|PartContent::Section(section)| section.get_staff(id))
+  }
+
+  #[must_use]
+  pub fn get_staff_mut(&mut self, id: usize) -> Option<&mut Staff> {
+    self
+      .iter_mut()
+      .find_map(|PartContent::Section(section)| section.get_staff_mut(id))
   }
 
   #[must_use]
   pub fn get_beats(&self, beat_base: &Duration) -> f64 {
     self
-      .content
       .iter()
-      .map(|content| match &content {
-        PartContent::Section(section) => section.borrow().get_beats(beat_base),
-      })
+      .map(|PartContent::Section(section)| section.get_beats(beat_base))
       .sum()
   }
 
@@ -212,50 +213,52 @@ impl Part {
     self.get_beats(&tempo.base_note) * 60.0 / f64::from(tempo.beats_per_minute)
   }
 
-  pub fn remove_section_by_id(&mut self, id: usize) -> &mut Self {
-    self.content.retain(|item| match item {
-      PartContent::Section(section) => section.borrow().get_id() != id,
-    });
+  pub fn remove_section(&mut self, id: usize) -> &mut Self {
     self
-  }
-
-  pub fn remove_section_by_name(&mut self, name: &str) -> &mut Self {
-    self.content.retain(|item| match item {
-      PartContent::Section(section) => section.borrow().get_name() != name,
-    });
+      .content
+      .retain(|PartContent::Section(section)| section.get_id() != id);
     self
-  }
-
-  pub fn remove_default_section(&mut self) -> &mut Self {
-    self.remove_section_by_name("default")
   }
 
   pub fn remove_item(&mut self, id: usize) -> &mut Self {
-    self.content.retain(|item| match item {
-      PartContent::Section(section) => section.borrow().get_id() != id,
-    });
-    self.content.iter().for_each(|item| match item {
-      PartContent::Section(section) => {
-        section.borrow_mut().remove_item(id);
-      }
+    self
+      .content
+      .retain(|PartContent::Section(section)| section.get_id() != id);
+    self.iter_mut().for_each(|PartContent::Section(section)| {
+      section.remove_item(id);
     });
     self
   }
 
-  pub fn iter(&self) -> Iter<'_, PartContent> {
-    self.content.iter()
+  pub fn remove_modification(&mut self, id: usize) -> &mut Self {
+    self.iter_mut().for_each(|PartContent::Section(section)| {
+      section.remove_modification(id);
+    });
+    self
   }
 
   #[must_use]
-  pub fn iter_timeslices(&self) -> impl IntoIterator<Item = Timeslice> {
+  pub fn num_timeslices(&self) -> usize {
+    self
+      .iter()
+      .map(|PartContent::Section(section)| section.num_timeslices())
+      .sum()
+  }
+
+  pub fn iter(&self) -> core::slice::Iter<'_, PartContent> {
+    self.content.iter()
+  }
+
+  pub fn iter_mut(&mut self) -> core::slice::IterMut<'_, PartContent> {
+    self.content.iter_mut()
+  }
+
+  #[must_use]
+  pub fn iter_timeslices(&self) -> impl core::iter::FusedIterator<Item = Timeslice> + '_ {
     // Note: use this to return timeslices for a single part
-    let mut timeslices = Vec::new();
-    self.content.iter().for_each(|item| match item {
-      PartContent::Section(section) => {
-        timeslices.append(&mut section.borrow().iter_timeslices());
-      }
-    });
-    timeslices
+    self
+      .iter()
+      .flat_map(|PartContent::Section(section)| section.iter_timeslices())
   }
 }
 
@@ -269,9 +272,33 @@ impl IntoIterator for Part {
 
 impl<'a> IntoIterator for &'a Part {
   type Item = &'a PartContent;
-  type IntoIter = Iter<'a, PartContent>;
+  type IntoIter = core::slice::Iter<'a, PartContent>;
   fn into_iter(self) -> Self::IntoIter {
     self.iter()
+  }
+}
+
+impl<'a> IntoIterator for &'a mut Part {
+  type Item = &'a mut PartContent;
+  type IntoIter = core::slice::IterMut<'a, PartContent>;
+  fn into_iter(self) -> Self::IntoIter {
+    self.iter_mut()
+  }
+}
+
+impl Clone for Part {
+  fn clone(&self) -> Self {
+    Self {
+      id: generate_id(),
+      name: self.name.clone(),
+      content: self.content.clone(),
+    }
+  }
+}
+
+impl PartialEq for Part {
+  fn eq(&self, other: &Self) -> bool {
+    self.content == other.content && self.name == other.name
   }
 }
 
@@ -279,11 +306,8 @@ impl<'a> IntoIterator for &'a Part {
 impl core::fmt::Display for Part {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     let sections = self
-      .content
       .iter()
-      .map(|item| match item {
-        PartContent::Section(section) => section.borrow().to_string(),
-      })
+      .map(|PartContent::Section(section)| section.to_string())
       .collect::<Vec<_>>()
       .join(", ");
     write!(f, "Part {}: [{sections}]", self.name)

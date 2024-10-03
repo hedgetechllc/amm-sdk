@@ -1,15 +1,9 @@
 use super::chord::ChordModificationType;
 use crate::context::{generate_id, Dynamic};
-use alloc::rc::Rc;
-use core::cell::RefCell;
-#[cfg(feature = "json")]
-use {
-  amm_internal::json_prelude::*,
-  amm_macros::{JsonDeserialize, JsonSerialize},
-};
+use amm_internal::amm_prelude::*;
+use amm_macros::{JsonDeserialize, JsonSerialize, ModOrder};
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, ModOrder, JsonDeserialize, JsonSerialize)]
 pub enum HandbellTechnique {
   Belltree,
   Damp,
@@ -25,8 +19,7 @@ pub enum HandbellTechnique {
   Swing,
 }
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Copy, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, ModOrder, JsonDeserialize, JsonSerialize)]
 pub enum NoteModificationType {
   #[default]
   Accent,
@@ -108,25 +101,24 @@ pub enum NoteModificationType {
   UpBow,
 }
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, JsonDeserialize, JsonSerialize)]
 pub struct NoteModification {
   id: usize,
-  modification: NoteModificationType,
+  pub r#type: NoteModificationType,
 }
 
 impl NoteModification {
   #[must_use]
-  pub fn new(modification: NoteModificationType) -> Rc<RefCell<Self>> {
-    Rc::new(RefCell::new(Self {
+  pub fn new(r#type: NoteModificationType) -> Self {
+    Self {
       id: generate_id(),
-      modification,
-    }))
+      r#type,
+    }
   }
 
   #[must_use]
-  pub fn from_chord_modification(modification: &ChordModificationType) -> Option<Rc<RefCell<Self>>> {
-    match *modification {
+  pub fn from_chord_modification(r#type: &ChordModificationType) -> Option<Self> {
+    match *r#type {
       ChordModificationType::Accent => Some(NoteModificationType::Accent),
       ChordModificationType::DetachedLegato => Some(NoteModificationType::DetachedLegato),
       ChordModificationType::DownBow => Some(NoteModificationType::DownBow),
@@ -154,11 +146,9 @@ impl NoteModification {
       ChordModificationType::UpBow => Some(NoteModificationType::UpBow),
       _ => None,
     }
-    .map(|modification| {
-      Rc::new(RefCell::new(Self {
-        id: generate_id(),
-        modification,
-      }))
+    .map(|r#type| Self {
+      id: generate_id(),
+      r#type,
     })
   }
 
@@ -166,10 +156,32 @@ impl NoteModification {
   pub fn get_id(&self) -> usize {
     self.id
   }
+}
 
-  #[must_use]
-  pub fn get_modification(&self) -> &NoteModificationType {
-    &self.modification
+impl Clone for NoteModification {
+  fn clone(&self) -> Self {
+    Self {
+      id: generate_id(),
+      r#type: self.r#type,
+    }
+  }
+}
+
+impl PartialEq for NoteModification {
+  fn eq(&self, other: &Self) -> bool {
+    self.r#type == other.r#type
+  }
+}
+
+impl Ord for NoteModification {
+  fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+    self.r#type.cmp(&other.r#type)
+  }
+}
+
+impl PartialOrd for NoteModification {
+  fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+    Some(self.cmp(other))
   }
 }
 
@@ -293,6 +305,6 @@ impl core::fmt::Display for NoteModificationType {
 #[cfg(feature = "print")]
 impl core::fmt::Display for NoteModification {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-    write!(f, "{}", self.modification)
+    write!(f, "{}", self.r#type)
   }
 }

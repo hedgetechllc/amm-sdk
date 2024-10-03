@@ -1,14 +1,9 @@
 use crate::context::{generate_id, Clef, Dynamic, Key, TimeSignature};
-use alloc::{rc::Rc, string::String};
-use core::cell::RefCell;
-#[cfg(feature = "json")]
-use {
-  amm_internal::json_prelude::*,
-  amm_macros::{JsonDeserialize, JsonSerialize},
-};
+use crate::temporal::Timeslice;
+use amm_internal::amm_prelude::*;
+use amm_macros::{JsonDeserialize, JsonSerialize, ModOrder};
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Copy, Clone, Default, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, ModOrder, JsonDeserialize, JsonSerialize)]
 pub enum DirectionType {
   AccordionRegistration {
     high: bool,
@@ -35,20 +30,19 @@ pub enum DirectionType {
   },
 }
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, JsonDeserialize, JsonSerialize)]
 pub struct Direction {
   id: usize,
-  modification: DirectionType,
+  pub r#type: DirectionType,
 }
 
 impl Direction {
   #[must_use]
-  pub fn new(modification: DirectionType) -> Rc<RefCell<Self>> {
-    Rc::new(RefCell::new(Self {
+  pub fn new(r#type: DirectionType) -> Self {
+    Self {
       id: generate_id(),
-      modification,
-    }))
+      r#type,
+    }
   }
 
   #[must_use]
@@ -57,8 +51,37 @@ impl Direction {
   }
 
   #[must_use]
-  pub fn get_modification(&self) -> &DirectionType {
-    &self.modification
+  pub fn to_timeslice(&self) -> Timeslice {
+    let mut timeslice = Timeslice::new();
+    timeslice.add_direction(self.clone());
+    timeslice
+  }
+}
+
+impl Clone for Direction {
+  fn clone(&self) -> Self {
+    Self {
+      id: generate_id(),
+      r#type: self.r#type,
+    }
+  }
+}
+
+impl PartialEq for Direction {
+  fn eq(&self, other: &Self) -> bool {
+    self.r#type == other.r#type
+  }
+}
+
+impl Ord for Direction {
+  fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+    self.r#type.cmp(&other.r#type)
+  }
+}
+
+impl PartialOrd for Direction {
+  fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+    Some(self.cmp(other))
   }
 }
 
@@ -91,6 +114,6 @@ impl core::fmt::Display for DirectionType {
 #[cfg(feature = "print")]
 impl core::fmt::Display for Direction {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-    write!(f, "{}", self.modification)
+    write!(f, "{}", self.r#type)
   }
 }

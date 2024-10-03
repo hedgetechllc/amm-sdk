@@ -1,15 +1,9 @@
 use super::note::NoteModificationType;
 use crate::context::{generate_id, Dynamic};
-use alloc::rc::Rc;
-use core::cell::RefCell;
-#[cfg(feature = "json")]
-use {
-  amm_internal::json_prelude::*,
-  amm_macros::{JsonDeserialize, JsonSerialize},
-};
+use amm_internal::amm_prelude::*;
+use amm_macros::{JsonDeserialize, JsonSerialize, ModOrder};
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Copy, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, ModOrder, JsonDeserialize, JsonSerialize)]
 pub enum ChordModificationType {
   #[default]
   Accent,
@@ -48,72 +42,93 @@ pub enum ChordModificationType {
   UpBow,
 }
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, JsonDeserialize, JsonSerialize)]
 pub struct ChordModification {
   id: usize,
-  modification: ChordModificationType,
+  pub r#type: ChordModificationType,
 }
 
 impl ChordModification {
   #[must_use]
-  pub fn new(modification: ChordModificationType) -> Rc<RefCell<Self>> {
-    Rc::new(RefCell::new(Self {
+  pub fn new(r#type: ChordModificationType) -> Self {
+    Self {
       id: generate_id(),
-      modification,
-    }))
+      r#type,
+    }
   }
 
   #[must_use]
-  pub fn from_note_modification(modification: &NoteModificationType) -> Rc<RefCell<Self>> {
-    Rc::new(RefCell::new(Self {
+  pub fn from_note_modification(r#type: &NoteModificationType) -> Option<Self> {
+    match *r#type {
+      NoteModificationType::Accent => Some(ChordModificationType::Accent),
+      NoteModificationType::DetachedLegato => Some(ChordModificationType::DetachedLegato),
+      NoteModificationType::DownBow => Some(ChordModificationType::DownBow),
+      NoteModificationType::Dynamic { dynamic } => Some(ChordModificationType::Dynamic { dynamic }),
+      NoteModificationType::Fermata => Some(ChordModificationType::Fermata),
+      NoteModificationType::Fingernails => Some(ChordModificationType::Fingernails),
+      NoteModificationType::HalfMuted => Some(ChordModificationType::HalfMuted),
+      NoteModificationType::HarmonMute { open, half } => Some(ChordModificationType::HarmonMute { open, half }),
+      NoteModificationType::Heel => Some(ChordModificationType::Heel),
+      NoteModificationType::Marcato => Some(ChordModificationType::Marcato),
+      NoteModificationType::Open => Some(ChordModificationType::Open),
+      NoteModificationType::Pizzicato => Some(ChordModificationType::Pizzicato),
+      NoteModificationType::Sforzando => Some(ChordModificationType::Sforzando),
+      NoteModificationType::Smear => Some(ChordModificationType::Smear),
+      NoteModificationType::SoftAccent => Some(ChordModificationType::SoftAccent),
+      NoteModificationType::Spiccato => Some(ChordModificationType::Spiccato),
+      NoteModificationType::Staccato => Some(ChordModificationType::Staccato),
+      NoteModificationType::Staccatissimo => Some(ChordModificationType::Staccatissimo),
+      NoteModificationType::Stress => Some(ChordModificationType::Stress),
+      NoteModificationType::Tenuto => Some(ChordModificationType::Tenuto),
+      NoteModificationType::Toe => Some(ChordModificationType::Toe),
+      NoteModificationType::Tremolo { relative_speed } => Some(ChordModificationType::Tremolo { relative_speed }),
+      NoteModificationType::Unstress => Some(ChordModificationType::Unstress),
+      NoteModificationType::UpBow => Some(ChordModificationType::UpBow),
+      _ => None,
+    }
+    .map(|mod_type| Self {
       id: generate_id(),
-      modification: match *modification {
-        NoteModificationType::Accent => ChordModificationType::Accent,
-        NoteModificationType::DetachedLegato => ChordModificationType::DetachedLegato,
-        NoteModificationType::DownBow => ChordModificationType::DownBow,
-        NoteModificationType::Dynamic { dynamic } => ChordModificationType::Dynamic { dynamic },
-        NoteModificationType::Fermata => ChordModificationType::Fermata,
-        NoteModificationType::Fingernails => ChordModificationType::Fingernails,
-        NoteModificationType::HalfMuted => ChordModificationType::HalfMuted,
-        NoteModificationType::HarmonMute { open, half } => ChordModificationType::HarmonMute { open, half },
-        NoteModificationType::Heel => ChordModificationType::Heel,
-        NoteModificationType::Marcato => ChordModificationType::Marcato,
-        NoteModificationType::Open => ChordModificationType::Open,
-        NoteModificationType::Pizzicato => ChordModificationType::Pizzicato,
-        NoteModificationType::Sforzando => ChordModificationType::Sforzando,
-        NoteModificationType::Smear => ChordModificationType::Smear,
-        NoteModificationType::SoftAccent => ChordModificationType::SoftAccent,
-        NoteModificationType::Spiccato => ChordModificationType::Spiccato,
-        NoteModificationType::Staccato => ChordModificationType::Staccato,
-        NoteModificationType::Staccatissimo => ChordModificationType::Staccatissimo,
-        NoteModificationType::Stress => ChordModificationType::Stress,
-        NoteModificationType::Tenuto => ChordModificationType::Tenuto,
-        NoteModificationType::Tie => ChordModificationType::Tie,
-        NoteModificationType::Toe => ChordModificationType::Toe,
-        NoteModificationType::Tremolo { relative_speed } => ChordModificationType::Tremolo { relative_speed },
-        NoteModificationType::Unstress => ChordModificationType::Unstress,
-        NoteModificationType::UpBow => ChordModificationType::UpBow,
-        _ => unsafe { core::hint::unreachable_unchecked() },
-      },
-    }))
+      r#type: mod_type,
+    })
   }
 
   #[must_use]
   pub fn get_id(&self) -> usize {
     self.id
   }
+}
 
-  #[must_use]
-  pub fn get_modification(&self) -> &ChordModificationType {
-    &self.modification
+impl Clone for ChordModification {
+  fn clone(&self) -> Self {
+    Self {
+      id: generate_id(),
+      r#type: self.r#type,
+    }
+  }
+}
+
+impl PartialEq for ChordModification {
+  fn eq(&self, other: &Self) -> bool {
+    self.r#type == other.r#type
+  }
+}
+
+impl Ord for ChordModification {
+  fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+    self.r#type.cmp(&other.r#type)
+  }
+}
+
+impl PartialOrd for ChordModification {
+  fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+    Some(self.cmp(other))
   }
 }
 
 #[cfg(feature = "print")]
 impl core::fmt::Display for ChordModification {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-    write!(f, "{}", self.modification)
+    write!(f, "{}", self.r#type)
   }
 }
 

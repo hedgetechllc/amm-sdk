@@ -1,15 +1,10 @@
-use alloc::string::String;
+use amm_internal::amm_prelude::*;
+use amm_macros::{JsonDeserialize, JsonSerialize};
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
-#[cfg(feature = "json")]
-use {
-  amm_internal::json_prelude::*,
-  amm_macros::{JsonDeserialize, JsonSerialize},
-};
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Default, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum PitchName {
   #[default]
   Rest,
@@ -22,9 +17,8 @@ pub enum PitchName {
   G,
 }
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Copy, Clone, Default, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub struct Pitch {
   pub name: PitchName,
   pub octave: u8,
@@ -51,16 +45,17 @@ impl Pitch {
   }
 
   #[must_use]
-  pub(crate) fn value(self) -> (usize, i16) {
+  #[allow(clippy::cast_possible_wrap)]
+  pub(crate) fn value(self) -> (usize, i8) {
     match self.name {
       PitchName::Rest => (0, 0),
-      PitchName::A => (1, i16::from(12 * self.octave) - 48),
-      PitchName::B => (2, i16::from(2 + (12 * self.octave)) - 48),
-      PitchName::C => (3, i16::from(3 + (12 * self.octave)) - 60),
-      PitchName::D => (4, i16::from(5 + (12 * self.octave)) - 60),
-      PitchName::E => (5, i16::from(7 + (12 * self.octave)) - 60),
-      PitchName::F => (6, i16::from(8 + (12 * self.octave)) - 60),
-      PitchName::G => (7, i16::from(10 + (12 * self.octave)) - 60),
+      PitchName::A => (1, (12 * self.octave) as i8 - 48),
+      PitchName::B => (2, (2 + (12 * self.octave)) as i8 - 48),
+      PitchName::C => (3, (3 + (12 * self.octave)) as i8 - 60),
+      PitchName::D => (4, (5 + (12 * self.octave)) as i8 - 60),
+      PitchName::E => (5, (7 + (12 * self.octave)) as i8 - 60),
+      PitchName::F => (6, (8 + (12 * self.octave)) as i8 - 60),
+      PitchName::G => (7, (10 + (12 * self.octave)) as i8 - 60),
     }
   }
 }

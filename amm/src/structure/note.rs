@@ -1,21 +1,19 @@
 use crate::context::{generate_id, Tempo};
 use crate::modification::{NoteModification, NoteModificationType};
-use crate::note::{Accidental, Duration, Pitch};
-use alloc::{rc::Rc, vec::Vec};
-use core::{cell::RefCell, slice::Iter};
-
-pub use crate::note::Note;
+use crate::note::{Accidental, Duration, Note, Pitch};
+use crate::temporal::Timeslice;
+use amm_internal::amm_prelude::*;
 
 impl Note {
   #[must_use]
-  pub fn new(pitch: Pitch, duration: Duration, accidental: Option<Accidental>) -> Rc<RefCell<Self>> {
-    Rc::new(RefCell::new(Self {
+  pub fn new(pitch: Pitch, duration: Duration, accidental: Option<Accidental>) -> Self {
+    Self {
       id: generate_id(),
       pitch,
       duration,
       accidental: accidental.unwrap_or_default(),
-      modifications: Vec::new(),
-    }))
+      modifications: BTreeSet::new(),
+    }
   }
 
   #[must_use]
@@ -23,24 +21,18 @@ impl Note {
     self.id
   }
 
-  pub fn add_modification(&mut self, modification: NoteModificationType) -> Rc<RefCell<NoteModification>> {
-    self
-      .modifications
-      .retain(|mods| *mods.borrow().get_modification() != modification);
-    let modification = NoteModification::new(modification);
-    self.modifications.push(Rc::clone(&modification));
-    modification
+  pub fn add_modification(&mut self, mod_type: NoteModificationType) -> usize {
+    let modification = NoteModification::new(mod_type);
+    let modification_id = modification.get_id();
+    self.modifications.replace(modification);
+    modification_id
   }
 
   #[must_use]
-  pub fn get_modification(&mut self, id: usize) -> Option<Rc<RefCell<NoteModification>>> {
-    self.modifications.iter().find_map(|modification| {
-      if modification.borrow().get_id() == id {
-        Some(Rc::clone(modification))
-      } else {
-        None
-      }
-    })
+  pub fn get_modification(&self, id: usize) -> Option<&NoteModification> {
+    self
+      .iter_modifications()
+      .find(|modification| modification.get_id() == id)
   }
 
   #[must_use]
@@ -54,14 +46,18 @@ impl Note {
   }
 
   pub fn remove_modification(&mut self, id: usize) -> &mut Self {
-    self
-      .modifications
-      .retain(|modification| modification.borrow().get_id() != id);
+    self.modifications.retain(|modification| modification.get_id() != id);
     self
   }
 
-  #[must_use]
-  pub fn iter_modifications(&self) -> Iter<'_, Rc<RefCell<NoteModification>>> {
+  pub fn iter_modifications(&self) -> alloc::collections::btree_set::Iter<'_, NoteModification> {
     self.modifications.iter()
+  }
+
+  #[must_use]
+  pub fn to_timeslice(&self) -> Timeslice {
+    let mut timeslice = Timeslice::new();
+    timeslice.add_note(self.clone());
+    timeslice
   }
 }

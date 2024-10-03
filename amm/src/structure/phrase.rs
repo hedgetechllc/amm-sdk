@@ -1,87 +1,62 @@
-use super::{chord::Chord, multivoice::MultiVoice, timeslice::Timeslice};
+use super::{
+  chord::Chord,
+  multivoice::{MultiVoice, MultiVoiceTimesliceIter},
+};
 use crate::context::{generate_id, Tempo};
 use crate::modification::{PhraseModification, PhraseModificationType};
 use crate::note::{Accidental, Duration, Note, Pitch};
-use alloc::{
-  rc::Rc,
-  string::{String, ToString},
-  vec::Vec,
-};
-use core::{cell::RefCell, slice::Iter};
-#[cfg(feature = "json")]
-use {
-  amm_internal::json_prelude::*,
-  amm_macros::{JsonDeserialize, JsonSerialize},
-};
+use crate::temporal::Timeslice;
+use amm_internal::amm_prelude::*;
+use amm_macros::{JsonDeserialize, JsonSerialize};
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone)]
+#[derive(Clone, Debug, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum PhraseContent {
-  Note(Rc<RefCell<Note>>),
-  Chord(Rc<RefCell<Chord>>),
-  Phrase(Rc<RefCell<Phrase>>),
-  MultiVoice(Rc<RefCell<MultiVoice>>),
+  Note(Note),
+  Chord(Chord),
+  Phrase(Phrase),
+  MultiVoice(MultiVoice),
 }
 
-#[cfg_attr(feature = "json", derive(JsonDeserialize, JsonSerialize))]
-#[derive(Clone, Default)]
+#[derive(Debug, Default, Eq, JsonDeserialize, JsonSerialize)]
 pub struct Phrase {
-  pub(crate) id: usize,
+  id: usize,
   pub(crate) content: Vec<PhraseContent>,
-  pub(crate) modifications: Vec<Rc<RefCell<PhraseModification>>>,
+  modifications: BTreeSet<PhraseModification>,
 }
 
 impl Phrase {
   #[must_use]
-  pub fn new() -> Rc<RefCell<Self>> {
-    Rc::new(RefCell::new(Self {
+  pub fn new() -> Self {
+    Self {
       id: generate_id(),
       content: Vec::new(),
-      modifications: Vec::new(),
-    }))
+      modifications: BTreeSet::new(),
+    }
   }
 
   #[must_use]
-  pub fn flatten(&self, fully: bool) -> Rc<RefCell<Self>> {
-    let mut flat_phrase;
+  pub fn flatten(&self, fully: bool) -> Self {
+    // Removes all multivoice layers (flattens multivoices into a single phrase)
+    // The "fully" parameter determines whether sub-phrases will also be flattened into a single phrase of notes and chords
+    let mut flat_phrase = Self {
+      id: generate_id(),
+      content: Vec::new(),
+      modifications: self.modifications.clone(),
+    };
     if fully {
-      flat_phrase = Self {
-        id: self.id,
-        content: Vec::new(),
-        modifications: self.modifications.clone(),
-      };
-      self.content.iter().for_each(|item| match item {
-        PhraseContent::Phrase(phrase) => phrase
-          .borrow()
-          .flatten(true)
-          .borrow()
-          .iter()
-          .for_each(|item| flat_phrase.content.push(item.clone())),
-        PhraseContent::MultiVoice(multivoice) => multivoice
-          .borrow()
-          .flatten()
-          .borrow()
-          .iter()
-          .for_each(|item| flat_phrase.content.push(item.clone())),
+      self.iter().for_each(|item| match item {
+        PhraseContent::Phrase(phrase) => flat_phrase.content.append(&mut phrase.flatten(true).content),
+        PhraseContent::MultiVoice(multivoice) => flat_phrase.content.append(&mut multivoice.flatten().content),
         _ => flat_phrase.content.push(item.clone()),
       });
     } else {
-      flat_phrase = Self {
-        id: self.id,
-        content: self
-          .content
-          .iter()
-          .map(|item| match item {
-            PhraseContent::Note(note) => PhraseContent::Note(Rc::clone(note)),
-            PhraseContent::Chord(chord) => PhraseContent::Chord(Rc::clone(chord)),
-            PhraseContent::Phrase(phrase) => PhraseContent::Phrase(phrase.borrow().flatten(false)),
-            PhraseContent::MultiVoice(multivoice) => PhraseContent::Phrase(multivoice.borrow().flatten()),
-          })
-          .collect(),
-        modifications: self.modifications.clone(),
-      };
+      flat_phrase.content.extend(self.content.iter().map(|item| match item {
+        PhraseContent::Phrase(phrase) => PhraseContent::Phrase(phrase.flatten(false)),
+        PhraseContent::MultiVoice(multivoice) => PhraseContent::Phrase(multivoice.flatten()),
+        _ => item.clone(),
+      }));
     }
-    Rc::new(RefCell::new(flat_phrase))
+    flat_phrase
   }
 
   #[must_use]
@@ -89,37 +64,77 @@ impl Phrase {
     self.id
   }
 
-  pub fn add_note(&mut self, pitch: Pitch, duration: Duration, accidental: Option<Accidental>) -> Rc<RefCell<Note>> {
-    let note = Note::new(pitch, duration, accidental);
-    self.content.push(PhraseContent::Note(Rc::clone(&note)));
-    note
-  }
-
-  pub fn add_chord(&mut self) -> Rc<RefCell<Chord>> {
-    let chord = Chord::new();
-    self.content.push(PhraseContent::Chord(Rc::clone(&chord)));
-    chord
-  }
-
-  pub fn add_phrase(&mut self) -> Rc<RefCell<Phrase>> {
-    let phrase = Phrase::new();
-    self.content.push(PhraseContent::Phrase(Rc::clone(&phrase)));
-    phrase
-  }
-
-  pub fn add_multivoice(&mut self) -> Rc<RefCell<MultiVoice>> {
-    let multivoice = MultiVoice::new();
-    self.content.push(PhraseContent::MultiVoice(Rc::clone(&multivoice)));
-    multivoice
-  }
-
-  pub fn add_modification(&mut self, modification: PhraseModificationType) -> Rc<RefCell<PhraseModification>> {
+  pub fn add_note(&mut self, pitch: Pitch, duration: Duration, accidental: Option<Accidental>) -> &mut Note {
     self
-      .modifications
-      .retain(|mods| *mods.borrow().get_modification() != modification);
-    let modification = PhraseModification::new(modification);
-    self.modifications.push(Rc::clone(&modification));
-    modification
+      .content
+      .push(PhraseContent::Note(Note::new(pitch, duration, accidental)));
+    match self.content.last_mut() {
+      Some(PhraseContent::Note(note)) => note,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
+  }
+
+  pub fn add_chord(&mut self) -> &mut Chord {
+    self.content.push(PhraseContent::Chord(Chord::new()));
+    match self.content.last_mut() {
+      Some(PhraseContent::Chord(chord)) => chord,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
+  }
+
+  pub fn add_phrase(&mut self) -> &mut Phrase {
+    self.content.push(PhraseContent::Phrase(Phrase::new()));
+    match self.content.last_mut() {
+      Some(PhraseContent::Phrase(phrase)) => phrase,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
+  }
+
+  pub fn add_multivoice(&mut self) -> &mut MultiVoice {
+    self.content.push(PhraseContent::MultiVoice(MultiVoice::new()));
+    match self.content.last_mut() {
+      Some(PhraseContent::MultiVoice(multivoice)) => multivoice,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
+  }
+
+  pub fn add_modification(&mut self, mod_type: PhraseModificationType) -> usize {
+    let modification = PhraseModification::new(mod_type);
+    let modification_id = modification.get_id();
+    self.modifications.replace(modification);
+    modification_id
+  }
+
+  pub fn claim_note(&mut self, note: Note) -> &mut Note {
+    self.content.push(PhraseContent::Note(note));
+    match self.content.last_mut() {
+      Some(PhraseContent::Note(note)) => note,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
+  }
+
+  pub fn claim_chord(&mut self, chord: Chord) -> &mut Chord {
+    self.content.push(PhraseContent::Chord(chord));
+    match self.content.last_mut() {
+      Some(PhraseContent::Chord(chord)) => chord,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
+  }
+
+  pub fn claim_phrase(&mut self, phrase: Phrase) -> &mut Phrase {
+    self.content.push(PhraseContent::Phrase(phrase));
+    match self.content.last_mut() {
+      Some(PhraseContent::Phrase(phrase)) => phrase,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
+  }
+
+  pub fn claim_multivoice(&mut self, multivoice: MultiVoice) -> &mut MultiVoice {
+    self.content.push(PhraseContent::MultiVoice(multivoice));
+    match self.content.last_mut() {
+      Some(PhraseContent::MultiVoice(multivoice)) => multivoice,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
   }
 
   pub fn insert_note(
@@ -128,102 +143,150 @@ impl Phrase {
     pitch: Pitch,
     duration: Duration,
     accidental: Option<Accidental>,
-  ) -> Rc<RefCell<Note>> {
-    let note = Note::new(pitch, duration, accidental);
-    self.content.insert(index, PhraseContent::Note(Rc::clone(&note)));
-    note
-  }
-
-  pub fn insert_chord(&mut self, index: usize) -> Rc<RefCell<Chord>> {
-    let chord = Chord::new();
-    self.content.insert(index, PhraseContent::Chord(Rc::clone(&chord)));
-    chord
-  }
-
-  pub fn insert_phrase(&mut self, index: usize) -> Rc<RefCell<Phrase>> {
-    let phrase = Phrase::new();
-    self.content.insert(index, PhraseContent::Phrase(Rc::clone(&phrase)));
-    phrase
-  }
-
-  pub fn insert_multivoice(&mut self, index: usize) -> Rc<RefCell<MultiVoice>> {
-    let multivoice = MultiVoice::new();
+  ) -> &mut Note {
     self
       .content
-      .insert(index, PhraseContent::MultiVoice(Rc::clone(&multivoice)));
-    multivoice
+      .insert(index, PhraseContent::Note(Note::new(pitch, duration, accidental)));
+    match self.content.get_mut(index) {
+      Some(PhraseContent::Note(note)) => note,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
+  }
+
+  pub fn insert_chord(&mut self, index: usize) -> &mut Chord {
+    self.content.insert(index, PhraseContent::Chord(Chord::new()));
+    match self.content.get_mut(index) {
+      Some(PhraseContent::Chord(chord)) => chord,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
+  }
+
+  pub fn insert_phrase(&mut self, index: usize) -> &mut Phrase {
+    self.content.insert(index, PhraseContent::Phrase(Phrase::new()));
+    match self.content.get_mut(index) {
+      Some(PhraseContent::Phrase(phrase)) => phrase,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
+  }
+
+  pub fn insert_multivoice(&mut self, index: usize) -> &mut MultiVoice {
+    self.content.insert(index, PhraseContent::MultiVoice(MultiVoice::new()));
+    match self.content.get_mut(index) {
+      Some(PhraseContent::MultiVoice(multivoice)) => multivoice,
+      _ => unsafe { core::hint::unreachable_unchecked() },
+    }
   }
 
   #[must_use]
-  pub fn get_note(&mut self, id: usize) -> Option<Rc<RefCell<Note>>> {
-    self.content.iter().find_map(|item| match item {
-      PhraseContent::Note(note) if note.borrow().get_id() == id => Some(Rc::clone(note)),
-      PhraseContent::Chord(chord) => chord.borrow_mut().get_note(id),
-      PhraseContent::Phrase(phrase) => phrase.borrow_mut().get_note(id),
+  pub fn get_note(&self, id: usize) -> Option<&Note> {
+    self.iter().find_map(|item| match item {
+      PhraseContent::Note(note) if note.get_id() == id => Some(note),
+      PhraseContent::Chord(chord) => chord.get_note(id),
+      PhraseContent::Phrase(phrase) => phrase.get_note(id),
+      PhraseContent::MultiVoice(multivoice) => multivoice.get_note(id),
+      PhraseContent::Note(_) => None,
+    })
+  }
+
+  #[must_use]
+  pub fn get_note_mut(&mut self, id: usize) -> Option<&mut Note> {
+    self.iter_mut().find_map(|item| match item {
+      PhraseContent::Note(note) if note.get_id() == id => Some(note),
+      PhraseContent::Chord(chord) => chord.get_note_mut(id),
+      PhraseContent::Phrase(phrase) => phrase.get_note_mut(id),
+      PhraseContent::MultiVoice(multivoice) => multivoice.get_note_mut(id),
+      PhraseContent::Note(_) => None,
+    })
+  }
+
+  #[must_use]
+  pub fn get_chord(&self, id: usize) -> Option<&Chord> {
+    self.iter().find_map(|item| match item {
+      PhraseContent::Chord(chord) if chord.get_id() == id => Some(chord),
+      PhraseContent::Phrase(phrase) => phrase.get_chord(id),
+      PhraseContent::MultiVoice(multivoice) => multivoice.get_chord(id),
       _ => None,
     })
   }
 
   #[must_use]
-  pub fn get_chord(&mut self, id: usize) -> Option<Rc<RefCell<Chord>>> {
-    self.content.iter().find_map(|item| match item {
-      PhraseContent::Chord(chord) if chord.borrow().get_id() == id => Some(Rc::clone(chord)),
-      PhraseContent::Phrase(phrase) => phrase.borrow_mut().get_chord(id),
+  pub fn get_chord_mut(&mut self, id: usize) -> Option<&mut Chord> {
+    self.iter_mut().find_map(|item| match item {
+      PhraseContent::Chord(chord) if chord.get_id() == id => Some(chord),
+      PhraseContent::Phrase(phrase) => phrase.get_chord_mut(id),
+      PhraseContent::MultiVoice(multivoice) => multivoice.get_chord_mut(id),
       _ => None,
     })
   }
 
   #[must_use]
-  pub fn get_phrase(&mut self, id: usize) -> Option<Rc<RefCell<Phrase>>> {
-    self.content.iter().find_map(|item| match item {
-      PhraseContent::Phrase(phrase) if phrase.borrow().get_id() == id => Some(Rc::clone(phrase)),
-      PhraseContent::Phrase(phrase) => phrase.borrow_mut().get_phrase(id),
+  pub fn get_phrase(&self, id: usize) -> Option<&Phrase> {
+    if self.id == id {
+      Some(self)
+    } else {
+      self.iter().find_map(|item| match item {
+        PhraseContent::Phrase(phrase) => phrase.get_phrase(id),
+        PhraseContent::MultiVoice(multivoice) => multivoice.get_phrase(id),
+        _ => None,
+      })
+    }
+  }
+
+  #[must_use]
+  pub fn get_phrase_mut(&mut self, id: usize) -> Option<&mut Phrase> {
+    if self.id == id {
+      Some(self)
+    } else {
+      self.iter_mut().find_map(|item| match item {
+        PhraseContent::Phrase(phrase) => phrase.get_phrase_mut(id),
+        PhraseContent::MultiVoice(multivoice) => multivoice.get_phrase_mut(id),
+        _ => None,
+      })
+    }
+  }
+
+  #[must_use]
+  pub fn get_multivoice(&self, id: usize) -> Option<&MultiVoice> {
+    self.iter().find_map(|item| match item {
+      PhraseContent::MultiVoice(multivoice) => multivoice.get_multivoice(id),
+      PhraseContent::Phrase(phrase) => phrase.get_multivoice(id),
       _ => None,
     })
   }
 
   #[must_use]
-  pub fn get_multivoice(&mut self, id: usize) -> Option<Rc<RefCell<MultiVoice>>> {
-    self.content.iter().find_map(|item| match item {
-      PhraseContent::MultiVoice(multivoice) if multivoice.borrow().get_id() == id => Some(Rc::clone(multivoice)),
-      PhraseContent::MultiVoice(multivoice) => multivoice.borrow_mut().get_multivoice(id),
+  pub fn get_multivoice_mut(&mut self, id: usize) -> Option<&mut MultiVoice> {
+    self.iter_mut().find_map(|item| match item {
+      PhraseContent::MultiVoice(multivoice) => multivoice.get_multivoice_mut(id),
+      PhraseContent::Phrase(phrase) => phrase.get_multivoice_mut(id),
       _ => None,
     })
   }
 
   #[must_use]
-  pub fn get_modification(&mut self, id: usize) -> Option<Rc<RefCell<PhraseModification>>> {
-    self.modifications.iter().find_map(|modification| {
-      if modification.borrow().get_id() == id {
-        Some(Rc::clone(modification))
-      } else {
-        None
-      }
-    })
+  pub fn get_modification(&self, id: usize) -> Option<&PhraseModification> {
+    self
+      .iter_modifications()
+      .find(|modification| modification.get_id() == id)
   }
 
   #[must_use]
-  pub fn get_index_of_item(&mut self, id: usize) -> Option<usize> {
+  pub fn get_index_of_item(&self, id: usize) -> Option<usize> {
     self.content.iter().position(|item| match item {
-      PhraseContent::Note(note) => note.borrow().get_id() == id,
-      PhraseContent::Chord(chord) => chord.borrow().get_id() == id,
-      PhraseContent::Phrase(phrase) => phrase.borrow().get_id() == id,
-      PhraseContent::MultiVoice(multivoice) => multivoice.borrow().get_id() == id,
+      PhraseContent::Note(note) => note.get_id() == id,
+      PhraseContent::Chord(chord) => chord.get_id() == id,
+      PhraseContent::Phrase(phrase) => phrase.get_id() == id,
+      PhraseContent::MultiVoice(multivoice) => multivoice.get_id() == id,
     })
   }
 
   #[must_use]
   pub fn get_beats(&self, beat_base: &Duration, tuplet_ratio: Option<f64>) -> f64 {
     // Determine if this phrase creates a tuplet
-    let new_tuplet_ratio = self
-      .modifications
-      .iter()
-      .find_map(|item| match item.borrow().get_modification() {
-        PhraseModificationType::Tuplet { num_beats, into_beats } => {
-          Some(f64::from(*into_beats) / f64::from(*num_beats))
-        }
-        _ => None,
-      });
+    let new_tuplet_ratio = self.iter_modifications().find_map(|item| match item.r#type {
+      PhraseModificationType::Tuplet { num_beats, into_beats } => Some(f64::from(into_beats) / f64::from(num_beats)),
+      _ => None,
+    });
     let tuplet_ratio = match tuplet_ratio {
       Some(ratio) => match new_tuplet_ratio {
         Some(new_ratio) => Some(ratio * new_ratio),
@@ -234,13 +297,12 @@ impl Phrase {
 
     // Calculate the sum of all phrase component durations
     self
-      .content
       .iter()
       .map(|content| match &content {
-        PhraseContent::Note(note) => note.borrow().get_beats(beat_base, tuplet_ratio),
-        PhraseContent::Chord(chord) => chord.borrow().get_beats(beat_base, tuplet_ratio),
-        PhraseContent::Phrase(phrase) => phrase.borrow().get_beats(beat_base, tuplet_ratio),
-        PhraseContent::MultiVoice(multivoice) => multivoice.borrow().get_beats(beat_base, tuplet_ratio),
+        PhraseContent::Note(note) => note.get_beats(beat_base, tuplet_ratio),
+        PhraseContent::Chord(chord) => chord.get_beats(beat_base, tuplet_ratio),
+        PhraseContent::Phrase(phrase) => phrase.get_beats(beat_base, tuplet_ratio),
+        PhraseContent::MultiVoice(multivoice) => multivoice.get_beats(beat_base, tuplet_ratio),
       })
       .sum()
   }
@@ -252,20 +314,20 @@ impl Phrase {
 
   pub fn remove_item(&mut self, id: usize) -> &mut Self {
     self.content.retain(|item| match item {
-      PhraseContent::Note(note) => note.borrow().get_id() != id,
-      PhraseContent::Chord(chord) => chord.borrow().get_id() != id,
-      PhraseContent::Phrase(phrase) => phrase.borrow().get_id() != id,
-      PhraseContent::MultiVoice(multivoice) => multivoice.borrow().get_id() != id,
+      PhraseContent::Note(note) => note.get_id() != id,
+      PhraseContent::Chord(chord) => chord.get_id() != id,
+      PhraseContent::Phrase(phrase) => phrase.get_id() != id,
+      PhraseContent::MultiVoice(multivoice) => multivoice.get_id() != id,
     });
-    self.content.iter().for_each(|item| match item {
+    self.iter_mut().for_each(|item| match item {
       PhraseContent::Chord(chord) => {
-        chord.borrow_mut().remove_item(id);
+        chord.remove_item(id);
       }
       PhraseContent::Phrase(phrase) => {
-        phrase.borrow_mut().remove_item(id);
+        phrase.remove_item(id);
       }
       PhraseContent::MultiVoice(multivoice) => {
-        multivoice.borrow_mut().remove_item(id);
+        multivoice.remove_item(id);
       }
       PhraseContent::Note(_) => (),
     });
@@ -273,88 +335,64 @@ impl Phrase {
   }
 
   pub fn remove_modification(&mut self, id: usize) -> &mut Self {
-    self
-      .modifications
-      .retain(|modification| modification.borrow().get_id() != id);
+    self.modifications.retain(|modification| modification.get_id() != id);
+    self.iter_mut().for_each(|item| match item {
+      PhraseContent::Note(note) => {
+        note.remove_modification(id);
+      }
+      PhraseContent::Chord(chord) => {
+        chord.remove_modification(id);
+      }
+      PhraseContent::Phrase(phrase) => {
+        phrase.remove_modification(id);
+      }
+      PhraseContent::MultiVoice(multivoice) => {
+        multivoice.remove_modification(id);
+      }
+    });
     self
   }
 
   #[must_use]
-  pub(crate) fn num_timeslices(&self) -> usize {
+  pub fn num_items(&self) -> usize {
+    self.content.len()
+  }
+
+  #[must_use]
+  pub fn num_timeslices(&self) -> usize {
     self
-      .content
       .iter()
       .map(|item| match item {
         PhraseContent::Note(_) | PhraseContent::Chord(_) => 1,
-        PhraseContent::Phrase(phrase) => phrase.borrow().num_timeslices(),
-        PhraseContent::MultiVoice(multivoice) => multivoice.borrow().num_timeslices(),
+        PhraseContent::Phrase(phrase) => phrase.num_timeslices(),
+        PhraseContent::MultiVoice(multivoice) => multivoice.num_timeslices(),
       })
       .sum()
   }
 
-  fn update_timeslice_details(
-    &self,
-    timeslices: &mut Vec<Timeslice>,
-    mut timeslice: Timeslice,
-    index: usize,
-    num_timeslices: usize,
-  ) -> usize {
-    if !self.modifications.is_empty() {
-      for content in &mut timeslice.content {
-        let details = content.add_phrase_details(index, num_timeslices);
-        self.modifications.iter().for_each(|modification| {
-          details.modifications.push(*modification.borrow().get_modification());
-        });
-        if index > 0 {
-          timeslices[index - 1].content.iter_mut().for_each(|item| {
-            item.phrase_details.iter_mut().for_each(|details| {
-              let note = content.note.borrow();
-              details.next_pitch = note.pitch;
-              details.next_accidental = note.accidental;
-            });
-          });
-        }
-      }
-    }
-    timeslices.push(timeslice);
-    index + 1
-  }
-
-  pub fn iter(&self) -> Iter<'_, PhraseContent> {
+  pub fn iter(&self) -> core::slice::Iter<'_, PhraseContent> {
     self.content.iter()
   }
 
-  #[must_use]
-  pub fn iter_modifications(&self) -> Iter<'_, Rc<RefCell<PhraseModification>>> {
+  pub fn iter_mut(&mut self) -> core::slice::IterMut<'_, PhraseContent> {
+    self.content.iter_mut()
+  }
+
+  pub fn iter_modifications(&self) -> alloc::collections::btree_set::Iter<'_, PhraseModification> {
     self.modifications.iter()
   }
 
   #[must_use]
-  pub fn iter_timeslices(&self) -> Vec<Timeslice> {
-    let num_timeslices = self.num_timeslices();
-    let (mut index, mut timeslices) = (0, Vec::new());
-    self.content.iter().for_each(|item| match item {
-      PhraseContent::Note(note) => {
-        let mut timeslice = Timeslice::new();
-        timeslice.add_note(note);
-        index = self.update_timeslice_details(&mut timeslices, timeslice, index, num_timeslices);
-      }
-      PhraseContent::Chord(chord) => {
-        let timeslice = chord.borrow().to_timeslice();
-        index = self.update_timeslice_details(&mut timeslices, timeslice, index, num_timeslices);
-      }
-      PhraseContent::Phrase(phrase) => {
-        phrase.borrow().iter_timeslices().into_iter().for_each(|timeslice| {
-          index = self.update_timeslice_details(&mut timeslices, timeslice, index, num_timeslices);
-        });
-      }
-      PhraseContent::MultiVoice(multivoice) => {
-        multivoice.borrow().iter_timeslices().into_iter().for_each(|timeslice| {
-          index = self.update_timeslice_details(&mut timeslices, timeslice, index, num_timeslices);
-        });
-      }
-    });
-    timeslices
+  pub fn iter_timeslices(&self) -> PhraseTimesliceIter<'_> {
+    PhraseTimesliceIter {
+      index: 0,
+      num_timeslices: self.num_timeslices(),
+      pending_timeslice: None,
+      content_iterator: self.iter(),
+      child_phrase_iterator: None,
+      child_multivoice_iterator: None,
+      modifications: &self.modifications,
+    }
   }
 }
 
@@ -368,29 +406,149 @@ impl IntoIterator for Phrase {
 
 impl<'a> IntoIterator for &'a Phrase {
   type Item = &'a PhraseContent;
-  type IntoIter = Iter<'a, PhraseContent>;
+  type IntoIter = core::slice::Iter<'a, PhraseContent>;
   fn into_iter(self) -> Self::IntoIter {
     self.iter()
   }
 }
 
+impl<'a> IntoIterator for &'a mut Phrase {
+  type Item = &'a mut PhraseContent;
+  type IntoIter = core::slice::IterMut<'a, PhraseContent>;
+  fn into_iter(self) -> Self::IntoIter {
+    self.iter_mut()
+  }
+}
+
+impl Clone for Phrase {
+  fn clone(&self) -> Self {
+    Self {
+      id: generate_id(),
+      content: self.content.clone(),
+      modifications: self.modifications.clone(),
+    }
+  }
+}
+
+impl PartialEq for Phrase {
+  fn eq(&self, other: &Self) -> bool {
+    self.content == other.content && self.modifications == other.modifications
+  }
+}
+
+pub struct PhraseTimesliceIter<'a> {
+  index: usize,
+  num_timeslices: usize,
+  pending_timeslice: Option<Timeslice>,
+  content_iterator: core::slice::Iter<'a, PhraseContent>,
+  child_phrase_iterator: Option<Box<PhraseTimesliceIter<'a>>>,
+  child_multivoice_iterator: Option<MultiVoiceTimesliceIter<'a>>,
+  modifications: &'a BTreeSet<PhraseModification>,
+}
+
+fn update_timeslice_details(iterator: &mut PhraseTimesliceIter, mut timeslice: Timeslice) -> Option<Timeslice> {
+  let mut pending_timeslice_updated = false;
+  timeslice.content.iter_mut().for_each(|content| {
+    if !iterator.modifications.is_empty() {
+      let details = content.add_phrase_details(iterator.index, iterator.num_timeslices);
+      iterator.modifications.iter().for_each(|modification| {
+        details.modifications.push(modification.r#type);
+      });
+    }
+    if !pending_timeslice_updated {
+      if let Some(pending_timeslice) = iterator.pending_timeslice.as_mut() {
+        pending_timeslice.content.iter_mut().for_each(|note| {
+          note.phrase_details.iter_mut().for_each(|details| {
+            details.next_pitch = content.note.pitch;
+            details.next_accidental = content.note.accidental;
+          });
+        });
+      }
+      pending_timeslice_updated = true;
+    }
+  });
+  iterator.index += 1;
+  let mut return_slice = Some(timeslice);
+  core::mem::swap(&mut iterator.pending_timeslice, &mut return_slice);
+  return_slice
+}
+
+impl Iterator for PhraseTimesliceIter<'_> {
+  type Item = Timeslice;
+  fn next(&mut self) -> Option<Self::Item> {
+    let (mut valid_timeslice, mut timeslice) = (false, None);
+    while !valid_timeslice {
+      if let Some(child_iterator) = &mut self.child_phrase_iterator {
+        match child_iterator.next() {
+          Some(timeslice) => return update_timeslice_details(self, timeslice),
+          None => self.child_phrase_iterator = None,
+        }
+      }
+      if let Some(child_iterator) = &mut self.child_multivoice_iterator {
+        match child_iterator.next() {
+          Some(timeslice) => return update_timeslice_details(self, timeslice),
+          None => self.child_multivoice_iterator = None,
+        }
+      }
+      (valid_timeslice, timeslice) = match self.content_iterator.next() {
+        Some(PhraseContent::Note(note)) => match update_timeslice_details(self, note.to_timeslice()) {
+          Some(timeslice) => (true, Some(timeslice)),
+          None => (false, None),
+        },
+        Some(PhraseContent::Chord(chord)) => match update_timeslice_details(self, chord.to_timeslice()) {
+          Some(timeslice) => (true, Some(timeslice)),
+          None => (false, None),
+        },
+        Some(PhraseContent::Phrase(phrase)) => {
+          let mut child_iterator = phrase.iter_timeslices();
+          match child_iterator.next() {
+            Some(timeslice) => {
+              self.child_phrase_iterator = Some(Box::new(child_iterator));
+              match update_timeslice_details(self, timeslice) {
+                Some(timeslice) => (true, Some(timeslice)),
+                None => (false, None),
+              }
+            }
+            None => (false, None),
+          }
+        }
+        Some(PhraseContent::MultiVoice(multivoice)) => {
+          let mut child_iterator = multivoice.iter_timeslices();
+          match child_iterator.next() {
+            Some(timeslice) => {
+              self.child_multivoice_iterator = Some(child_iterator);
+              match update_timeslice_details(self, timeslice) {
+                Some(timeslice) => (true, Some(timeslice)),
+                None => (false, None),
+              }
+            }
+            None => (false, None),
+          }
+        }
+        None => (true, self.pending_timeslice.take()),
+      };
+    }
+    timeslice
+  }
+}
+
+impl core::iter::FusedIterator for PhraseTimesliceIter<'_> {}
+
 #[cfg(feature = "print")]
 impl core::fmt::Display for Phrase {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
     let mods = self
-      .modifications
-      .iter()
-      .map(|modification| modification.borrow_mut().to_string())
+      .iter_modifications()
+      .map(ToString::to_string)
       .collect::<Vec<String>>()
       .join(", ");
     let items = self
-      .content
       .iter()
       .map(|item| match item {
-        PhraseContent::Note(note) => note.borrow().to_string(),
-        PhraseContent::Chord(chord) => chord.borrow().to_string(),
-        PhraseContent::Phrase(phrase) => phrase.borrow().to_string(),
-        PhraseContent::MultiVoice(multivoice) => multivoice.borrow().to_string(),
+        PhraseContent::Note(note) => note.to_string(),
+        PhraseContent::Chord(chord) => chord.to_string(),
+        PhraseContent::Phrase(phrase) => phrase.to_string(),
+        PhraseContent::MultiVoice(multivoice) => multivoice.to_string(),
       })
       .collect::<Vec<_>>()
       .join(", ");
@@ -409,67 +567,65 @@ impl core::fmt::Display for Phrase {
 #[cfg(test)]
 mod test {
   use super::*;
-  use crate::{DurationType, PitchName};
+  use crate::note::{Accidental, DurationType, PitchName};
 
-  fn create_phrase() -> Rc<RefCell<Phrase>> {
-    let phrase = Phrase::new();
-    let phrase1 = phrase.borrow_mut().add_phrase();
-    let phrase2 = phrase1.borrow_mut().add_phrase();
-    phrase2.borrow_mut().add_note(
+  fn create_phrase() -> Phrase {
+    let mut phrase = Phrase::new();
+    let phrase1 = phrase.add_phrase();
+    let phrase2 = phrase1.add_phrase();
+    phrase2.add_note(
       Pitch::new(PitchName::C, 4),
       Duration::new(DurationType::Quarter, 0),
       Some(Accidental::Sharp),
     );
-    phrase2.borrow_mut().add_note(
+    phrase2.add_note(
       Pitch::new(PitchName::D, 4),
       Duration::new(DurationType::Quarter, 0),
       Some(Accidental::Flat),
     );
-    let multivoice = phrase2.borrow_mut().add_multivoice();
-    let mphrase1 = multivoice.borrow_mut().add_phrase();
-    let mphrase2 = multivoice.borrow_mut().add_phrase();
-    mphrase1.borrow_mut().add_note(
+    let multivoice = phrase2.add_multivoice();
+    let mut mphrase = multivoice.add_phrase();
+    mphrase.add_note(
       Pitch::new(PitchName::E, 4),
       Duration::new(DurationType::Quarter, 0),
       Some(Accidental::Natural),
     );
-    mphrase1.borrow_mut().add_note(
+    mphrase.add_note(
       Pitch::new(PitchName::F, 4),
       Duration::new(DurationType::Quarter, 0),
       Some(Accidental::Sharp),
     );
-    mphrase1
-      .borrow_mut()
-      .add_note(Pitch::new_rest(), Duration::new(DurationType::Half, 0), None);
-    mphrase2.borrow_mut().add_note(
+    mphrase.add_note(Pitch::new_rest(), Duration::new(DurationType::Half, 0), None);
+    mphrase = multivoice.add_phrase();
+    mphrase.add_note(
       Pitch::new(PitchName::G, 4),
       Duration::new(DurationType::Half, 0),
       Some(Accidental::Flat),
     );
-    mphrase2.borrow_mut().add_note(
+    mphrase.add_note(
       Pitch::new(PitchName::A, 4),
       Duration::new(DurationType::Half, 0),
       Some(Accidental::Natural),
     );
-    let phrase3 = phrase2.borrow_mut().add_phrase();
-    let phrase4 = phrase3.borrow_mut().add_phrase();
-    phrase4.borrow_mut().add_note(
+    let phrase3 = phrase2.add_phrase();
+    let phrase4 = phrase3.add_phrase();
+    phrase4.add_note(
       Pitch::new(PitchName::C, 4),
       Duration::new(DurationType::Quarter, 0),
       Some(Accidental::Sharp),
     );
-    let chord = phrase4.borrow_mut().add_chord();
-    chord.borrow_mut().add_note(
+    let chord = phrase4.add_chord();
+    chord.add_note(
       Pitch::new(PitchName::D, 4),
       Duration::new(DurationType::Quarter, 0),
       Some(Accidental::Flat),
     );
-    chord.borrow_mut().add_note(
+    chord.add_note(
       Pitch::new(PitchName::E, 4),
       Duration::new(DurationType::Quarter, 0),
       Some(Accidental::Natural),
     );
-    chord.borrow_mut().add_note(
+    chord.add_note(
       Pitch::new(PitchName::F, 4),
       Duration::new(DurationType::Quarter, 0),
       Some(Accidental::Sharp),
@@ -480,41 +636,41 @@ mod test {
   #[test]
   fn test_triplet() {
     let tempo = Tempo::new(Duration::new(DurationType::Quarter, 0), 120);
-    let phrase = Phrase::new();
-    phrase.borrow_mut().add_note(
+    let mut phrase = Phrase::new();
+    phrase.add_note(
       Pitch::new(PitchName::C, 4),
       Duration::new(DurationType::Quarter, 0),
       None,
     );
-    phrase.borrow_mut().add_note(
+    phrase.add_note(
       Pitch::new(PitchName::C, 4),
       Duration::new(DurationType::Quarter, 0),
       None,
     );
-    phrase.borrow_mut().add_note(
+    phrase.add_note(
       Pitch::new(PitchName::C, 4),
       Duration::new(DurationType::Quarter, 0),
       None,
     );
-    assert_eq!(phrase.borrow().get_duration(&tempo, None), 1.5);
-    phrase.borrow_mut().add_modification(PhraseModificationType::Tuplet {
+    assert_eq!(phrase.get_duration(&tempo, None), 1.5);
+    phrase.add_modification(PhraseModificationType::Tuplet {
       num_beats: 3,
       into_beats: 2,
     });
-    assert_eq!(phrase.borrow().get_duration(&tempo, None), 1.0);
+    assert_eq!(phrase.get_duration(&tempo, None), 1.0);
   }
 
   #[test]
   fn test_flatten_light() {
     let tempo = Tempo::new(Duration::new(DurationType::Quarter, 0), 120);
-    let phrase = create_phrase().borrow().flatten(false);
-    assert_eq!(phrase.borrow().get_duration(&tempo, None), 4.0);
+    let phrase = create_phrase().flatten(false);
+    assert_eq!(phrase.get_duration(&tempo, None), 4.0);
   }
 
   #[test]
   fn test_flatten_full() {
     let tempo = Tempo::new(Duration::new(DurationType::Quarter, 0), 120);
-    let phrase = create_phrase().borrow().flatten(true);
-    assert_eq!(phrase.borrow().get_duration(&tempo, None), 4.0);
+    let phrase = create_phrase().flatten(true);
+    assert_eq!(phrase.get_duration(&tempo, None), 4.0);
   }
 }
