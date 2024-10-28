@@ -12,11 +12,10 @@ Under heavy development - Updates forthcoming
     * Determines that fastest possible timeslice and use that as the time quantization level
     * Can also select ranges of timeslices
 * Implement `get_pcm_samples()` on `Timeslice` to create audio buffer for note + mods to use in direct playback
-* Add option to `get_duration` to take into account tempo adjustments (e.g. accelerando, fermata, etc.) but ONLY when requested since internally this function is used to combine multivoice parts
 * Finish MIDI Reader Implementation
-* Make fully `no_std` compatible
 * MusicXML change to inline serialize/deserialize, remove Regex, implement ZIP transcoder
 * Create MusicXML WASM build
+* Make fully `no_std` compatible
 
 * Add a test containing Glissandos and/or multi-note tremolos and/or implicit + explicit tempo changes
 * Finish MusicXML Reader Implementation

@@ -278,6 +278,7 @@ impl Composition {
 
   #[must_use]
   pub fn get_duration(&self) -> f64 {
+    // Note: Does not take into account fermatas or gradual tempo changes like accelerandos as these are style-dependent
     self.get_beats() * 60.0 / f64::from(self.tempo.beats_per_minute)
   }
 
