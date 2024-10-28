@@ -204,9 +204,9 @@ impl Duration {
 fn dots_to_text(dots: u8) -> String {
   match dots {
     0 => String::new(),
-    1 => String::from(" Dotted"),
-    2 => String::from(" Double-Dotted"),
-    _ => format!(" {dots}-Dotted"),
+    1 => String::from("Dotted "),
+    2 => String::from("Double-Dotted "),
+    _ => format!("{dots}-Dotted "),
   }
 }
 
@@ -240,7 +240,7 @@ impl core::fmt::Display for DurationType {
 #[cfg(feature = "print")]
 impl core::fmt::Display for Duration {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-    write!(f, "{}{}", self.value, dots_to_text(self.dots))
+    write!(f, "{}{}", dots_to_text(self.dots), self.value)
   }
 }
 
