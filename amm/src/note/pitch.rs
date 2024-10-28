@@ -60,6 +60,18 @@ impl Pitch {
   }
 }
 
+impl Ord for Pitch {
+  fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+    self.value().1.cmp(&other.value().1)
+  }
+}
+
+impl PartialOrd for Pitch {
+  fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+    Some(self.cmp(other))
+  }
+}
+
 #[cfg(feature = "print")]
 impl core::fmt::Display for PitchName {
   fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
