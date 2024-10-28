@@ -58,8 +58,8 @@ impl Storage {
   pub fn save(&self, path: &str, composition: &Composition) -> Result<usize, String> {
     match self {
       Self::AMM => AmmStorage::save(path, composition),
-      Self::MusicXML => Err(String::from("Cannot write to MusicXML")),
-      Self::MIDI => Err(String::from("Cannot write to MIDI")),
+      Self::MusicXML => Err(String::from("Cannot export to MusicXML")),
+      Self::MIDI => Err(String::from("Cannot export to MIDI")),
     }
   }
 }
@@ -70,9 +70,9 @@ impl core::fmt::Display for Storage {
       f,
       "{}",
       match self {
-        Self::AMM => "Abstract Music Manipulation (AMM)",
-        Self::MusicXML => "MusicXML",
-        Self::MIDI => "Musical Instrument Digital Interface (MIDI)",
+        Self::AMM => "AMM (Abstract Music Manipulation)",
+        Self::MusicXML => "MusicXML (Music Extensible Markup Language)",
+        Self::MIDI => "MIDI (Musical Instrument Digital Interface)",
       }
     )
   }
