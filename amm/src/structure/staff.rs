@@ -262,6 +262,7 @@ impl Staff {
   #[must_use]
   pub fn get_multivoice(&self, id: usize) -> Option<&MultiVoice> {
     self.iter().find_map(|item| match item {
+      StaffContent::Phrase(phrase) => phrase.get_multivoice(id),
       StaffContent::MultiVoice(multivoice) => multivoice.get_multivoice(id),
       _ => None,
     })
@@ -270,6 +271,7 @@ impl Staff {
   #[must_use]
   pub fn get_multivoice_mut(&mut self, id: usize) -> Option<&mut MultiVoice> {
     self.iter_mut().find_map(|item| match item {
+      StaffContent::Phrase(phrase) => phrase.get_multivoice_mut(id),
       StaffContent::MultiVoice(multivoice) => multivoice.get_multivoice_mut(id),
       _ => None,
     })
