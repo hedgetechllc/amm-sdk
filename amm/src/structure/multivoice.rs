@@ -470,7 +470,11 @@ impl MultiVoice {
       base_duration: Duration::new(DurationType::TwoThousandFortyEighth, 0),
       phrase_iterators: self
         .iter()
-        .map(|MultiVoiceContent::Phrase(phrase)| (0.0, phrase.iter_timeslices()))
+        .map(|MultiVoiceContent::Phrase(phrase)| {
+          let mut iter = phrase.iter_timeslices();
+          let next = iter.next();
+          (0.0, iter, next)
+        })
         .collect(),
     }
   }
@@ -517,7 +521,7 @@ impl PartialEq for MultiVoice {
 
 pub struct MultiVoiceTimesliceIter<'a> {
   base_duration: Duration,
-  phrase_iterators: Vec<(f64, PhraseTimesliceIter<'a>)>,
+  phrase_iterators: Vec<(f64, PhraseTimesliceIter<'a>, Option<Timeslice>)>,
 }
 
 impl Iterator for MultiVoiceTimesliceIter<'_> {
@@ -525,25 +529,29 @@ impl Iterator for MultiVoiceTimesliceIter<'_> {
   fn next(&mut self) -> Option<Self::Item> {
     let mut next_start_time = f64::MAX;
     let mut timeslice: Option<Timeslice> = None;
-    self.phrase_iterators.iter_mut().for_each(|(next_time, iterator)| {
-      if next_time.abs() <= 0.000_001 {
-        if let Some(mut slice) = iterator.next() {
-          *next_time = slice.get_beats(&self.base_duration);
-          if *next_time < next_start_time {
-            next_start_time = *next_time;
+    self
+      .phrase_iterators
+      .iter_mut()
+      .for_each(|(next_time, iterator, next_item)| {
+        if next_time.abs() <= 0.000_001 {
+          if let Some(mut slice) = next_item.take() {
+            *next_item = iterator.next();
+            *next_time = slice.get_beats(&self.base_duration);
+            if *next_time < next_start_time && next_item.is_some() {
+              next_start_time = *next_time;
+            }
+            if let Some(timeslice) = timeslice.as_mut() {
+              timeslice.combine_with(&mut slice);
+            } else {
+              timeslice = Some(slice);
+            }
           }
-          if let Some(timeslice) = timeslice.as_mut() {
-            timeslice.combine_with(&mut slice);
-          } else {
-            timeslice = Some(slice);
-          }
+        } else if *next_time >= 0.0 && *next_time < next_start_time {
+          next_start_time = *next_time;
         }
-      } else if *next_time >= 0.0 && *next_time < next_start_time {
-        next_start_time = *next_time;
-      }
-    });
+      });
     if timeslice.is_some() {
-      self.phrase_iterators.iter_mut().for_each(|(next_time, _)| {
+      self.phrase_iterators.iter_mut().for_each(|(next_time, _, _)| {
         *next_time -= next_start_time;
       });
     }
