@@ -28,6 +28,14 @@ fn test_timeslices(composition: &mut Composition) {
 }
 
 #[allow(dead_code)]
+fn test_composition_timeslices(composition: &mut Composition) {
+  println!("{}", composition);
+  composition.iter_timeslices().into_iter().for_each(|timeslice| {
+    println!("{timeslice}");
+  });
+}
+
+#[allow(dead_code)]
 fn test_flattened_and_restructured_iterating(composition: &mut Composition) {
   let mut composition = composition.restructure_staves_as_parts().flatten();
   println!("{}", composition);
@@ -47,6 +55,7 @@ fn main() {
     Ok(composition) => {
       test_iterating(composition);
       //test_timeslices(composition);
+      //test_composition_timeslices(composition);
       //test_flattened_and_restructured_iterating(composition);
       //test_flattened_and_restructured_timeslices(composition);
     }

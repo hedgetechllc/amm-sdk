@@ -310,9 +310,7 @@ mod test {
         going_up: true,
       });
       note.add_modification(NoteModificationType::Golpe);
-      note.add_modification(NoteModificationType::Grace {
-        acciaccatura: true,
-      });
+      note.add_modification(NoteModificationType::Grace { acciaccatura: true });
       note.add_modification(NoteModificationType::HalfMuted);
       note.add_modification(NoteModificationType::Handbell {
         technique: HandbellTechnique::Belltree,

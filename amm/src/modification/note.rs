@@ -230,9 +230,7 @@ impl core::fmt::Display for NoteModificationType {
         if *from_current { "From Note" } else { "To Note" },
       ),
       Self::Golpe => write!(f, "Golpe"),
-      Self::Grace {
-        acciaccatura,
-      } => write!(
+      Self::Grace { acciaccatura } => write!(
         f,
         "Grace {}",
         if *acciaccatura { "Acciaccatura" } else { "Appoggiatura" },
