@@ -252,3 +252,19 @@ impl PartTimeslice {
     self.timeslices.get(part_name)
   }
 }
+
+#[cfg(feature = "print")]
+impl core::fmt::Display for PartTimeslice {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+    write!(
+      f,
+      "{}",
+      self
+        .timeslices
+        .iter()
+        .map(|(part_name, timeslice)| format!("{} {}", part_name, timeslice))
+        .collect::<Vec<String>>()
+        .join(", ")
+    )
+  }
+}
