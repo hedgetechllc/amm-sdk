@@ -196,13 +196,6 @@ impl core::fmt::Display for Timeslice {
     write!(
       f,
       "Timeslice: {}{}{}{}{}{}{}{}{}",
-      if self.directions.is_empty() {
-        ""
-      } else {
-        "Directions: ["
-      },
-      directions_string,
-      if self.directions.is_empty() { "" } else { "], " },
       if self.tempo_details.is_empty() {
         ""
       } else {
@@ -210,6 +203,13 @@ impl core::fmt::Display for Timeslice {
       },
       tempo_details,
       if self.tempo_details.is_empty() { "" } else { "], " },
+      if self.directions.is_empty() {
+        ""
+      } else {
+        "Directions: ["
+      },
+      directions_string,
+      if self.directions.is_empty() { "" } else { "], " },
       if self.content.is_empty() { "" } else { "Content: [" },
       self
         .content
