@@ -312,7 +312,6 @@ mod test {
       note.add_modification(NoteModificationType::Golpe);
       note.add_modification(NoteModificationType::Grace {
         acciaccatura: true,
-        note_value: 45,
       });
       note.add_modification(NoteModificationType::HalfMuted);
       note.add_modification(NoteModificationType::Handbell {

@@ -42,7 +42,6 @@ pub enum NoteModificationType {
   Golpe,
   Grace {
     acciaccatura: bool,
-    note_value: u8,
   },
   HalfMuted,
   Handbell {
@@ -233,10 +232,9 @@ impl core::fmt::Display for NoteModificationType {
       Self::Golpe => write!(f, "Golpe"),
       Self::Grace {
         acciaccatura,
-        note_value,
       } => write!(
         f,
-        "{} Grace Note: {note_value}",
+        "Grace {}",
         if *acciaccatura { "Acciaccatura" } else { "Appoggiatura" },
       ),
       Self::HalfMuted => write!(f, "Half Muted"),
