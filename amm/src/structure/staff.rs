@@ -1,7 +1,7 @@
 use super::{
   chord::Chord,
   multivoice::{MultiVoice, MultiVoiceTimesliceIter},
-  phrase::{Phrase, PhraseTimesliceIter},
+  phrase::{Phrase, PhraseContent, PhraseTimesliceIter},
 };
 use crate::context::{generate_id, Tempo};
 use crate::modification::{Direction, DirectionType};
@@ -33,6 +33,54 @@ impl Staff {
       id: generate_id(),
       name: String::from(name),
       content: Vec::new(),
+    }
+  }
+
+  pub(crate) fn simplify(&mut self) {
+    let mut content_changed = true;
+    while content_changed {
+      let mut content_to_edit = Vec::new();
+      self.content.iter_mut().enumerate().for_each(|(idx, item)| match item {
+        StaffContent::Phrase(phrase) => {
+          phrase.simplify();
+          if phrase.is_empty() {
+            content_to_edit.push((idx, None));
+          } else if phrase.iter_modifications().len() == 0 {
+            let phrase = core::mem::take(phrase);
+            content_to_edit.push((
+              idx,
+              Some(
+                phrase
+                  .into_iter()
+                  .map(|item| match item {
+                    PhraseContent::Note(note) => StaffContent::Note(note),
+                    PhraseContent::Chord(chord) => StaffContent::Chord(chord),
+                    PhraseContent::Phrase(phrase) => StaffContent::Phrase(phrase),
+                    PhraseContent::MultiVoice(multivoice) => StaffContent::MultiVoice(multivoice),
+                  })
+                  .collect(),
+              ),
+            ));
+          }
+        }
+        StaffContent::MultiVoice(multivoice) => {
+          let single_phrase = multivoice
+            .simplify()
+            .map(|phrase| Vec::from([StaffContent::Phrase(phrase)]));
+          if multivoice.is_empty() {
+            content_to_edit.push((idx, single_phrase));
+          }
+        }
+        _ => (),
+      });
+      content_changed = !content_to_edit.is_empty();
+      for (idx, content) in content_to_edit.into_iter().rev() {
+        if let Some(contents) = content {
+          self.content.splice(idx..=idx, contents);
+        } else {
+          self.content.remove(idx);
+        }
+      }
     }
   }
 

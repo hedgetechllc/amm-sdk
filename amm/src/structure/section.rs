@@ -36,6 +36,46 @@ impl Section {
     }
   }
 
+  pub(crate) fn simplify(&mut self) {
+    let mut content_changed = true;
+    while content_changed {
+      let mut content_to_edit = Vec::new();
+      self.iter_mut().enumerate().for_each(|(idx, item)| match item {
+        SectionContent::Staff(staff) => staff.simplify(),
+        SectionContent::Section(section) => {
+          section.simplify();
+          if section.is_empty() {
+            content_to_edit.push((idx, None));
+          } else if section.modifications.is_empty() {
+            content_to_edit.push((idx, Some(core::mem::take(&mut section.content))));
+          }
+        }
+      });
+      content_changed = !content_to_edit.is_empty();
+      for (idx, content) in content_to_edit.into_iter().rev() {
+        if let Some(contents) = content {
+          self.content.splice(idx..=idx, contents);
+        } else {
+          self.content.remove(idx);
+        }
+      }
+    }
+    if self.modifications.is_empty()
+      && self.content.len() == 1
+      && self
+        .content
+        .iter()
+        .all(|item| matches!(item, SectionContent::Section(_)))
+    {
+      if let Some(SectionContent::Section(section)) = self.content.pop() {
+        self.id = section.id;
+        self.name = section.name;
+        self.content = section.content;
+        self.modifications = section.modifications;
+      }
+    }
+  }
+
   #[must_use]
   pub(crate) fn clone_with_single_staff(&self, retained_staff: &str) -> Self {
     // Create an implicit section for all naked staff groupings
@@ -456,6 +496,16 @@ impl Section {
   }
 
   #[must_use]
+  pub fn is_empty(&self) -> bool {
+    self.content.is_empty()
+  }
+
+  #[must_use]
+  pub fn num_items(&self) -> usize {
+    self.content.len()
+  }
+
+  #[must_use]
   pub fn num_timeslices(&self) -> usize {
     self.iter_timeslices().count()
   }
@@ -544,7 +594,7 @@ pub struct SectionTimesliceIter<'a> {
 impl Iterator for SectionTimesliceIter<'_> {
   type Item = Timeslice;
   fn next(&mut self) -> Option<Self::Item> {
-    while self.iteration < self.num_iterations {
+    while self.iteration < self.num_iterations || self.processing_staves {
       if self.processing_staves {
         let mut next_start_time = f64::MAX;
         let mut timeslice: Option<Timeslice> = None;
@@ -576,7 +626,6 @@ impl Iterator for SectionTimesliceIter<'_> {
         }
         self.staff_iterators.clear();
         self.processing_staves = false;
-        self.iteration += 1;
       }
       if let Some(section_iterator) = &mut self.section_iterator {
         match section_iterator.next() {
@@ -604,9 +653,7 @@ impl Iterator for SectionTimesliceIter<'_> {
       } else {
         self.content_iterator = self.content.iter();
         self.processing_staves = !self.staff_iterators.is_empty();
-        if !self.processing_staves {
-          self.iteration += 1;
-        }
+        self.iteration += 1;
       }
     }
     None

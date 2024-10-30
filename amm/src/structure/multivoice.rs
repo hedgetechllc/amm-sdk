@@ -30,6 +30,19 @@ impl MultiVoice {
   }
 
   #[must_use]
+  pub(crate) fn simplify(&mut self) -> Option<Phrase> {
+    self.content.retain_mut(|MultiVoiceContent::Phrase(phrase)| {
+      phrase.simplify();
+      !phrase.is_empty()
+    });
+    if self.content.len() == 1 {
+      self.content.pop().map(|MultiVoiceContent::Phrase(phrase)| phrase)
+    } else {
+      None
+    }
+  }
+
+  #[must_use]
   #[allow(clippy::too_many_lines)]
   pub fn flatten(&self) -> Phrase {
     // Note: Loses any modifications on contained phrases
@@ -449,6 +462,16 @@ impl MultiVoice {
       phrase.remove_modification(id);
     });
     self
+  }
+
+  #[must_use]
+  pub fn is_empty(&self) -> bool {
+    self.content.is_empty()
+  }
+
+  #[must_use]
+  pub fn num_items(&self) -> usize {
+    self.content.len()
   }
 
   #[must_use]

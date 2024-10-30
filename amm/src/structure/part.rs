@@ -27,6 +27,13 @@ impl Part {
     }
   }
 
+  pub(crate) fn simplify(&mut self) {
+    self
+      .content
+      .iter_mut()
+      .for_each(|PartContent::Section(section)| section.simplify());
+  }
+
   #[must_use]
   pub fn flatten(&self) -> Self {
     Self {

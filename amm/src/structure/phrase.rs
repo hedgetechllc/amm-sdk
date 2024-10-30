@@ -34,6 +34,40 @@ impl Phrase {
     }
   }
 
+  pub(crate) fn simplify(&mut self) {
+    let mut content_changed = true;
+    while content_changed {
+      let mut content_to_edit = Vec::new();
+      self.iter_mut().enumerate().for_each(|(idx, item)| match item {
+        PhraseContent::Phrase(phrase) => {
+          phrase.simplify();
+          if phrase.content.is_empty() {
+            content_to_edit.push((idx, None));
+          } else if phrase.modifications.is_empty() {
+            content_to_edit.push((idx, Some(core::mem::take(&mut phrase.content))));
+          }
+        }
+        PhraseContent::MultiVoice(multivoice) => {
+          let single_phrase = multivoice
+            .simplify()
+            .map(|phrase| Vec::from([PhraseContent::Phrase(phrase)]));
+          if multivoice.is_empty() {
+            content_to_edit.push((idx, single_phrase));
+          }
+        }
+        _ => (),
+      });
+      content_changed = !content_to_edit.is_empty();
+      for (idx, content) in content_to_edit.into_iter().rev() {
+        if let Some(contents) = content {
+          self.content.splice(idx..=idx, contents);
+        } else {
+          self.content.remove(idx);
+        }
+      }
+    }
+  }
+
   #[must_use]
   pub fn flatten(&self, fully: bool) -> Self {
     // Removes all multivoice layers (flattens multivoices into a single phrase)
@@ -351,6 +385,11 @@ impl Phrase {
       }
     });
     self
+  }
+
+  #[must_use]
+  pub fn is_empty(&self) -> bool {
+    self.content.is_empty()
   }
 
   #[must_use]
