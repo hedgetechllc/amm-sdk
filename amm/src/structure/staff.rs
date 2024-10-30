@@ -23,7 +23,7 @@ pub enum StaffContent {
 pub struct Staff {
   id: usize,
   name: String,
-  content: Vec<StaffContent>,
+  pub(crate) content: Vec<StaffContent>,
 }
 
 impl Staff {
