@@ -111,6 +111,11 @@ impl Chord {
     self
   }
 
+  #[must_use]
+  pub fn num_items(&self) -> usize {
+    self.content.len()
+  }
+
   pub fn iter(&self) -> core::slice::Iter<'_, ChordContent> {
     self.content.iter()
   }

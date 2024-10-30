@@ -262,7 +262,7 @@ impl core::fmt::Display for PartTimeslice {
       self
         .timeslices
         .iter()
-        .map(|(part_name, timeslice)| format!("{} {}", part_name, timeslice))
+        .map(|(part_name, timeslice)| format!("{part_name} {timeslice}"))
         .collect::<Vec<String>>()
         .join(", ")
     )

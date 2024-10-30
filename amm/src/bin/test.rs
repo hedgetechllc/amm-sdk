@@ -2,10 +2,10 @@ use amm::{storage::Storage, Composition};
 
 #[allow(dead_code)]
 fn test_iterating(composition: &mut Composition) {
-  println!("{}", composition);
+  println!("{composition}");
   for part_name in &composition.get_part_names() {
     if let Some(part) = composition.get_part_by_name(part_name) {
-      println!("{:#?}\n\n\n", part);
+      println!("{part:#?}\n\n\n");
     } else {
       println!("Part {part_name} not found");
     }
@@ -14,11 +14,11 @@ fn test_iterating(composition: &mut Composition) {
 
 #[allow(dead_code)]
 fn test_timeslices(composition: &mut Composition) {
-  println!("{}", composition);
+  println!("{composition}");
   for part_name in &composition.get_part_names() {
     if let Some(part) = composition.get_part_by_name(part_name) {
       println!("\nPart {part_name}:");
-      part.iter_timeslices().into_iter().for_each(|timeslice| {
+      part.iter_timeslices().for_each(|timeslice| {
         println!("  {timeslice}");
       });
     } else {
@@ -29,8 +29,8 @@ fn test_timeslices(composition: &mut Composition) {
 
 #[allow(dead_code)]
 fn test_composition_timeslices(composition: &mut Composition) {
-  println!("{}", composition);
-  composition.iter_timeslices().into_iter().for_each(|timeslice| {
+  println!("{composition}");
+  composition.iter_timeslices().for_each(|timeslice| {
     println!("{timeslice}");
   });
 }
@@ -38,14 +38,14 @@ fn test_composition_timeslices(composition: &mut Composition) {
 #[allow(dead_code)]
 fn test_flattened_and_restructured_iterating(composition: &mut Composition) {
   let mut composition = composition.restructure_staves_as_parts().flatten();
-  println!("{}", composition);
+  println!("{composition}");
   test_iterating(&mut composition);
 }
 
 #[allow(dead_code)]
 fn test_flattened_and_restructured_timeslices(composition: &mut Composition) {
   let mut composition = composition.restructure_staves_as_parts().flatten();
-  println!("{}", composition);
+  println!("{composition}");
   test_timeslices(&mut composition);
 }
 
@@ -59,6 +59,6 @@ fn main() {
       //test_flattened_and_restructured_iterating(composition);
       //test_flattened_and_restructured_timeslices(composition);
     }
-    Err(error) => println!("{}", error),
+    Err(error) => println!("{error}"),
   }
 }
