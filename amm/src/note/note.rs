@@ -1,6 +1,6 @@
 use super::{Accidental, Duration, Pitch};
 use crate::context::{generate_id, Key};
-use crate::modification::NoteModification;
+use crate::modification::{NoteModification, NoteModificationType};
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize};
 #[cfg(target_arch = "wasm32")]
@@ -41,6 +41,14 @@ impl Note {
   }
 
   #[must_use]
+  pub fn is_grace_note(&self) -> bool {
+    self
+      .modifications
+      .iter()
+      .any(|modification| matches!(modification.r#type, NoteModificationType::Grace { acciaccatura: _ }))
+  }
+
+  #[must_use]
   pub fn pitch_hz(&self, key: Option<Key>, a4_frequency_hz: Option<f32>) -> f32 {
     let accidentals = key.unwrap_or_default().accidentals();
     a4_frequency_hz.unwrap_or(A4_FREQUENCY_HZ) * 2f32.powf(f32::from(self.semitone_distance(accidentals)) / 12.0)
@@ -55,7 +63,11 @@ impl Note {
 
   #[must_use]
   pub fn beats(&self, base_beat_value: f64) -> f64 {
-    self.duration.beats(base_beat_value)
+    if self.is_grace_note() {
+      0.0
+    } else {
+      self.duration.beats(base_beat_value)
+    }
   }
 }
 
