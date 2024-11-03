@@ -504,20 +504,22 @@ impl Iterator for StaffTimesliceIter<'_> {
         None => self.child_multivoice = None,
       }
     }
-    let (mut valid_timeslice, mut timeslice) = (false, None);
+    let mut valid_timeslice = false;
+    let mut timeslice: Option<Timeslice> = None;
+    let (mut new_timeslice, mut combine_timeslices);
     while !valid_timeslice {
-      (valid_timeslice, timeslice) = match self.content_iterator.next() {
-        Some(StaffContent::Direction(direction)) => (true, Some(direction.to_timeslice())),
-        Some(StaffContent::Note(note)) => (true, Some(note.to_timeslice())),
-        Some(StaffContent::Chord(chord)) => (true, Some(chord.to_timeslice())),
+      (valid_timeslice, new_timeslice, combine_timeslices) = match self.content_iterator.next() {
+        Some(StaffContent::Direction(direction)) => (true, Some(direction.to_timeslice()), true),
+        Some(StaffContent::Note(note)) => (true, Some(note.to_timeslice()), false),
+        Some(StaffContent::Chord(chord)) => (true, Some(chord.to_timeslice()), false),
         Some(StaffContent::Phrase(phrase)) => {
           let mut child_iterator = phrase.iter_timeslices();
           match child_iterator.next() {
             Some(timeslice) => {
               self.child_phrase = Some(child_iterator);
-              (true, Some(timeslice))
+              (true, Some(timeslice), false)
             }
-            None => (false, None),
+            None => (false, None, false),
           }
         }
         Some(StaffContent::MultiVoice(multivoice)) => {
@@ -525,13 +527,21 @@ impl Iterator for StaffTimesliceIter<'_> {
           match child_iterator.next() {
             Some(timeslice) => {
               self.child_multivoice = Some(child_iterator);
-              (true, Some(timeslice))
+              (true, Some(timeslice), false)
             }
-            None => (false, None),
+            None => (false, None, false),
           }
         }
-        None => (true, None),
+        None => (true, None, false),
       };
+      if let Some(timeslice) = &mut timeslice {
+        if let Some(new_slice) = &mut new_timeslice {
+          timeslice.combine_with(new_slice);
+        }
+      } else {
+        timeslice = new_timeslice;
+      }
+      valid_timeslice = valid_timeslice && !combine_timeslices;
     }
     timeslice
   }
