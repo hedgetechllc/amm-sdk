@@ -21,6 +21,7 @@ struct PhraseModDetails {
   pub is_start: bool,
   pub number: Option<u8>,
   pub for_voice: Option<String>,
+  pub combine_with_next: bool,
 }
 
 #[cfg(feature = "print")]
@@ -45,6 +46,7 @@ struct NoteDetails {
   pub pitch: Pitch,
   pub duration: Duration,
   pub accidental: Accidental,
+  pub divisions: usize,
   pub voice: Option<String>,
   pub arpeggiated: bool,
   pub non_arpeggiated: bool,
@@ -273,18 +275,18 @@ impl core::fmt::Display for TemporalPartData {
 
 #[derive(Debug, Default)]
 struct MusicalItem {
+  divisions: usize,
   note: Option<Note>,
   chord: Option<Chord>,
   new_phrase_modifications: Vec<PhraseModDetails>,
   ending_phrase_modifications: Vec<PhraseModDetails>,
-  is_legato: bool,
 }
 
 impl MusicXmlConverter {
   #[allow(clippy::cast_possible_truncation)]
   fn calculate_num_dots(base_divisions: usize, total_divisions: usize) -> u8 {
     let (mut num_dots, mut remaining_divisions) = (0, total_divisions - base_divisions);
-    while remaining_divisions > 0 {
+    while remaining_divisions > 0 && num_dots < 8 {
       num_dots += 1;
       remaining_divisions -= base_divisions / (2_usize.pow(num_dots));
     }
@@ -522,6 +524,68 @@ impl MusicXmlConverter {
     max_quarter_notes as usize
   }
 
+  fn convert_divisions_to_duration(divisions: usize, divisions_per_quarter_note: usize, num_dots: u8) -> Duration {
+    match divisions {
+      _ if divisions / divisions_per_quarter_note >= 32 => Duration::new(
+        DurationType::Maxima,
+        MusicXmlConverter::calculate_num_dots(32 * divisions_per_quarter_note, divisions),
+      ),
+      _ if divisions / divisions_per_quarter_note >= 16 => Duration::new(
+        DurationType::Long,
+        MusicXmlConverter::calculate_num_dots(16 * divisions_per_quarter_note, divisions),
+      ),
+      _ if divisions / divisions_per_quarter_note >= 8 => Duration::new(
+        DurationType::Breve,
+        MusicXmlConverter::calculate_num_dots(8 * divisions_per_quarter_note, divisions),
+      ),
+      _ if divisions / divisions_per_quarter_note >= 4 => Duration::new(
+        DurationType::Whole,
+        MusicXmlConverter::calculate_num_dots(4 * divisions_per_quarter_note, divisions),
+      ),
+      _ if divisions / divisions_per_quarter_note >= 2 => Duration::new(
+        DurationType::Half,
+        MusicXmlConverter::calculate_num_dots(2 * divisions_per_quarter_note, divisions),
+      ),
+      _ if divisions / divisions_per_quarter_note >= 1 => Duration::new(
+        DurationType::Quarter,
+        MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note, divisions),
+      ),
+      _ if divisions_per_quarter_note / divisions <= 2 => Duration::new(
+        DurationType::Eighth,
+        MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note / 2, divisions),
+      ),
+      _ if divisions_per_quarter_note / divisions <= 4 => Duration::new(
+        DurationType::Sixteenth,
+        MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note / 4, divisions),
+      ),
+      _ if divisions_per_quarter_note / divisions <= 8 => Duration::new(
+        DurationType::ThirtySecond,
+        MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note / 8, divisions),
+      ),
+      _ if divisions_per_quarter_note / divisions <= 16 => Duration::new(
+        DurationType::SixtyFourth,
+        MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note / 16, divisions),
+      ),
+      _ if divisions_per_quarter_note / divisions <= 32 => Duration::new(
+        DurationType::OneHundredTwentyEighth,
+        MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note / 32, divisions),
+      ),
+      _ if divisions_per_quarter_note / divisions <= 64 => Duration::new(
+        DurationType::TwoHundredFiftySixth,
+        MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note / 64, divisions),
+      ),
+      _ if divisions_per_quarter_note / divisions <= 128 => Duration::new(
+        DurationType::FiveHundredTwelfth,
+        MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note / 128, divisions),
+      ),
+      _ if divisions_per_quarter_note / divisions <= 256 => Duration::new(
+        DurationType::OneThousandTwentyFourth,
+        MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note / 256, divisions),
+      ),
+      _ => Duration::new(DurationType::TwoThousandFortyEighth, num_dots),
+    }
+  }
+
   fn parse_attributes_element(
     element: &musicxml::elements::AttributesContents,
     time_slices: &mut BTreeMap<String, Vec<TimeSliceContainer>>,
@@ -622,6 +686,7 @@ impl MusicXmlConverter {
   fn parse_direction_element(
     element: &musicxml::elements::Direction,
     time_slice: &mut BTreeMap<String, Vec<TimeSliceContainer>>,
+    open_wedges: &mut BTreeMap<Option<u8>, Vec<musicxml::datatypes::WedgeType>>,
     cursor: usize,
   ) -> isize {
     let staff_name = if let Some(staff) = &element.content.staff {
@@ -645,16 +710,46 @@ impl MusicXmlConverter {
         }
         musicxml::elements::DirectionTypeContents::Wedge(wedge) => {
           if wedge.attributes.r#type != musicxml::datatypes::WedgeType::Continue {
+            let wedge_number = wedge.attributes.number.as_ref().map(|number| **number);
             let item = PhraseModDetails {
               modification: match wedge.attributes.r#type {
                 musicxml::datatypes::WedgeType::Diminuendo => {
+                  if let Some(open_wedge) = open_wedges.get_mut(&wedge_number) {
+                    open_wedge.push(musicxml::datatypes::WedgeType::Diminuendo);
+                  } else {
+                    open_wedges.insert(wedge_number, Vec::from([musicxml::datatypes::WedgeType::Diminuendo]));
+                  }
                   PhraseModificationType::Decrescendo { final_dynamic: None }
                 }
-                _ => PhraseModificationType::Crescendo { final_dynamic: None },
+                musicxml::datatypes::WedgeType::Stop => {
+                  if let Some(open_wedge) = open_wedges.get_mut(&wedge_number) {
+                    let wedge_type = open_wedge.pop();
+                    if open_wedge.is_empty() {
+                      open_wedges.remove(&wedge_number);
+                    }
+                    match wedge_type {
+                      Some(musicxml::datatypes::WedgeType::Crescendo) => {
+                        PhraseModificationType::Crescendo { final_dynamic: None }
+                      }
+                      _ => PhraseModificationType::Decrescendo { final_dynamic: None },
+                    }
+                  } else {
+                    PhraseModificationType::Crescendo { final_dynamic: None }
+                  }
+                }
+                _ => {
+                  if let Some(open_wedge) = open_wedges.get_mut(&wedge_number) {
+                    open_wedge.push(musicxml::datatypes::WedgeType::Crescendo);
+                  } else {
+                    open_wedges.insert(wedge_number, Vec::from([musicxml::datatypes::WedgeType::Crescendo]));
+                  }
+                  PhraseModificationType::Crescendo { final_dynamic: None }
+                }
               },
               is_start: wedge.attributes.r#type != musicxml::datatypes::WedgeType::Stop,
               number: wedge.attributes.number.as_ref().map(|number| **number),
               for_voice: None,
+              combine_with_next: false,
             };
             if item.is_start {
               time_slice.get_mut(&staff_name).unwrap()[cursor]
@@ -709,6 +804,7 @@ impl MusicXmlConverter {
               is_start: true,
               number: pedal.attributes.number.as_ref().map(|number| **number),
               for_voice: None,
+              combine_with_next: false,
             };
             time_slice.get_mut(&staff_name).unwrap()[cursor]
               .phrase_modification_start
@@ -722,6 +818,7 @@ impl MusicXmlConverter {
               is_start: false,
               number: pedal.attributes.number.as_ref().map(|number| **number),
               for_voice: None,
+              combine_with_next: false,
             };
             time_slice.get_mut(&staff_name).unwrap()[cursor]
               .phrase_modification_end
@@ -735,6 +832,7 @@ impl MusicXmlConverter {
               is_start: true,
               number: pedal.attributes.number.as_ref().map(|number| **number),
               for_voice: None,
+              combine_with_next: false,
             };
             time_slice.get_mut(&staff_name).unwrap()[cursor]
               .phrase_modification_start
@@ -748,6 +846,7 @@ impl MusicXmlConverter {
               is_start: false,
               number: pedal.attributes.number.as_ref().map(|number| **number),
               for_voice: None,
+              combine_with_next: false,
             };
             let item2 = PhraseModDetails {
               modification: PhraseModificationType::Pedal {
@@ -756,6 +855,7 @@ impl MusicXmlConverter {
               is_start: true,
               number: pedal.attributes.number.as_ref().map(|number| **number),
               for_voice: None,
+              combine_with_next: false,
             };
             time_slice.get_mut(&staff_name).unwrap()[cursor]
               .phrase_modification_end
@@ -774,7 +874,7 @@ impl MusicXmlConverter {
                   Some(musicxml::datatypes::PositiveInteger(15)) => 2,
                   Some(musicxml::datatypes::PositiveInteger(22)) => 3,
                   _ => 1,
-                } * if octave_shift.attributes.r#type == musicxml::datatypes::UpDownStopContinue::Down {
+                } * if octave_shift.attributes.r#type == musicxml::datatypes::UpDownStopContinue::Up {
                   -1
                 } else {
                   1
@@ -783,6 +883,7 @@ impl MusicXmlConverter {
               is_start: octave_shift.attributes.r#type != musicxml::datatypes::UpDownStopContinue::Stop,
               number: octave_shift.attributes.number.as_ref().map(|number| **number),
               for_voice: None,
+              combine_with_next: false,
             };
             if item.is_start {
               time_slice.get_mut(&staff_name).unwrap()[cursor]
@@ -889,21 +990,27 @@ impl MusicXmlConverter {
       String::from("1")
     };
     let num_dots = note.content.dot.len() as u8;
-    let (divisions, mut tied, chord, pitch) = match &note.content.info {
+    let (divisions, mut tied, acciaccatura, appoggiatura, chord, pitch) = match &note.content.info {
       musicxml::elements::NoteType::Cue(cue) => (
         *cue.duration.content as usize,
+        false,
+        false,
         false,
         cue.chord.is_some(),
         Pitch::new_rest(),
       ),
       musicxml::elements::NoteType::Grace(grace) => match &grace.info {
-        musicxml::elements::GraceType::Cue(cue) => (0, false, cue.chord.is_some(), Pitch::new_rest()),
+        musicxml::elements::GraceType::Cue(cue) => (0, false, false, true, cue.chord.is_some(), Pitch::new_rest()),
         musicxml::elements::GraceType::Normal(normal) => (
           0,
           normal
             .tie
             .iter()
             .any(|tie| tie.attributes.r#type == musicxml::datatypes::StartStop::Start),
+          grace.grace.attributes.slash == Some(musicxml::datatypes::YesNo::Yes)
+            || grace.grace.attributes.steal_time_previous.is_some(),
+          grace.grace.attributes.slash != Some(musicxml::datatypes::YesNo::Yes)
+            && grace.grace.attributes.steal_time_previous.is_none(),
           normal.chord.is_some(),
           match &normal.audible {
             musicxml::elements::AudibleType::Pitch(pitch) => {
@@ -928,6 +1035,8 @@ impl MusicXmlConverter {
           .tie
           .iter()
           .any(|tie| tie.attributes.r#type == musicxml::datatypes::StartStop::Start),
+        false,
+        false,
         normal.chord.is_some(),
         match &normal.audible {
           musicxml::elements::AudibleType::Pitch(pitch) => {
@@ -972,65 +1081,7 @@ impl MusicXmlConverter {
         musicxml::datatypes::NoteTypeValue::Quarter => Duration::new(DurationType::Quarter, num_dots),
       }
     } else {
-      match divisions {
-        _ if divisions / divisions_per_quarter_note >= 32 => Duration::new(
-          DurationType::Maxima,
-          MusicXmlConverter::calculate_num_dots(32 * divisions_per_quarter_note, divisions),
-        ),
-        _ if divisions / divisions_per_quarter_note >= 16 => Duration::new(
-          DurationType::Long,
-          MusicXmlConverter::calculate_num_dots(16 * divisions_per_quarter_note, divisions),
-        ),
-        _ if divisions / divisions_per_quarter_note >= 8 => Duration::new(
-          DurationType::Breve,
-          MusicXmlConverter::calculate_num_dots(8 * divisions_per_quarter_note, divisions),
-        ),
-        _ if divisions / divisions_per_quarter_note >= 4 => Duration::new(
-          DurationType::Whole,
-          MusicXmlConverter::calculate_num_dots(4 * divisions_per_quarter_note, divisions),
-        ),
-        _ if divisions / divisions_per_quarter_note >= 2 => Duration::new(
-          DurationType::Half,
-          MusicXmlConverter::calculate_num_dots(2 * divisions_per_quarter_note, divisions),
-        ),
-        _ if divisions / divisions_per_quarter_note >= 1 => Duration::new(
-          DurationType::Quarter,
-          MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note, divisions),
-        ),
-        _ if divisions_per_quarter_note / divisions <= 2 => Duration::new(
-          DurationType::Eighth,
-          MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note / 2, divisions),
-        ),
-        _ if divisions_per_quarter_note / divisions <= 4 => Duration::new(
-          DurationType::Sixteenth,
-          MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note / 4, divisions),
-        ),
-        _ if divisions_per_quarter_note / divisions <= 8 => Duration::new(
-          DurationType::ThirtySecond,
-          MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note / 8, divisions),
-        ),
-        _ if divisions_per_quarter_note / divisions <= 16 => Duration::new(
-          DurationType::SixtyFourth,
-          MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note / 16, divisions),
-        ),
-        _ if divisions_per_quarter_note / divisions <= 32 => Duration::new(
-          DurationType::OneHundredTwentyEighth,
-          MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note / 32, divisions),
-        ),
-        _ if divisions_per_quarter_note / divisions <= 64 => Duration::new(
-          DurationType::TwoHundredFiftySixth,
-          MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note / 64, divisions),
-        ),
-        _ if divisions_per_quarter_note / divisions <= 128 => Duration::new(
-          DurationType::FiveHundredTwelfth,
-          MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note / 128, divisions),
-        ),
-        _ if divisions_per_quarter_note / divisions <= 256 => Duration::new(
-          DurationType::OneThousandTwentyFourth,
-          MusicXmlConverter::calculate_num_dots(divisions_per_quarter_note / 256, divisions),
-        ),
-        _ => Duration::new(DurationType::TwoThousandFortyEighth, num_dots),
-      }
+      Self::convert_divisions_to_duration(divisions, divisions_per_quarter_note, num_dots)
     };
     let voice = note.content.voice.as_ref().map(|voice| voice.content.clone());
     let accidental = note
@@ -1080,11 +1131,16 @@ impl MusicXmlConverter {
                 is_start: slur.attributes.r#type == musicxml::datatypes::StartStopContinue::Start,
                 number: slur.attributes.number.as_ref().map(|number| **number),
                 for_voice: None,
+                combine_with_next: false,
               };
               if item.is_start {
-                phrase_modifications_start.push(item);
+                time_slices.get_mut(&staff_name).unwrap()[cursor]
+                  .phrase_modification_start
+                  .push(item);
               } else {
-                phrase_modifications_end.push(item);
+                time_slices.get_mut(&staff_name).unwrap()[cursor + divisions]
+                  .phrase_modification_end
+                  .push(item);
               }
             }
           }
@@ -1094,6 +1150,7 @@ impl MusicXmlConverter {
               is_start: tuplet.attributes.r#type == musicxml::datatypes::StartStop::Start,
               number: tuplet.attributes.number.as_ref().map(|number| **number),
               for_voice: voice.clone(),
+              combine_with_next: false,
             };
             if item.is_start {
               phrase_modifications_start.push(item);
@@ -1107,6 +1164,7 @@ impl MusicXmlConverter {
               is_start: glissando.attributes.r#type == musicxml::datatypes::StartStop::Start,
               number: glissando.attributes.number.as_ref().map(|number| **number),
               for_voice: voice.clone(),
+              combine_with_next: false,
             };
             if item.is_start {
               phrase_modifications_start.push(item);
@@ -1120,6 +1178,7 @@ impl MusicXmlConverter {
               is_start: slide.attributes.r#type == musicxml::datatypes::StartStop::Start,
               number: slide.attributes.number.as_ref().map(|number| **number),
               for_voice: voice.clone(),
+              combine_with_next: false,
             };
             if item.is_start {
               phrase_modifications_start.push(item);
@@ -1192,6 +1251,7 @@ impl MusicXmlConverter {
                             is_start: true,
                             number: None,
                             for_voice: voice.clone(),
+                            combine_with_next: false,
                           });
                           None
                         }
@@ -1201,6 +1261,7 @@ impl MusicXmlConverter {
                             is_start: false,
                             number: None,
                             for_voice: voice.clone(),
+                            combine_with_next: false,
                           });
                           None
                         }
@@ -1420,10 +1481,16 @@ impl MusicXmlConverter {
     if tied {
       note_modifications.push(NoteModificationType::Tie);
     }
+    if acciaccatura {
+      note_modifications.push(NoteModificationType::Grace { acciaccatura: true });
+    } else if appoggiatura {
+      note_modifications.push(NoteModificationType::Grace { acciaccatura: false });
+    }
     let item = NoteDetails {
       pitch,
       duration,
       accidental: accidental.unwrap_or_default(),
+      divisions,
       voice,
       arpeggiated: arpeggiate,
       non_arpeggiated: non_arpeggiate,
@@ -1590,11 +1657,281 @@ impl MusicXmlConverter {
     section_structure
   }
 
+  fn ensure_valid_mod_overlaps(time_slices: &mut [TimeSliceContainer], section_structure: &BTreeMap<usize, usize>) {
+    // Determine the start and end indices for each modification
+    let mut last_valid_timeslice = 0;
+    let mut valid_timeslices = BTreeMap::new();
+    let mut mod_ranges: Vec<(PhraseModificationType, usize, usize)> = Vec::new();
+    let mut open_mods: BTreeMap<PhraseModificationType, (usize, usize)> = BTreeMap::new();
+    for (time_slice_idx, time_slice) in time_slices.iter_mut().enumerate() {
+      if !time_slice.is_empty() {
+        valid_timeslices.insert(time_slice_idx, 0);
+        if let Some(last_timeslice) = valid_timeslices.get_mut(&last_valid_timeslice) {
+          *last_timeslice = time_slice_idx;
+        }
+        last_valid_timeslice = time_slice_idx;
+      }
+      if section_structure.get(&time_slice_idx).is_some() || !time_slice.direction.is_empty() {
+        for (_, _, mod_end) in &mut mod_ranges {
+          if *mod_end == 0 {
+            *mod_end = time_slice_idx;
+          }
+        }
+        open_mods.clear();
+      }
+      for mod_end in &time_slice.phrase_modification_end {
+        if let Some((mod_count, mod_idx)) = open_mods.get_mut(&mod_end.modification) {
+          *mod_count -= 1;
+          if *mod_count == 0 {
+            mod_ranges[*mod_idx].2 = time_slice_idx;
+            open_mods.remove(&mod_end.modification);
+          }
+        }
+      }
+      for mod_start in &time_slice.phrase_modification_start {
+        if let Some((mod_count, _)) = open_mods.get_mut(&mod_start.modification) {
+          *mod_count += 1;
+        } else {
+          open_mods.insert(mod_start.modification, (1, mod_ranges.len()));
+          mod_ranges.push((mod_start.modification, time_slice_idx, 0));
+        }
+      }
+      time_slice.phrase_modification_start.clear();
+      time_slice.phrase_modification_end.clear();
+    }
+
+    // Repeat until no more swaps are needed
+    let mut swapped = true;
+    while swapped {
+      // Ensure that modifications that can fully contain other modifications are ordered first
+      while swapped {
+        swapped = false;
+        for idx in 1..mod_ranges.len() {
+          if mod_ranges[idx - 1].1 == mod_ranges[idx].1 && mod_ranges[idx - 1].2 < mod_ranges[idx].2 {
+            mod_ranges.swap(idx - 1, idx);
+            swapped = true;
+          }
+        }
+      }
+
+      // Handle inappropriately overlapping crescendos and decrescendos
+      let mut open_mods = Vec::new();
+      for idx in 0..mod_ranges.len() {
+        // Close any open modifications that have ended
+        let (mod_type, mod_start, mod_end) = mod_ranges[idx];
+        while let Some((_, _, _, open_mod_end)) = open_mods.last() {
+          if mod_start >= *open_mod_end {
+            open_mods.pop();
+          } else {
+            break;
+          }
+        }
+
+        // Determine how to handle modifications that only partially overlap
+        if open_mods.is_empty() {
+          open_mods.push((idx, mod_type, mod_start, mod_end));
+        } else if let Some(&(open_mod_idx, open_mod_type, open_mod_start, open_mod_end)) = open_mods.last() {
+          if open_mod_end < mod_end {
+            let (expand_first_amount, shrink_first_amount) = if matches!(
+              open_mod_type,
+              PhraseModificationType::Crescendo { .. } | PhraseModificationType::Decrescendo { .. }
+            ) {
+              (
+                mod_end - open_mod_end,
+                if idx - 1 == open_mod_idx {
+                  mod_start - open_mod_start
+                } else {
+                  usize::MAX
+                },
+              )
+            } else {
+              (usize::MAX, usize::MAX)
+            };
+            let (expand_second_amount, shrink_second_amount) = if matches!(
+              mod_type,
+              PhraseModificationType::Crescendo { .. } | PhraseModificationType::Decrescendo { .. }
+            ) {
+              (
+                if idx - 1 == open_mod_idx {
+                  mod_start - open_mod_start
+                } else {
+                  usize::MAX
+                },
+                mod_end - open_mod_end,
+              )
+            } else {
+              (usize::MAX, usize::MAX)
+            };
+            let min_disruption_amount = expand_first_amount
+              .min(shrink_first_amount)
+              .min(expand_second_amount)
+              .min(shrink_second_amount);
+            if expand_first_amount == min_disruption_amount {
+              mod_ranges[open_mod_idx].2 = mod_end;
+              open_mods.push((idx, mod_type, mod_start, mod_end));
+            } else if expand_second_amount == min_disruption_amount {
+              mod_ranges[idx].1 = open_mod_start;
+              mod_ranges.swap(open_mod_idx, idx);
+              let open_mods_len = open_mods.len();
+              open_mods.last_mut().unwrap().0 = idx;
+              open_mods.push((open_mod_idx, mod_type, open_mod_start, mod_end));
+              open_mods.swap(open_mods_len, open_mods_len - 1);
+              swapped = true;
+            } else if shrink_first_amount == min_disruption_amount {
+              mod_ranges[open_mod_idx].1 = mod_start;
+              mod_ranges.swap(open_mod_idx, idx);
+              let open_mods_len = open_mods.len();
+              open_mods.last_mut().unwrap().0 = idx;
+              open_mods.last_mut().unwrap().2 = mod_start;
+              open_mods.push((open_mod_idx, mod_type, mod_start, mod_end));
+              open_mods.swap(open_mods_len, open_mods_len - 1);
+              swapped = true;
+            } else if shrink_second_amount == min_disruption_amount {
+              mod_ranges[idx].2 = open_mod_end;
+              open_mods.push((idx, mod_type, mod_start, mod_end));
+            }
+          } else {
+            open_mods.push((idx, mod_type, mod_start, mod_end));
+          }
+        }
+      }
+    }
+
+    // Repeat until no more swaps are needed
+    swapped = true;
+    while swapped {
+      // Ensure that modifications that can fully contain other modifications are ordered first
+      while swapped {
+        swapped = false;
+        for idx in 1..mod_ranges.len() {
+          if mod_ranges[idx - 1].1 == mod_ranges[idx].1 && mod_ranges[idx - 1].2 < mod_ranges[idx].2 {
+            mod_ranges.swap(idx - 1, idx);
+            swapped = true;
+          }
+        }
+      }
+
+      // Handle inappropriately overlapping legatos
+      let mut open_mods = Vec::new();
+      for idx in 0..mod_ranges.len() {
+        // Close any open modifications that have ended
+        let (mod_type, mod_start, mod_end) = mod_ranges[idx];
+        while let Some((_, _, _, open_mod_end)) = open_mods.last() {
+          if mod_start >= *open_mod_end {
+            open_mods.pop();
+          } else {
+            break;
+          }
+        }
+
+        // Determine how to handle modifications that only partially overlap
+        if open_mods.is_empty() {
+          open_mods.push((idx, mod_type, mod_start, mod_end));
+        } else if let Some(&(open_mod_idx, open_mod_type, open_mod_start, open_mod_end)) = open_mods.last() {
+          if open_mod_end < mod_end {
+            let (expand_first_amount, shrink_first_amount) = if matches!(open_mod_type, PhraseModificationType::Legato)
+            {
+              (
+                mod_end - open_mod_end,
+                if idx - 1 == open_mod_idx {
+                  mod_start - open_mod_start
+                } else {
+                  usize::MAX
+                },
+              )
+            } else {
+              (usize::MAX, usize::MAX)
+            };
+            let (expand_second_amount, shrink_second_amount) = if matches!(mod_type, PhraseModificationType::Legato) {
+              (
+                if idx - 1 == open_mod_idx {
+                  mod_start - open_mod_start
+                } else {
+                  usize::MAX
+                },
+                mod_end - open_mod_end,
+              )
+            } else {
+              (usize::MAX, usize::MAX)
+            };
+            let min_disruption_amount = expand_first_amount
+              .min(shrink_first_amount)
+              .min(expand_second_amount)
+              .min(shrink_second_amount);
+            if expand_first_amount == min_disruption_amount {
+              mod_ranges[open_mod_idx].2 = mod_end;
+              open_mods.push((idx, mod_type, mod_start, mod_end));
+            } else if expand_second_amount == min_disruption_amount {
+              mod_ranges[idx].1 = open_mod_start;
+              mod_ranges.swap(open_mod_idx, idx);
+              let open_mods_len = open_mods.len();
+              open_mods.last_mut().unwrap().0 = idx;
+              open_mods.push((open_mod_idx, mod_type, open_mod_start, mod_end));
+              open_mods.swap(open_mods_len, open_mods_len - 1);
+              swapped = true;
+            } else if shrink_first_amount == min_disruption_amount {
+              mod_ranges[open_mod_idx].1 = mod_start;
+              mod_ranges.swap(open_mod_idx, idx);
+              let open_mods_len = open_mods.len();
+              open_mods.last_mut().unwrap().0 = idx;
+              open_mods.last_mut().unwrap().2 = mod_start;
+              open_mods.push((open_mod_idx, mod_type, mod_start, mod_end));
+              open_mods.swap(open_mods_len, open_mods_len - 1);
+              swapped = true;
+            } else if shrink_second_amount == min_disruption_amount {
+              mod_ranges[idx].2 = open_mod_end;
+              open_mods.push((idx, mod_type, mod_start, mod_end));
+            }
+          } else {
+            open_mods.push((idx, mod_type, mod_start, mod_end));
+          }
+        }
+      }
+    }
+
+    // Remove any meaningless single-note modification phrases
+    mod_ranges.retain(|(mod_type, start, end)| {
+      !matches!(
+        mod_type,
+        PhraseModificationType::Legato
+          | PhraseModificationType::Crescendo { .. }
+          | PhraseModificationType::Decrescendo { .. }
+      ) || if let Some(next_idx) = valid_timeslices.get(start) {
+        *next_idx != *end
+      } else {
+        true
+      }
+    });
+
+    // Update the timeslices using the new modification ranges
+    for (idx, &(mod_type, mod_start_idx, mod_end_idx)) in mod_ranges.iter().enumerate() {
+      let combine_with_next =
+        idx + 1 < mod_ranges.len() && mod_ranges[idx + 1].1 == mod_start_idx && mod_ranges[idx + 1].2 == mod_end_idx;
+      time_slices[mod_start_idx]
+        .phrase_modification_start
+        .push(PhraseModDetails {
+          modification: mod_type,
+          is_start: true,
+          number: None,
+          for_voice: None,
+          combine_with_next,
+        });
+      time_slices[mod_end_idx].phrase_modification_end.push(PhraseModDetails {
+        modification: mod_type,
+        is_start: false,
+        number: None,
+        for_voice: None,
+        combine_with_next: false,
+      });
+    }
+  }
+
   fn get_musical_elements_by_voice(
     note_details: Vec<NoteDetails>,
     chord_mods: &[ChordModificationType],
   ) -> BTreeMap<String, MusicalItem> {
     // Parse notes and separate them by voice
+    let mut note_accidentals = BTreeMap::new();
     let mut voicewide_mods = BTreeMap::new();
     let mut notes_by_voice = BTreeMap::<String, Vec<(Note, NoteDetails)>>::new();
     for item in note_details {
@@ -1606,6 +1943,9 @@ impl MusicXmlConverter {
           voicewide_mods.insert(voice.clone(), Vec::new());
           voicewide_mods.get_mut(&voice).unwrap_unchecked()
         }
+      };
+      if item.accidental != Accidental::None {
+        note_accidentals.insert(item.pitch, item.accidental);
       };
       let mut note = Note::new(item.pitch, item.duration, Some(item.accidental));
       for modification in &item.note_modifications {
@@ -1633,6 +1973,9 @@ impl MusicXmlConverter {
       if notes.len() <= 1 {
         for (mut note, details) in notes {
           let mut musical_item = MusicalItem::default();
+          if let Some(accidental) = note_accidentals.get(&note.pitch) {
+            note.accidental = *accidental;
+          }
           if let Some(mods) = voicewide_mods.get_mut(voice.as_str()) {
             for modification in mods {
               if let Some(note_mod) = NoteModification::from_chord_modification(modification) {
@@ -1646,21 +1989,19 @@ impl MusicXmlConverter {
             }
           }
           for modification in details.phrase_modifications_start {
-            match modification.modification {
-              PhraseModificationType::Legato => musical_item.is_legato = true,
-              _ => {
-                if !musical_item
-                  .new_phrase_modifications
-                  .iter()
-                  .any(|item| item.modification == modification.modification)
-                {
-                  musical_item.new_phrase_modifications.push(modification);
-                }
-              }
+            if !musical_item
+              .new_phrase_modifications
+              .iter()
+              .any(|item| item.modification == modification.modification)
+            {
+              musical_item.new_phrase_modifications.push(modification);
             }
           }
+          for modification in details.phrase_modifications_end {
+            musical_item.ending_phrase_modifications.push(modification);
+          }
           musical_item.note = Some(note);
-          musical_item.ending_phrase_modifications = details.phrase_modifications_end;
+          musical_item.divisions = details.divisions;
           items_by_voice.insert(voice.clone(), musical_item);
         }
       } else {
@@ -1674,31 +2015,26 @@ impl MusicXmlConverter {
         for modification in chord_mods {
           chord.add_modification(*modification);
         }
-        for (note, details) in notes {
-          for modification in details.phrase_modifications_start {
-            match modification.modification {
-              PhraseModificationType::Legato => musical_item.is_legato = true,
-              _ => {
-                if !musical_item
-                  .new_phrase_modifications
-                  .iter()
-                  .any(|item| item.modification == modification.modification)
-                {
-                  musical_item.new_phrase_modifications.push(modification);
-                }
-              }
-            }
+        for (mut note, details) in notes {
+          if let Some(accidental) = note_accidentals.get(&note.pitch) {
+            note.accidental = *accidental;
           }
-          for modification in details.phrase_modifications_end {
+          for modification in details.phrase_modifications_start {
             if !musical_item
-              .ending_phrase_modifications
+              .new_phrase_modifications
               .iter()
               .any(|item| item.modification == modification.modification)
             {
-              musical_item.ending_phrase_modifications.push(modification);
+              musical_item.new_phrase_modifications.push(modification);
             }
           }
+          for modification in details.phrase_modifications_end {
+            musical_item.ending_phrase_modifications.push(modification);
+          }
           chord.claim_note(note);
+          if musical_item.divisions == 0 || musical_item.divisions > details.divisions {
+            musical_item.divisions = details.divisions;
+          }
         }
         musical_item.chord = Some(chord);
         items_by_voice.insert(voice.clone(), musical_item);
@@ -1758,12 +2094,18 @@ impl MusicXmlConverter {
     }
 
     // Parse the actual musical contents of the score into discrete time slices
+    let mut part_divisions_per_quarter_note = BTreeMap::new();
     for part in &score.content.part {
       if part.content.is_empty() {
         composition.remove_part_by_name(unsafe { parts_map.get(&*part.attributes.id).unwrap_unchecked() });
       } else {
+        let mut open_wedges = BTreeMap::new();
         let (mut cursor, mut previous_cursor): (usize, usize) = (0, 0);
         let divisions_per_quarter_note = MusicXmlConverter::find_divisions_per_quarter_note(&part.content);
+        part_divisions_per_quarter_note.insert(
+          unsafe { parts_map.get(&*part.attributes.id).unwrap_unchecked() },
+          divisions_per_quarter_note,
+        );
         let time_slices = unsafe {
           part_data
             .data
@@ -1791,7 +2133,7 @@ impl MusicXmlConverter {
                   MusicXmlConverter::parse_forward_element(&forward.content)
                 }
                 musicxml::elements::MeasureElement::Direction(direction) => {
-                  MusicXmlConverter::parse_direction_element(direction, time_slices, cursor)
+                  MusicXmlConverter::parse_direction_element(direction, time_slices, &mut open_wedges, cursor)
                 }
                 musicxml::elements::MeasureElement::Barline(barline) => {
                   MusicXmlConverter::parse_barline_element(barline, time_slices, cursor)
@@ -1818,347 +2160,263 @@ impl MusicXmlConverter {
     } else {
       BTreeMap::new()
     };
-    // TODO: DELETE THIS
-    /*for (idx, details) in &section_details {
-      println!("[{idx}]:\n{details}");
-    }*/
 
     // Use the temporally ordered time slices for each part to construct a final composition structure
-    // TODO: DELETE THIS: println!("{}", part_data);
     for (part_name, staves) in part_data.data {
       let part = composition
         .get_part_mut_by_name(&part_name)
         .expect("Unknown part name encountered");
+      let divisions_per_quarter_note = *part_divisions_per_quarter_note.get(&part_name).unwrap();
 
       // Handle creation of the section structure for this part
       let master_section = part.add_section("Top-Level Section");
       let section_structure = Self::generate_section_structure(master_section, &section_details);
 
       // Iterate through all staves in the part
-      for (staff_name, time_slices) in staves {
+      for (staff_name, mut time_slices) in staves {
         let mut current_section_idx = 0;
-        let mut multivoice_phrases = BTreeMap::new();
-        let (mut local_phrases, mut global_phrases) = (BTreeMap::new(), Vec::new());
-        let (mut delayed_phrase_starts, mut delayed_phrase_ends) = (Vec::new(), Vec::new());
-        for (time_slice_idx, time_slice) in time_slices.into_iter().enumerate() {
+        let mut pending_directions = Vec::new();
+        let mut pending_staff_phrase_starts = Vec::new();
+        let mut pending_staff_phrase_ends = Vec::new();
+        let mut staff_phrases = Vec::new();
+        let mut voice_phrases: BTreeMap<PhraseModificationType, Vec<usize>> = BTreeMap::new();
+        let mut multivoices: BTreeMap<String, (usize, [usize; 1], Vec<usize>)> = BTreeMap::new();
+        Self::ensure_valid_mod_overlaps(&mut time_slices, &section_structure);
+        for (time_slice_idx, mut time_slice) in time_slices.into_iter().enumerate() {
           // Handle section delineations
           if let Some(&new_section_idx) = section_structure.get(&time_slice_idx) {
             // New sections require that all existing phrases be closed
-            delayed_phrase_ends.clear();
-            delayed_phrase_starts.clear();
-            local_phrases.clear();
-            global_phrases.clear();
-            multivoice_phrases.clear();
+            multivoices.clear();
+            staff_phrases.clear();
+            voice_phrases.clear();
+            pending_directions.clear();
+            pending_staff_phrase_starts.clear();
+            pending_staff_phrase_ends.clear();
 
             // Move to the new section
             unsafe {
               current_section_idx = new_section_idx;
-              master_section
-                .get_section_mut(current_section_idx)
-                .unwrap_unchecked()
-                .add_staff(&staff_name);
+              staff_phrases.push((
+                Vec::from([master_section
+                  .get_section_mut(current_section_idx)
+                  .unwrap_unchecked()
+                  .add_staff(&staff_name)
+                  .add_phrase()
+                  .get_id()]),
+                Vec::new(),
+              ));
             }
           }
 
           // Parse notes and chords and separate them by voice
-          let items_by_voice = Self::get_musical_elements_by_voice(time_slice.notes, &time_slice.chord_modification);
+          let mut items_by_voice =
+            Self::get_musical_elements_by_voice(time_slice.notes, &time_slice.chord_modification);
 
-          // Handle global phrase modification endings
-          for item in time_slice.phrase_modification_end {
-            if local_phrases.is_empty() {
-              multivoice_phrases.clear();
-              global_phrases.pop();
-            } else {
-              delayed_phrase_ends.push((item.number, item.modification));
-            }
-          }
-
-          // Handle staff-wide directions
-          if !time_slice.direction.is_empty() {
-            local_phrases.clear();
-            multivoice_phrases.clear();
-            global_phrases.clear();
-            for item in time_slice.direction {
-              master_section
-                .get_section_mut(current_section_idx)
-                .unwrap()
-                .get_staff_mut_by_name(&staff_name)
-                .unwrap()
-                .add_direction(item);
-            }
-          }
-
-          // Handle new global phrase modifications
-          for item in time_slice.phrase_modification_start {
-            if local_phrases.is_empty() {
-              multivoice_phrases.clear();
-              let new_phrase = if let Some(&phrase_id) = global_phrases.last() {
-                master_section.get_phrase_mut(phrase_id).unwrap().add_phrase()
-              } else {
-                master_section
-                  .get_section_mut(current_section_idx)
-                  .unwrap()
-                  .get_staff_mut_by_name(&staff_name)
-                  .unwrap()
-                  .add_phrase()
-              };
-              new_phrase.add_modification(item.modification);
-              global_phrases.push(new_phrase.get_id());
-            } else {
-              delayed_phrase_starts.push((item.number, item.modification));
-            }
-          }
-
-          // Handle adding notes, chords, multivoices, and local phrase modifications
-          let mut phrase_ends = BTreeMap::new();
-          let mut pending_legato_phrases = Vec::new();
-          if multivoice_phrases.is_empty() {
-            if items_by_voice.len() <= 1 {
-              for (voice, voice_items) in items_by_voice {
-                phrase_ends.insert(voice.clone(), voice_items.ending_phrase_modifications);
-                if voice_items.is_legato {
-                  if local_phrases.is_empty() {
-                    let phrase = if let Some(&phrase_id) = global_phrases.last() {
-                      master_section.get_phrase_mut(phrase_id).unwrap().add_phrase()
-                    } else {
-                      master_section
-                        .get_section_mut(current_section_idx)
-                        .unwrap()
-                        .get_staff_mut_by_name(&staff_name)
-                        .unwrap()
-                        .add_phrase()
-                    };
-                    phrase.add_modification(PhraseModificationType::Legato);
-                    if let Some(note) = voice_items.note {
-                      phrase.claim_note(note);
-                    } else if let Some(chord) = voice_items.chord {
-                      phrase.claim_chord(chord);
-                    }
-                    local_phrases.insert(voice.clone(), Vec::from([phrase.get_id()]));
-                  } else {
-                    pending_legato_phrases.push(voice.clone());
-                  }
-                } else if let Some(local_phrase_ids) = local_phrases.get_mut(&voice) {
-                  if let Some(note) = voice_items.note {
-                    master_section
-                      .get_phrase_mut(*local_phrase_ids.last().unwrap())
-                      .unwrap()
-                      .claim_note(note);
-                  } else if let Some(chord) = voice_items.chord {
-                    master_section
-                      .get_phrase_mut(*local_phrase_ids.last().unwrap())
-                      .unwrap()
-                      .claim_chord(chord);
-                  }
-                } else if let Some(&phrase_id) = global_phrases.last() {
-                  if let Some(note) = voice_items.note {
-                    master_section.get_phrase_mut(phrase_id).unwrap().claim_note(note);
-                  } else if let Some(chord) = voice_items.chord {
-                    master_section.get_phrase_mut(phrase_id).unwrap().claim_chord(chord);
-                  }
-                } else if let Some(note) = voice_items.note {
-                  master_section
-                    .get_section_mut(current_section_idx)
-                    .unwrap()
-                    .get_staff_mut_by_name(&staff_name)
-                    .unwrap()
-                    .claim_note(note);
-                } else if let Some(chord) = voice_items.chord {
-                  master_section
-                    .get_section_mut(current_section_idx)
-                    .unwrap()
-                    .get_staff_mut_by_name(&staff_name)
-                    .unwrap()
-                    .claim_chord(chord);
-                }
-              }
-            } else {
-              local_phrases.clear();
-              let multivoice = if let Some(&phrase_id) = global_phrases.last() {
-                master_section.get_phrase_mut(phrase_id).unwrap().add_multivoice()
-              } else {
-                master_section
-                  .get_section_mut(current_section_idx)
-                  .unwrap()
-                  .get_staff_mut_by_name(&staff_name)
-                  .unwrap()
-                  .add_multivoice()
-              };
-              for (voice, voice_items) in items_by_voice {
-                phrase_ends.insert(voice.clone(), voice_items.ending_phrase_modifications);
-                let new_voice = multivoice.add_phrase();
-                if voice_items.is_legato {
-                  let new_phrase = new_voice.add_phrase();
-                  new_phrase.add_modification(PhraseModificationType::Legato);
-                  if let Some(note) = voice_items.note {
-                    new_phrase.claim_note(note);
-                  } else if let Some(chord) = voice_items.chord {
-                    new_phrase.claim_chord(chord);
-                  }
-                  local_phrases.insert(voice.clone(), Vec::from([new_phrase.get_id()]));
-                } else if let Some(note) = voice_items.note {
-                  new_voice.claim_note(note);
-                } else if let Some(chord) = voice_items.chord {
-                  new_voice.claim_chord(chord);
-                }
-                multivoice_phrases.insert(voice.clone(), new_voice.get_id());
-              }
-            }
-          } else if items_by_voice
+          // Handle closing multivoices
+          let latest_expected_timestamp_idx = multivoices
             .iter()
-            .all(|(voice, _)| multivoice_phrases.contains_key(voice))
-          {
-            for (voice, voice_items) in items_by_voice {
-              phrase_ends.insert(voice.clone(), voice_items.ending_phrase_modifications);
-              if let Some(&phrase_id) = multivoice_phrases.get(&voice) {
-                if voice_items.is_legato {
-                  if local_phrases.contains_key(&voice) {
-                    pending_legato_phrases.push(voice.clone());
-                  } else {
-                    let new_phrase = master_section.get_phrase_mut(phrase_id).unwrap().add_phrase();
-                    new_phrase.add_modification(PhraseModificationType::Legato);
-                    if let Some(note) = voice_items.note {
-                      new_phrase.claim_note(note);
-                    } else if let Some(chord) = voice_items.chord {
-                      new_phrase.claim_chord(chord);
+            .map(|(_, (_, idx, _))| idx[0])
+            .max()
+            .unwrap_or(time_slice_idx);
+          if latest_expected_timestamp_idx != time_slice_idx {
+            for (voice_id, (_, expected_next_timestamp_idx, _)) in &mut multivoices {
+              if expected_next_timestamp_idx[0] == time_slice_idx && !items_by_voice.contains_key(voice_id) {
+                let mut rest = MusicalItem::default();
+                let duration = Self::convert_divisions_to_duration(
+                  latest_expected_timestamp_idx - time_slice_idx,
+                  divisions_per_quarter_note,
+                  0,
+                );
+                rest.note = Some(Note::new(Pitch::new_rest(), duration, None));
+                items_by_voice.insert(voice_id.clone(), rest);
+                expected_next_timestamp_idx[0] = latest_expected_timestamp_idx;
+              }
+            }
+          }
+          multivoices.retain(|voice_id, (_, expected_next_timestamp_idx, _)| {
+            expected_next_timestamp_idx[0] > time_slice_idx
+              || (expected_next_timestamp_idx[0] == time_slice_idx && items_by_voice.contains_key(voice_id))
+          });
+          if !items_by_voice.keys().all(|voice| multivoices.contains_key(voice)) {
+            multivoices.clear();
+            voice_phrases.clear();
+          }
+
+          // Handle staff-wide phrase modification endings
+          if voice_phrases.is_empty() {
+            time_slice
+              .phrase_modification_end
+              .append(&mut pending_staff_phrase_ends);
+            for item in time_slice.phrase_modification_end {
+              let phrases_len = staff_phrases.len();
+              if let Some((idx, (existing_mod_ids, _))) = staff_phrases
+                .iter_mut()
+                .enumerate()
+                .find(|(_, (_, mod_types))| mod_types.contains(&item.modification))
+              {
+                existing_mod_ids.pop();
+                if existing_mod_ids.is_empty() {
+                  multivoices.clear();
+                  let mut phrases_to_read = Vec::new();
+                  for _ in (idx + 1)..phrases_len {
+                    phrases_to_read.push(staff_phrases.pop().unwrap());
+                  }
+                  staff_phrases.pop();
+                  while let Some(phrase) = phrases_to_read.pop() {
+                    let new_phrase = master_section
+                      .get_phrase_mut(*staff_phrases.last().unwrap().0.first().unwrap())
+                      .unwrap()
+                      .add_phrase();
+                    for modification in &phrase.1 {
+                      new_phrase.add_modification(*modification);
                     }
-                    local_phrases.insert(voice.clone(), Vec::from([new_phrase.get_id()]));
-                  }
-                } else if let Some(note) = voice_items.note {
-                  if let Some(local_phrase_ids) = local_phrases.get_mut(&voice) {
-                    master_section
-                      .get_phrase_mut(*local_phrase_ids.last().unwrap())
-                      .unwrap()
-                      .claim_note(note);
-                  } else {
-                    master_section.get_phrase_mut(phrase_id).unwrap().claim_note(note);
-                  }
-                } else if let Some(chord) = voice_items.chord {
-                  if let Some(local_phrase_ids) = local_phrases.get_mut(&voice) {
-                    master_section
-                      .get_phrase_mut(*local_phrase_ids.last().unwrap())
-                      .unwrap()
-                      .claim_chord(chord);
-                  } else {
-                    master_section.get_phrase_mut(phrase_id).unwrap().claim_chord(chord);
+                    staff_phrases.push((Vec::from([new_phrase.get_id()]), phrase.1));
                   }
                 }
               }
             }
           } else {
-            local_phrases.clear();
-            multivoice_phrases.clear();
-            if items_by_voice.len() <= 1 {
-              for (voice, voice_items) in items_by_voice {
-                phrase_ends.insert(voice.clone(), voice_items.ending_phrase_modifications);
-                if voice_items.is_legato {
-                  let phrase = if let Some(&global_phrase_id) = global_phrases.last() {
-                    master_section.get_phrase_mut(global_phrase_id).unwrap().add_phrase()
-                  } else {
-                    master_section
-                      .get_section_mut(current_section_idx)
-                      .unwrap()
-                      .get_staff_mut_by_name(&staff_name)
-                      .unwrap()
-                      .add_phrase()
-                  };
-                  phrase.add_modification(PhraseModificationType::Legato);
-                  if let Some(note) = voice_items.note {
-                    phrase.claim_note(note);
-                  } else if let Some(chord) = voice_items.chord {
-                    phrase.claim_chord(chord);
-                  }
-                  local_phrases.insert(voice.clone(), Vec::from([phrase.get_id()]));
-                } else if let Some(&global_phrase_id) = global_phrases.last() {
-                  if let Some(note) = voice_items.note {
-                    master_section
-                      .get_phrase_mut(global_phrase_id)
-                      .unwrap()
-                      .claim_note(note);
-                  } else if let Some(chord) = voice_items.chord {
-                    master_section
-                      .get_phrase_mut(global_phrase_id)
-                      .unwrap()
-                      .claim_chord(chord);
-                  }
-                } else if let Some(note) = voice_items.note {
-                  master_section
-                    .get_section_mut(current_section_idx)
-                    .unwrap()
-                    .get_staff_mut_by_name(&staff_name)
-                    .unwrap()
-                    .claim_note(note);
-                } else if let Some(chord) = voice_items.chord {
-                  master_section
-                    .get_section_mut(current_section_idx)
-                    .unwrap()
-                    .get_staff_mut_by_name(&staff_name)
-                    .unwrap()
-                    .claim_chord(chord);
+            pending_staff_phrase_ends.append(&mut time_slice.phrase_modification_end);
+          }
+
+          // Handle staff-wide directions
+          if voice_phrases.is_empty() {
+            time_slice.direction.append(&mut pending_directions);
+            if !time_slice.direction.is_empty() {
+              multivoices.clear();
+              staff_phrases.clear();
+              unsafe {
+                let staff = master_section
+                  .get_section_mut(current_section_idx)
+                  .unwrap_unchecked()
+                  .get_staff_mut_by_name(&staff_name)
+                  .unwrap_unchecked();
+                for direction in time_slice.direction {
+                  staff.add_direction(direction);
+                }
+                staff_phrases.push((Vec::from([staff.add_phrase().get_id()]), Vec::new()));
+              }
+            }
+          } else {
+            pending_directions.append(&mut time_slice.direction);
+          }
+
+          // Handle new staff-wide phrase modifications
+          let mut combined_indices = 0;
+          time_slice
+            .phrase_modification_start
+            .append(&mut pending_staff_phrase_starts);
+          for (mut idx, item) in time_slice.phrase_modification_start.iter().enumerate() {
+            if combined_indices > 0 {
+              combined_indices -= 1;
+              continue;
+            }
+            if let Some((existing_mod_ids, _)) = staff_phrases
+              .iter_mut()
+              .find(|(_, mod_types)| mod_types.contains(&item.modification))
+            {
+              existing_mod_ids.push(0);
+            } else if voice_phrases.is_empty() {
+              while idx < time_slice.phrase_modification_start.len()
+                && time_slice.phrase_modification_start[idx].combine_with_next
+              {
+                combined_indices += 1;
+                idx += 1;
+              }
+              multivoices.clear();
+              let new_phrase = master_section
+                .get_phrase_mut(*staff_phrases.last().unwrap().0.first().unwrap())
+                .unwrap()
+                .add_phrase();
+              let mut phrase_mod_types = Vec::new();
+              for combined_idx in 0..=combined_indices {
+                let mod_type = time_slice.phrase_modification_start[idx - combined_indices + combined_idx].modification;
+                new_phrase.add_modification(mod_type);
+                phrase_mod_types.push(mod_type);
+              }
+              staff_phrases.push((Vec::from([new_phrase.get_id()]), phrase_mod_types));
+            } else {
+              pending_staff_phrase_starts.push(item.clone());
+            }
+          }
+
+          // Handle voice-wide musical contents
+          for (voice, voice_items) in items_by_voice {
+            // Retrieve or create a new phrase for the current voice
+            let mut phrase = if let Some((_, expected_timestamp, phrase_ids)) = multivoices.get_mut(&voice) {
+              expected_timestamp[0] = time_slice_idx + voice_items.divisions;
+              master_section.get_phrase_mut(*phrase_ids.last().unwrap()).unwrap()
+            } else if let Some((_, &(multivoice_id, _, _))) = multivoices.first_key_value() {
+              let new_phrase = master_section.get_multivoice_mut(multivoice_id).unwrap().add_phrase();
+              multivoices.insert(
+                voice.clone(),
+                (
+                  multivoice_id,
+                  [time_slice_idx + voice_items.divisions],
+                  Vec::from([new_phrase.get_id()]),
+                ),
+              );
+              new_phrase
+            } else {
+              let new_multivoice = master_section
+                .get_phrase_mut(*staff_phrases.last().unwrap().0.first().unwrap())
+                .unwrap()
+                .add_multivoice();
+              let multivoice_id = new_multivoice.get_id();
+              let new_phrase = new_multivoice.add_phrase();
+              multivoices.insert(
+                voice.clone(),
+                (
+                  multivoice_id,
+                  [time_slice_idx + voice_items.divisions],
+                  Vec::from([new_phrase.get_id()]),
+                ),
+              );
+              new_phrase
+            };
+
+            // Handle adding new phrase modifications
+            if voice_items.ending_phrase_modifications.is_empty() {
+              for new_mod in voice_items.new_phrase_modifications {
+                phrase = phrase.add_phrase();
+                phrase.add_modification(new_mod.modification);
+                multivoices.get_mut(&voice).unwrap().2.push(phrase.get_id());
+                if let Some(phrases) = voice_phrases.get_mut(&new_mod.modification) {
+                  phrases.push(phrase.get_id());
+                } else {
+                  voice_phrases.insert(new_mod.modification, Vec::from([phrase.get_id()]));
                 }
               }
             } else {
-              let multivoice = if let Some(&phrase_id) = global_phrases.last() {
-                master_section.get_phrase_mut(phrase_id).unwrap().add_multivoice()
-              } else {
-                master_section
-                  .get_section_mut(current_section_idx)
-                  .unwrap()
-                  .get_staff_mut_by_name(&staff_name)
-                  .unwrap()
-                  .add_multivoice()
-              };
-              for (voice, voice_items) in items_by_voice {
-                phrase_ends.insert(voice.clone(), voice_items.ending_phrase_modifications);
-                let new_voice = multivoice.add_phrase();
-                if voice_items.is_legato {
-                  let phrase = new_voice.add_phrase();
-                  phrase.add_modification(PhraseModificationType::Legato);
-                  if let Some(note) = voice_items.note {
-                    phrase.claim_note(note);
-                  } else if let Some(chord) = voice_items.chord {
-                    phrase.claim_chord(chord);
+              // TODO: What if not empty? Convert to note_mod
+            }
+
+            // Add the current musical item to the phrase
+            if let Some(note) = voice_items.note {
+              phrase.claim_note(note);
+            } else if let Some(chord) = voice_items.chord {
+              phrase.claim_chord(chord);
+            }
+
+            // Handle removing ending phrase modifications
+            for ending_mod in voice_items.ending_phrase_modifications {
+              if let Some(phrases) = voice_phrases.get_mut(&ending_mod.modification) {
+                if !phrases.is_empty() {
+                  multivoices.get_mut(&voice).unwrap().2.pop();
+                  phrases.pop();
+                  if phrases.is_empty() {
+                    voice_phrases.remove(&ending_mod.modification);
                   }
-                  local_phrases.insert(voice.clone(), Vec::from([phrase.get_id()]));
-                } else if let Some(note) = voice_items.note {
-                  new_voice.claim_note(note);
-                } else if let Some(chord) = voice_items.chord {
-                  new_voice.claim_chord(chord);
-                }
-                multivoice_phrases.insert(voice.clone(), new_voice.get_id());
-              }
-            }
-          }
-
-          // Handle ending local phrase modifications
-          for (voice, items) in phrase_ends {
-            let mut to_remove = Vec::new();
-            if let Some(phrase_ids) = local_phrases.get_mut(&voice) {
-              for item in items {
-                phrase_ids.pop(); //last().unwrap().borrow_mut().add_modification(item);
-                if phrase_ids.is_empty() {
-                  to_remove.push(voice.clone());
                 }
               }
             }
-            for item in to_remove {
-              local_phrases.remove(&item);
-            }
-
-            // Handle delayed global phrase modification endings
-            if local_phrases.is_empty() && !delayed_phrase_ends.is_empty() {
-              delayed_phrase_ends.clear();
-              multivoice_phrases.clear();
-              global_phrases.pop();
-            }
-            // TODO: Delayed global phrase starts
-            // TODO: Delayed legatos
           }
         }
       }
+
+      // Simplify the part to remove any unnecessary nesting structures
+      part.simplify();
     }
-    // TODO: If any phrases contain other phrases of exactly the same length, combine them
-    // TODO: Remove the top-level section if it just contains a single section
 
     Ok(composition)
   }
