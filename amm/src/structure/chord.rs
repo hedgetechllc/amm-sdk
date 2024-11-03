@@ -88,11 +88,11 @@ impl Chord {
   pub fn get_beats(&self, beat_base: &Duration, tuplet_ratio: Option<f64>) -> f64 {
     self
       .iter()
-      .map(|ChordContent::Note(note)| {
+      .filter_map(|ChordContent::Note(note)| {
         if note.is_grace_note() {
-          f64::MAX
+          None
         } else {
-          note.get_beats(beat_base, tuplet_ratio)
+          Some(note.get_beats(beat_base, tuplet_ratio))
         }
       })
       .reduce(f64::min)

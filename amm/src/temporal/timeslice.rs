@@ -167,7 +167,13 @@ impl Timeslice {
     self
       .content
       .iter()
-      .map(|element| element.get_beats(beat_base))
+      .filter_map(|element| {
+        if element.note.is_grace_note() {
+          None
+        } else {
+          Some(element.get_beats(beat_base))
+        }
+      })
       .reduce(f64::min)
       .unwrap_or_default()
   }
