@@ -11,7 +11,6 @@ use core::{
   sync::atomic::{AtomicUsize, Ordering},
 };
 use musicxml::{self, elements::ScorePartwise};
-use std::vec;
 
 pub struct MusicXmlConverter;
 
@@ -2182,6 +2181,30 @@ impl MusicXmlConverter {
         let mut voice_phrases: BTreeMap<PhraseModificationType, Vec<usize>> = BTreeMap::new();
         let mut multivoices: BTreeMap<String, (usize, [usize; 1], Vec<usize>)> = BTreeMap::new();
         Self::ensure_valid_mod_overlaps(&mut time_slices, &section_structure);
+
+        // Ensure that all time slices have a duration that matches their annotated divisions
+        let mut last_valid_idx = usize::MAX;
+        for idx in 0..time_slices.len() {
+          if !time_slices[idx].is_empty() {
+            if last_valid_idx != usize::MAX
+              && idx - last_valid_idx
+                != time_slices[last_valid_idx]
+                  .notes
+                  .iter()
+                  .map(|item| item.divisions)
+                  .min()
+                  .unwrap_or(usize::MAX)
+            {
+              if let Some(details) = time_slices[last_valid_idx].notes.first_mut() {
+                details.divisions = idx - last_valid_idx;
+                details.duration =
+                  Self::convert_divisions_to_duration(details.divisions, divisions_per_quarter_note, 0);
+              }
+            }
+            last_valid_idx = idx;
+          }
+        }
+
         for (time_slice_idx, mut time_slice) in time_slices.into_iter().enumerate() {
           // Handle section delineations
           if let Some(&new_section_idx) = section_structure.get(&time_slice_idx) {

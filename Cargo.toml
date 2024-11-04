@@ -4,7 +4,7 @@ resolver = "2"
 
 [workspace.package]
 edition = "2021"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["Will Hedgecock <will.hedgecock@gmail.com>"]
 license = "MIT"
 documentation = "https://docs.rs/amm_sdk/latest/"
