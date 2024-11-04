@@ -38,14 +38,12 @@ fn test_composition_timeslices(composition: &mut Composition) {
 #[allow(dead_code)]
 fn test_flattened_and_restructured_iterating(composition: &mut Composition) {
   let mut composition = composition.restructure_staves_as_parts().flatten();
-  println!("{composition}");
   test_iterating(&mut composition);
 }
 
 #[allow(dead_code)]
 fn test_flattened_and_restructured_timeslices(composition: &mut Composition) {
   let mut composition = composition.restructure_staves_as_parts().flatten();
-  println!("{composition}");
   test_timeslices(&mut composition);
 }
 

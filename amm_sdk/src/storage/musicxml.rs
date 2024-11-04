@@ -285,11 +285,22 @@ impl MusicXmlConverter {
   #[allow(clippy::cast_possible_truncation)]
   fn calculate_num_dots(base_divisions: usize, total_divisions: usize) -> u8 {
     let (mut num_dots, mut remaining_divisions) = (0, total_divisions - base_divisions);
-    while remaining_divisions > 0 && num_dots < 8 {
-      num_dots += 1;
-      remaining_divisions -= base_divisions / (2_usize.pow(num_dots));
+    while remaining_divisions > 0 && num_dots < 3 {
+      let next_dot_divisions = base_divisions / (2_usize.pow(num_dots + 1));
+      remaining_divisions -= if next_dot_divisions <= remaining_divisions {
+        num_dots += 1;
+        next_dot_divisions
+      } else {
+        remaining_divisions
+      };
     }
     num_dots as u8
+  }
+
+  fn calculate_num_divisions(base_divisions: usize, num_dots: u8) -> usize {
+    (0..=num_dots)
+      .map(|dots| base_divisions / (2_usize.pow(dots as u32)))
+      .sum()
   }
 
   fn find_starting_key(parts: &Vec<musicxml::elements::Part>) -> Key {
@@ -521,6 +532,44 @@ impl MusicXmlConverter {
       }
     }
     max_quarter_notes as usize
+  }
+
+  fn convert_duration_to_divisions(duration: &Duration, divisions_per_quarter_note: usize) -> usize {
+    match duration.value {
+      DurationType::Maxima => {
+        MusicXmlConverter::calculate_num_divisions(32 * divisions_per_quarter_note, duration.dots)
+      }
+      DurationType::Long => MusicXmlConverter::calculate_num_divisions(16 * divisions_per_quarter_note, duration.dots),
+      DurationType::Breve => MusicXmlConverter::calculate_num_divisions(8 * divisions_per_quarter_note, duration.dots),
+      DurationType::Whole => MusicXmlConverter::calculate_num_divisions(4 * divisions_per_quarter_note, duration.dots),
+      DurationType::Half => MusicXmlConverter::calculate_num_divisions(2 * divisions_per_quarter_note, duration.dots),
+      DurationType::Quarter => MusicXmlConverter::calculate_num_divisions(divisions_per_quarter_note, duration.dots),
+      DurationType::Eighth => MusicXmlConverter::calculate_num_divisions(divisions_per_quarter_note / 2, duration.dots),
+      DurationType::Sixteenth => {
+        MusicXmlConverter::calculate_num_divisions(divisions_per_quarter_note / 4, duration.dots)
+      }
+      DurationType::ThirtySecond => {
+        MusicXmlConverter::calculate_num_divisions(divisions_per_quarter_note / 8, duration.dots)
+      }
+      DurationType::SixtyFourth => {
+        MusicXmlConverter::calculate_num_divisions(divisions_per_quarter_note / 16, duration.dots)
+      }
+      DurationType::OneHundredTwentyEighth => {
+        MusicXmlConverter::calculate_num_divisions(divisions_per_quarter_note / 32, duration.dots)
+      }
+      DurationType::TwoHundredFiftySixth => {
+        MusicXmlConverter::calculate_num_divisions(divisions_per_quarter_note / 64, duration.dots)
+      }
+      DurationType::FiveHundredTwelfth => {
+        MusicXmlConverter::calculate_num_divisions(divisions_per_quarter_note / 128, duration.dots)
+      }
+      DurationType::OneThousandTwentyFourth => {
+        MusicXmlConverter::calculate_num_divisions(divisions_per_quarter_note / 256, duration.dots)
+      }
+      DurationType::TwoThousandFortyEighth => {
+        MusicXmlConverter::calculate_num_divisions(divisions_per_quarter_note / 512, duration.dots)
+      }
+    }
   }
 
   fn convert_divisions_to_duration(divisions: usize, divisions_per_quarter_note: usize, num_dots: u8) -> Duration {
@@ -2200,11 +2249,19 @@ impl MusicXmlConverter {
                     Self::convert_divisions_to_duration(details.divisions, divisions_per_quarter_note, 0);
                 }
               } else if idx - last_valid_idx > slice_duration {
-                let mut implicit_rest = NoteDetails::default();
-                implicit_rest.divisions = idx - last_valid_idx - slice_duration;
-                implicit_rest.duration =
-                  Self::convert_divisions_to_duration(implicit_rest.divisions, divisions_per_quarter_note, 0);
-                time_slices[last_valid_idx + slice_duration].notes.push(implicit_rest);
+                let mut divisions_remaining = idx - last_valid_idx - slice_duration;
+                last_valid_idx += slice_duration;
+                while divisions_remaining > 0 {
+                  let mut implicit_rest = NoteDetails::default();
+                  implicit_rest.duration =
+                    Self::convert_divisions_to_duration(divisions_remaining, divisions_per_quarter_note, 0);
+                  let new_divisions =
+                    Self::convert_duration_to_divisions(&implicit_rest.duration, divisions_per_quarter_note);
+                  implicit_rest.divisions = new_divisions;
+                  divisions_remaining -= new_divisions;
+                  time_slices[last_valid_idx].notes.push(implicit_rest);
+                  last_valid_idx += new_divisions;
+                }
               }
             }
             last_valid_idx = idx;
