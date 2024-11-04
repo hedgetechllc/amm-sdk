@@ -1,5 +1,5 @@
 [workspace]
-members = ["amm_internal", "amm_macros", "amm"]
+members = ["amm_internal", "amm_macros", "amm_sdk"]
 resolver = "2"
 
 [workspace.package]
@@ -7,13 +7,13 @@ edition = "2021"
 version = "0.3.0"
 authors = ["Will Hedgecock <will.hedgecock@gmail.com>"]
 license = "MIT"
-documentation = "https://docs.rs/amm/latest/"
+documentation = "https://docs.rs/amm_sdk/latest/"
 readme = "README.md"
 homepage = "https://github.com/hedgetechllc/amm-sdk"
 repository = "https://github.com/hedgetechllc/amm-sdk"
 keywords = ["music", "musicxml", "format", "parser", "parsing"]
 categories = ["api-bindings", "parsing", "data-structures", "encoding", "multimedia::audio"]
-publish = false
+publish = true
 
 [workspace.dependencies]
 amm_internal = { path = "amm_internal", version = "0.3.0" }

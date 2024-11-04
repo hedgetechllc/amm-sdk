@@ -25,7 +25,7 @@ wasm:
 publish:
 	cargo publish -p amm_internal
 	cargo publish -p amm_macros
-	cargo publish -p amm
+	cargo publish -p amm_sdk
 
 publishweb: wasm
 	wasm-pack publish

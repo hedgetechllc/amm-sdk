@@ -1,4 +1,4 @@
-use amm::{storage::Storage, Composition};
+use amm_sdk::{storage::Storage, Composition};
 
 #[allow(dead_code)]
 fn test_iterating(composition: &mut Composition) {

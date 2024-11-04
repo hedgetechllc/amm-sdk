@@ -296,7 +296,7 @@ impl MultiVoice {
               PhraseContent::Chord(chord) => chord.get_beats(&beat_base_note, None),
               _ => unsafe { core::hint::unreachable_unchecked() },
             })
-            .reduce(f64::max)
+            .reduce(f64::min)
             .unwrap_or_default()
         };
         let target_duration = Duration::from_beats(&beat_base_note, target_beats);

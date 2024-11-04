@@ -1,6 +1,6 @@
 [package]
 edition.workspace = true
-name = "amm"
+name = "amm_sdk"
 version.workspace = true
 authors.workspace = true
 license.workspace = true
