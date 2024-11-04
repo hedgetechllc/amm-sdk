@@ -40,7 +40,7 @@ impl core::fmt::Display for PhraseModDetails {
   }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 struct NoteDetails {
   pub pitch: Pitch,
   pub duration: Duration,
@@ -2087,7 +2087,7 @@ impl MusicXmlConverter {
         part_data.data.insert(part_name.clone(), BTreeMap::new());
         let part_staves = unsafe { part_data.data.get_mut(part_name).unwrap_unchecked() };
         for staff in MusicXmlConverter::find_staves(&part.content) {
-          part_staves.insert(staff, vec![TimeSliceContainer::default(); max_divisions + 1]);
+          part_staves.insert(staff, vec![TimeSliceContainer::default(); max_divisions + 64]);
         }
       }
     }
@@ -2180,25 +2180,31 @@ impl MusicXmlConverter {
         let mut staff_phrases = Vec::new();
         let mut voice_phrases: BTreeMap<PhraseModificationType, Vec<usize>> = BTreeMap::new();
         let mut multivoices: BTreeMap<String, (usize, [usize; 1], Vec<usize>)> = BTreeMap::new();
-        Self::ensure_valid_mod_overlaps(&mut time_slices, &section_structure);
 
         // Ensure that all time slices have a duration that matches their annotated divisions
+        Self::ensure_valid_mod_overlaps(&mut time_slices, &section_structure);
         let mut last_valid_idx = usize::MAX;
         for idx in 0..time_slices.len() {
           if !time_slices[idx].is_empty() {
-            if last_valid_idx != usize::MAX
-              && idx - last_valid_idx
-                != time_slices[last_valid_idx]
-                  .notes
-                  .iter()
-                  .map(|item| item.divisions)
-                  .min()
-                  .unwrap_or(usize::MAX)
-            {
-              if let Some(details) = time_slices[last_valid_idx].notes.first_mut() {
-                details.divisions = idx - last_valid_idx;
-                details.duration =
-                  Self::convert_divisions_to_duration(details.divisions, divisions_per_quarter_note, 0);
+            if last_valid_idx != usize::MAX {
+              let slice_duration = time_slices[last_valid_idx]
+                .notes
+                .iter()
+                .map(|item| item.divisions)
+                .min()
+                .unwrap_or(usize::MAX);
+              if idx - last_valid_idx < slice_duration {
+                if let Some(details) = time_slices[last_valid_idx].notes.first_mut() {
+                  details.divisions = idx - last_valid_idx;
+                  details.duration =
+                    Self::convert_divisions_to_duration(details.divisions, divisions_per_quarter_note, 0);
+                }
+              } else if idx - last_valid_idx > slice_duration {
+                let mut implicit_rest = NoteDetails::default();
+                implicit_rest.divisions = idx - last_valid_idx - slice_duration;
+                implicit_rest.duration =
+                  Self::convert_divisions_to_duration(implicit_rest.divisions, divisions_per_quarter_note, 0);
+                time_slices[last_valid_idx + slice_duration].notes.push(implicit_rest);
               }
             }
             last_valid_idx = idx;
