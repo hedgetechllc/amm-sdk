@@ -2162,6 +2162,7 @@ impl MusicXmlConverter {
         };
         for element in &part.content {
           if let musicxml::elements::PartElement::Measure(measure) = element {
+            let mut latest_cursor_reached = cursor;
             for measure_element in &measure.content {
               let cursor_change = match measure_element {
                 musicxml::elements::MeasureElement::Attributes(attributes) => {
@@ -2191,8 +2192,10 @@ impl MusicXmlConverter {
               if cursor_change != 0 {
                 previous_cursor = cursor;
                 cursor = cursor.saturating_add_signed(cursor_change);
+                latest_cursor_reached = latest_cursor_reached.max(cursor);
               }
             }
+            cursor = latest_cursor_reached;
           }
         }
       }
