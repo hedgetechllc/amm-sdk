@@ -2087,7 +2087,7 @@ impl MusicXmlConverter {
         part_data.data.insert(part_name.clone(), BTreeMap::new());
         let part_staves = unsafe { part_data.data.get_mut(part_name).unwrap_unchecked() };
         for staff in MusicXmlConverter::find_staves(&part.content) {
-          part_staves.insert(staff, vec![TimeSliceContainer::default(); max_divisions]);
+          part_staves.insert(staff, vec![TimeSliceContainer::default(); max_divisions + 1]);
         }
       }
     }
