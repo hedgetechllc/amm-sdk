@@ -9,7 +9,7 @@ clean:
 	@rm -rf pkg target*
 
 setup:
-	rustup target add wasm32-unknown-unknown
+	rustup target add wasm32-unknown-unknown x86_64-unknown-none
 	cargo install wasm-pack
 
 docs:
@@ -34,7 +34,7 @@ format:
 	cargo fmt
 
 checknostd:
-	cd ensure_no_std && cargo rustc -- -C link-arg=-nostartfiles
+	cd ensure_no_std && cargo build --target x86_64-unknown-none
 
 check:
 	cargo clippy -- -W clippy::all -W clippy::correctness -W clippy::suspicious -W clippy::complexity -W clippy::perf -W clippy::style -W clippy::pedantic -A clippy::module_name_repetitions -A clippy::module_inception -A clippy::too_many_lines -D warnings

@@ -11,7 +11,7 @@ mod musicxml;
 
 pub(crate) trait Load {
   fn load(path: &str) -> Result<Composition, String>;
-  fn load_data(data: &[u8]) -> Result<Composition, String>;
+  fn load_data(data: Vec<u8>) -> Result<Composition, String>;
 }
 
 pub(crate) trait Store {
@@ -43,7 +43,7 @@ impl Storage {
   ///
   /// # Errors
   /// TODO
-  pub fn load_data(&self, data: &[u8]) -> Result<Composition, String> {
+  pub fn load_data(&self, data: Vec<u8>) -> Result<Composition, String> {
     match self {
       Self::AMM => AmmStorage::load_data(data),
       Self::MusicXML => MusicXmlConverter::load_data(data),

@@ -299,7 +299,7 @@ impl MusicXmlConverter {
 
   fn calculate_num_divisions(base_divisions: usize, num_dots: u8) -> usize {
     (0..=num_dots)
-      .map(|dots| base_divisions / (2_usize.pow(dots as u32)))
+      .map(|dots| base_divisions / (2_usize.pow(u32::from(dots))))
       .sum()
   }
 
@@ -534,7 +534,7 @@ impl MusicXmlConverter {
     max_quarter_notes as usize
   }
 
-  fn convert_duration_to_divisions(duration: &Duration, divisions_per_quarter_note: usize) -> usize {
+  fn convert_duration_to_divisions(duration: Duration, divisions_per_quarter_note: usize) -> usize {
     match duration.value {
       DurationType::Maxima => {
         MusicXmlConverter::calculate_num_divisions(32 * divisions_per_quarter_note, duration.dots)
@@ -2242,26 +2242,31 @@ impl MusicXmlConverter {
                 .map(|item| item.divisions)
                 .min()
                 .unwrap_or(usize::MAX);
-              if idx - last_valid_idx < slice_duration {
-                if let Some(details) = time_slices[last_valid_idx].notes.first_mut() {
-                  details.divisions = idx - last_valid_idx;
-                  details.duration =
-                    Self::convert_divisions_to_duration(details.divisions, divisions_per_quarter_note, 0);
+              match idx - last_valid_idx {
+                diff if diff < slice_duration => {
+                  if let Some(details) = time_slices[last_valid_idx].notes.first_mut() {
+                    details.divisions = diff;
+                    details.duration =
+                      Self::convert_divisions_to_duration(details.divisions, divisions_per_quarter_note, 0);
+                  }
                 }
-              } else if idx - last_valid_idx > slice_duration {
-                let mut divisions_remaining = idx - last_valid_idx - slice_duration;
-                last_valid_idx += slice_duration;
-                while divisions_remaining > 0 {
-                  let mut implicit_rest = NoteDetails::default();
-                  implicit_rest.duration =
-                    Self::convert_divisions_to_duration(divisions_remaining, divisions_per_quarter_note, 0);
-                  let new_divisions =
-                    Self::convert_duration_to_divisions(&implicit_rest.duration, divisions_per_quarter_note);
-                  implicit_rest.divisions = new_divisions;
-                  divisions_remaining -= new_divisions;
-                  time_slices[last_valid_idx].notes.push(implicit_rest);
-                  last_valid_idx += new_divisions;
+                diff if diff > slice_duration => {
+                  let mut divisions_remaining = diff - slice_duration;
+                  last_valid_idx += slice_duration;
+                  while divisions_remaining > 0 {
+                    let mut implicit_rest = NoteDetails {
+                      duration: Self::convert_divisions_to_duration(divisions_remaining, divisions_per_quarter_note, 0),
+                      ..Default::default()
+                    };
+                    let new_divisions =
+                      Self::convert_duration_to_divisions(implicit_rest.duration, divisions_per_quarter_note);
+                    implicit_rest.divisions = new_divisions;
+                    divisions_remaining -= new_divisions;
+                    time_slices[last_valid_idx].notes.push(implicit_rest);
+                    last_valid_idx += new_divisions;
+                  }
                 }
+                _ => {}
               }
             }
             last_valid_idx = idx;
@@ -2514,10 +2519,8 @@ impl Load for MusicXmlConverter {
     MusicXmlConverter::load_from_musicxml(&score)
   }
 
-  fn load_data(data: &[u8]) -> Result<Composition, String> {
-    let data = str::from_utf8(data).map_err(|err| err.to_string())?;
-    let score = musicxml::parser::parse_from_xml_str(data).map_err(|err| err.to_string())?;
+  fn load_data(data: Vec<u8>) -> Result<Composition, String> {
+    let score = musicxml::read_score_data_partwise(data)?;
     MusicXmlConverter::load_from_musicxml(&score)
-    // TODO: "Update MusicXML parser library to parse from raw data so we can do the partwise conversion if necessary"
   }
 }

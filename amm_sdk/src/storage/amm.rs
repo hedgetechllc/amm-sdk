@@ -20,11 +20,11 @@ impl AmmStorage {
 impl Load for AmmStorage {
   fn load(path: &str) -> Result<Composition, String> {
     let data = fs::read(path).map_err(|err| err.to_string())?;
-    AmmStorage::load_from_amm(&data)
+    AmmStorage::load_from_amm(data.as_slice())
   }
 
-  fn load_data(data: &[u8]) -> Result<Composition, String> {
-    AmmStorage::load_from_amm(data)
+  fn load_data(data: Vec<u8>) -> Result<Composition, String> {
+    AmmStorage::load_from_amm(data.as_slice())
   }
 }
 
@@ -510,7 +510,7 @@ mod test {
       });
     }
     let serialized = composition.serialize_json();
-    match AmmStorage::load_data(serialized.as_bytes()).as_ref() {
+    match AmmStorage::load_data(serialized.as_bytes().to_vec()).as_ref() {
       Ok(loaded) => {
         let reserialized = loaded.serialize_json();
         assert_eq!(composition, *loaded);

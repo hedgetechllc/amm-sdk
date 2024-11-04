@@ -13,8 +13,6 @@ Under heavy development - Updates forthcoming
     * Can also select ranges of timeslices
 * Implement `get_pcm_samples()` on `Timeslice` to create audio buffer for note + mods to use in direct playback
 * Finish MIDI Reader Implementation
-* MusicXML change to inline serialize/deserialize, remove Regex, implement ZIP transcoder
-* Create MusicXML WASM build
 * Make fully `no_std` compatible
 
 * Add a test containing Glissandos and/or multi-note tremolos and/or implicit + explicit tempo changes
@@ -24,4 +22,3 @@ Under heavy development - Updates forthcoming
   * Scan `sound` attributes for items maybe not recognized otherwise (rall., etc.)
 * Remove `pub(crate)` from Phrase and make `MultiVoice` okay with this
 * Make composition timeslice iterator a real iterator (and check that staff timeslices line up correctly)
-* MusicXML parser: End multivoice phrase if there is a timeslice that is missing the next voice note when there should be one

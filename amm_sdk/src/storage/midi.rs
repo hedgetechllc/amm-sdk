@@ -29,10 +29,10 @@ impl MidiConverter {
 impl Load for MidiConverter {
   fn load(path: &str) -> Result<Composition, String> {
     let data = fs::read(path).map_err(|err| err.to_string())?;
-    MidiConverter::load_from_midi(&data)
+    MidiConverter::load_from_midi(data.as_slice())
   }
 
-  fn load_data(data: &[u8]) -> Result<Composition, String> {
-    MidiConverter::load_from_midi(data)
+  fn load_data(data: Vec<u8>) -> Result<Composition, String> {
+    MidiConverter::load_from_midi(data.as_slice())
   }
 }
