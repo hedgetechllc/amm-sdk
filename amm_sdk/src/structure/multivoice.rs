@@ -205,11 +205,7 @@ impl MultiVoice {
           .map(|phrase| {
             let mut updated_phrase = phrase.clone();
             phrase.iter_modifications().for_each(|modification| {
-              if let PhraseModificationType::Tuplet {
-                num_beats: _,
-                into_beats: _,
-              } = modification.r#type
-              {
+              if let PhraseModificationType::Tuplet { .. } = modification.r#type {
                 // Expand tuplet by only taking the first note and holding it for the full tuplet duration
                 let target_duration =
                   Duration::from_beats(&beat_base_note, updated_phrase.get_beats(&beat_base_note, None));

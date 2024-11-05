@@ -45,7 +45,7 @@ impl Note {
     self
       .modifications
       .iter()
-      .any(|modification| matches!(modification.r#type, NoteModificationType::Grace { acciaccatura: _ }))
+      .any(|modification| matches!(modification.r#type, NoteModificationType::Grace { .. }))
   }
 
   #[must_use]

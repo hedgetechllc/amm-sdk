@@ -2271,7 +2271,17 @@ impl MusicXmlConverter {
               let slice_duration = time_slices[last_valid_idx]
                 .notes
                 .iter()
-                .map(|item| item.divisions)
+                .filter_map(|item| {
+                  if item
+                    .note_modifications
+                    .iter()
+                    .any(|modification| matches!(modification, NoteModificationType::Grace { .. }))
+                  {
+                    None
+                  } else {
+                    Some(item.divisions)
+                  }
+                })
                 .min()
                 .unwrap_or(usize::MAX);
               match idx - last_valid_idx {
