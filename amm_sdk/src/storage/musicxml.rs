@@ -2290,6 +2290,12 @@ impl MusicXmlConverter {
                     details.divisions = diff;
                     details.duration =
                       Self::convert_divisions_to_duration(details.divisions, divisions_per_quarter_note, 0);
+                  } else {
+                    time_slices[last_valid_idx].notes.push(NoteDetails {
+                      divisions: diff,
+                      duration: Self::convert_divisions_to_duration(diff, divisions_per_quarter_note, 0),
+                      ..Default::default()
+                    });
                   }
                 }
                 diff if diff > slice_duration => {
