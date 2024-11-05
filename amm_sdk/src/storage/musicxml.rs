@@ -493,10 +493,6 @@ impl MusicXmlConverter {
     vec![String::from("1")]
   }
 
-  fn find_num_measures(part_elements: &[musicxml::elements::PartElement]) -> usize {
-    part_elements.len()
-  }
-
   fn find_divisions_per_quarter_note(part_elements: &Vec<musicxml::elements::PartElement>) -> usize {
     for element in part_elements {
       if let musicxml::elements::PartElement::Measure(measure) = element {
@@ -512,26 +508,31 @@ impl MusicXmlConverter {
     4
   }
 
-  #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-  fn find_max_num_quarter_notes_per_measure(part_elements: &Vec<musicxml::elements::PartElement>) -> usize {
-    let mut max_quarter_notes: u32 = 1;
+  #[allow(clippy::cast_possible_wrap)]
+  fn find_max_num_divisions(part_elements: &Vec<musicxml::elements::PartElement>) -> usize {
+    let mut cursor: usize = 0;
     for element in part_elements {
       if let musicxml::elements::PartElement::Measure(measure) = element {
         for measure_element in &measure.content {
-          if let musicxml::elements::MeasureElement::Attributes(attributes) = measure_element {
-            for time_element in &attributes.content.time {
-              for beat_element in &time_element.content.beats {
-                let num_quarter_notes = (((*beat_element.beats.content).parse::<f32>().unwrap() * 4.0f32
-                  / (*beat_element.beat_type.content).parse::<f32>().unwrap())
-                  + 0.5f32) as u32;
-                max_quarter_notes = max_quarter_notes.max(num_quarter_notes);
-              }
+          let cursor_change = match measure_element {
+            musicxml::elements::MeasureElement::Note(note) => match &note.content.info {
+              musicxml::elements::NoteType::Cue(cue) => *cue.duration.content as isize,
+              musicxml::elements::NoteType::Grace(_) => 0,
+              musicxml::elements::NoteType::Normal(normal) => *normal.duration.content as isize,
+            },
+            musicxml::elements::MeasureElement::Backup(backup) => {
+              MusicXmlConverter::parse_backup_element(&backup.content)
             }
-          }
+            musicxml::elements::MeasureElement::Forward(forward) => {
+              MusicXmlConverter::parse_forward_element(&forward.content)
+            }
+            _ => 0,
+          };
+          cursor = cursor.saturating_add_signed(cursor_change);
         }
       }
     }
-    max_quarter_notes as usize
+    cursor
   }
 
   fn convert_duration_to_divisions(duration: Duration, divisions_per_quarter_note: usize) -> usize {
@@ -2158,13 +2159,11 @@ impl MusicXmlConverter {
         let part_name = parts_map
           .get(&*part.attributes.id)
           .expect("Unknown Part ID encountered");
-        let max_divisions = MusicXmlConverter::find_divisions_per_quarter_note(&part.content)
-          * MusicXmlConverter::find_max_num_quarter_notes_per_measure(&part.content)
-          * MusicXmlConverter::find_num_measures(&part.content);
+        let max_divisions = MusicXmlConverter::find_max_num_divisions(&part.content);
         part_data.data.insert(part_name.clone(), BTreeMap::new());
         let part_staves = unsafe { part_data.data.get_mut(part_name).unwrap_unchecked() };
         for staff in MusicXmlConverter::find_staves(&part.content) {
-          part_staves.insert(staff, vec![TimeSliceContainer::default(); max_divisions + 64]);
+          part_staves.insert(staff, vec![TimeSliceContainer::default(); max_divisions + 32]);
         }
       }
     }
