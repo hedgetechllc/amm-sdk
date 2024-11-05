@@ -1027,6 +1027,7 @@ impl MusicXmlConverter {
   #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
   fn parse_note_element(
     note: &musicxml::elements::Note,
+    accidental_context: &mut BTreeMap<Pitch, Accidental>,
     time_slices: &mut BTreeMap<String, Vec<TimeSliceContainer>>,
     divisions_per_quarter_note: usize,
     previous_cursor: usize,
@@ -1132,24 +1133,25 @@ impl MusicXmlConverter {
       Self::convert_divisions_to_duration(divisions, divisions_per_quarter_note, num_dots)
     };
     let voice = note.content.voice.as_ref().map(|voice| voice.content.clone());
-    let accidental = note
-      .content
-      .accidental
-      .as_ref()
-      .map(|accidental| match accidental.content {
+    let accidental = if let Some(accidental) = &note.content.accidental {
+      let accidental = match accidental.content {
         musicxml::datatypes::AccidentalValue::Sharp | musicxml::datatypes::AccidentalValue::NaturalSharp => {
           Accidental::Sharp
         }
         musicxml::datatypes::AccidentalValue::Flat | musicxml::datatypes::AccidentalValue::NaturalFlat => {
           Accidental::Flat
         }
-        musicxml::datatypes::AccidentalValue::Natural => Accidental::Natural,
         musicxml::datatypes::AccidentalValue::DoubleSharp | musicxml::datatypes::AccidentalValue::SharpSharp => {
           Accidental::DoubleSharp
         }
         musicxml::datatypes::AccidentalValue::FlatFlat => Accidental::DoubleFlat,
-        _ => Accidental::None,
-      });
+        _ => Accidental::Natural,
+      };
+      accidental_context.insert(pitch, accidental);
+      Some(accidental)
+    } else {
+      accidental_context.get(&pitch).copied()
+    };
     let tuplet_details =
       note
         .content
@@ -2163,6 +2165,7 @@ impl MusicXmlConverter {
         for element in &part.content {
           if let musicxml::elements::PartElement::Measure(measure) = element {
             let mut latest_cursor_reached = cursor;
+            let mut accidental_context = BTreeMap::new();
             for measure_element in &measure.content {
               let cursor_change = match measure_element {
                 musicxml::elements::MeasureElement::Attributes(attributes) => {
@@ -2170,6 +2173,7 @@ impl MusicXmlConverter {
                 }
                 musicxml::elements::MeasureElement::Note(note) => MusicXmlConverter::parse_note_element(
                   note,
+                  &mut accidental_context,
                   time_slices,
                   divisions_per_quarter_note,
                   previous_cursor,
