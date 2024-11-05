@@ -1105,6 +1105,11 @@ impl MusicXmlConverter {
         },
       ),
     };
+    if let Some(print) = &note.attributes.print_object {
+      if *print == musicxml::datatypes::YesNo::No {
+        return divisions as isize;
+      }
+    }
     let (duration, extra_rests, altered_divisions) = if let Some(note_type) = &note.content.r#type {
       (
         match &note_type.content {
@@ -1145,9 +1150,13 @@ impl MusicXmlConverter {
           ..Default::default()
         };
         let new_divisions = Self::convert_duration_to_divisions(implicit_rest.duration, divisions_per_quarter_note);
-        implicit_rest.divisions = new_divisions;
-        divisions_remaining -= new_divisions;
-        extra_durations.push(implicit_rest);
+        if divisions_remaining < new_divisions {
+          divisions_remaining = 0;
+        } else {
+          implicit_rest.divisions = new_divisions;
+          divisions_remaining -= new_divisions;
+          extra_durations.push(implicit_rest);
+        }
       }
       (duration, extra_durations, altered_divisions)
     };
