@@ -1104,33 +1104,51 @@ impl MusicXmlConverter {
         },
       ),
     };
-    let duration = if let Some(note_type) = &note.content.r#type {
-      match &note_type.content {
-        musicxml::datatypes::NoteTypeValue::Maxima => Duration::new(DurationType::Maxima, num_dots),
-        musicxml::datatypes::NoteTypeValue::Long => Duration::new(DurationType::Long, num_dots),
-        musicxml::datatypes::NoteTypeValue::Breve => Duration::new(DurationType::Breve, num_dots),
-        musicxml::datatypes::NoteTypeValue::Whole => Duration::new(DurationType::Whole, num_dots),
-        musicxml::datatypes::NoteTypeValue::Half => Duration::new(DurationType::Half, num_dots),
-        musicxml::datatypes::NoteTypeValue::Eighth => Duration::new(DurationType::Eighth, num_dots),
-        musicxml::datatypes::NoteTypeValue::Sixteenth => Duration::new(DurationType::Sixteenth, num_dots),
-        musicxml::datatypes::NoteTypeValue::ThirtySecond => Duration::new(DurationType::ThirtySecond, num_dots),
-        musicxml::datatypes::NoteTypeValue::SixtyFourth => Duration::new(DurationType::SixtyFourth, num_dots),
-        musicxml::datatypes::NoteTypeValue::OneHundredTwentyEighth => {
-          Duration::new(DurationType::OneHundredTwentyEighth, num_dots)
-        }
-        musicxml::datatypes::NoteTypeValue::TwoHundredFiftySixth => {
-          Duration::new(DurationType::TwoHundredFiftySixth, num_dots)
-        }
-        musicxml::datatypes::NoteTypeValue::FiveHundredTwelfth => {
-          Duration::new(DurationType::FiveHundredTwelfth, num_dots)
-        }
-        musicxml::datatypes::NoteTypeValue::OneThousandTwentyFourth => {
-          Duration::new(DurationType::OneThousandTwentyFourth, num_dots)
-        }
-        musicxml::datatypes::NoteTypeValue::Quarter => Duration::new(DurationType::Quarter, num_dots),
-      }
+    let (duration, extra_rests, altered_divisions) = if let Some(note_type) = &note.content.r#type {
+      (
+        match &note_type.content {
+          musicxml::datatypes::NoteTypeValue::Maxima => Duration::new(DurationType::Maxima, num_dots),
+          musicxml::datatypes::NoteTypeValue::Long => Duration::new(DurationType::Long, num_dots),
+          musicxml::datatypes::NoteTypeValue::Breve => Duration::new(DurationType::Breve, num_dots),
+          musicxml::datatypes::NoteTypeValue::Whole => Duration::new(DurationType::Whole, num_dots),
+          musicxml::datatypes::NoteTypeValue::Half => Duration::new(DurationType::Half, num_dots),
+          musicxml::datatypes::NoteTypeValue::Eighth => Duration::new(DurationType::Eighth, num_dots),
+          musicxml::datatypes::NoteTypeValue::Sixteenth => Duration::new(DurationType::Sixteenth, num_dots),
+          musicxml::datatypes::NoteTypeValue::ThirtySecond => Duration::new(DurationType::ThirtySecond, num_dots),
+          musicxml::datatypes::NoteTypeValue::SixtyFourth => Duration::new(DurationType::SixtyFourth, num_dots),
+          musicxml::datatypes::NoteTypeValue::OneHundredTwentyEighth => {
+            Duration::new(DurationType::OneHundredTwentyEighth, num_dots)
+          }
+          musicxml::datatypes::NoteTypeValue::TwoHundredFiftySixth => {
+            Duration::new(DurationType::TwoHundredFiftySixth, num_dots)
+          }
+          musicxml::datatypes::NoteTypeValue::FiveHundredTwelfth => {
+            Duration::new(DurationType::FiveHundredTwelfth, num_dots)
+          }
+          musicxml::datatypes::NoteTypeValue::OneThousandTwentyFourth => {
+            Duration::new(DurationType::OneThousandTwentyFourth, num_dots)
+          }
+          musicxml::datatypes::NoteTypeValue::Quarter => Duration::new(DurationType::Quarter, num_dots),
+        },
+        Vec::new(),
+        divisions,
+      )
     } else {
-      Self::convert_divisions_to_duration(divisions, divisions_per_quarter_note, num_dots)
+      let mut extra_durations = Vec::new();
+      let duration = Self::convert_divisions_to_duration(divisions, divisions_per_quarter_note, num_dots);
+      let altered_divisions = Self::convert_duration_to_divisions(duration, divisions_per_quarter_note);
+      let mut divisions_remaining = divisions - altered_divisions;
+      while divisions_remaining > 0 {
+        let mut implicit_rest = NoteDetails {
+          duration: Self::convert_divisions_to_duration(divisions_remaining, divisions_per_quarter_note, 0),
+          ..Default::default()
+        };
+        let new_divisions = Self::convert_duration_to_divisions(implicit_rest.duration, divisions_per_quarter_note);
+        implicit_rest.divisions = new_divisions;
+        divisions_remaining -= new_divisions;
+        extra_durations.push(implicit_rest);
+      }
+      (duration, extra_durations, altered_divisions)
     };
     let voice = note.content.voice.as_ref().map(|voice| voice.content.clone());
     let accidental = if let Some(accidental) = &note.content.accidental {
@@ -1540,7 +1558,7 @@ impl MusicXmlConverter {
       pitch,
       duration,
       accidental: accidental.unwrap_or_default(),
-      divisions,
+      divisions: altered_divisions,
       voice,
       arpeggiated: arpeggiate,
       non_arpeggiated: non_arpeggiate,
@@ -1555,6 +1573,14 @@ impl MusicXmlConverter {
       0
     } else {
       time_slices.get_mut(&staff_name).unwrap()[cursor].notes.push(item);
+      let mut implicit_cursor = cursor + altered_divisions;
+      for extra_rest in extra_rests {
+        let implicit_divisions = extra_rest.divisions;
+        time_slices.get_mut(&staff_name).unwrap()[implicit_cursor]
+          .notes
+          .push(extra_rest);
+        implicit_cursor += implicit_divisions;
+      }
       divisions as isize
     }
   }
