@@ -7,6 +7,7 @@ use alloc::{
   vec::Vec,
 };
 use core::{
+  cell::Cell,
   str,
   sync::atomic::{AtomicUsize, Ordering},
 };
@@ -1599,8 +1600,23 @@ impl MusicXmlConverter {
     let mut section_details = BTreeMap::new();
     let (mut open_endings, mut open_repeats) = (Vec::new(), Vec::new());
     let (mut open_sections, mut open_tempos) = (Vec::new(), Vec::new());
-    for (time_slice_idx, time_slice) in time_slices.iter().enumerate().filter(|(_, slice)| {
-      slice.jump_to.is_some()
+
+    // Check for implicit repeats
+    let add_implicit_repeat = Cell::new(false);
+    for slice in time_slices.iter() {
+      for (repeat_start, _) in &slice.repeat {
+        if *repeat_start {
+          open_repeats.push(0);
+        } else if open_repeats.pop().is_none() {
+          add_implicit_repeat.set(true);
+        }
+      }
+    }
+
+    // Gather section details
+    for (time_slice_idx, time_slice) in time_slices.into_iter().enumerate().filter(|(_, slice)| {
+      add_implicit_repeat.get()
+        || slice.jump_to.is_some()
         || slice.section_start.is_some()
         || !slice.ending.is_empty()
         || !slice.repeat.is_empty()
@@ -1612,6 +1628,12 @@ impl MusicXmlConverter {
       // If a parent section ends before a child section, but the parent and child did not start at the same time, then the child should become the parent, and the parent should be split into multiple sections with same characteristics (how does this work with repeats, etc)
       section_details.insert(time_slice_idx, SectionDetails::default());
       let details = unsafe { section_details.get_mut(&time_slice_idx).unwrap_unchecked() };
+      if add_implicit_repeat.get() {
+        let (new_section_id, new_section) = details.new_section("Repeated Section");
+        new_section.add_modification(SectionModificationType::Repeat { num_times: 1 });
+        open_repeats.push(new_section_id);
+        add_implicit_repeat.set(false);
+      }
       for (ending_start, _) in &time_slice.ending {
         if !*ending_start {
           details.ending_sections.push(open_endings.pop().unwrap_or_default());
@@ -2239,16 +2261,21 @@ impl MusicXmlConverter {
       }
     }
 
-    // Use the temporally ordered time slices from the first available part and staff to parse section structure details
-    let section_details = if let Some(Some(time_slices)) = part_data
+    // Use the temporally ordered time slices to parse section structure details
+    let section_details: BTreeMap<String, BTreeMap<usize, SectionDetails>> = part_data
       .data
-      .first_key_value()
-      .map(|(_, staves)| staves.values().next())
-    {
-      Self::gather_section_structure_details(time_slices)
-    } else {
-      BTreeMap::new()
-    };
+      .iter()
+      .map(|(part_name, staves)| {
+        (
+          part_name.clone(),
+          if let Some(time_slices) = staves.values().next() {
+            Self::gather_section_structure_details(time_slices)
+          } else {
+            BTreeMap::new()
+          },
+        )
+      })
+      .collect();
 
     // Use the temporally ordered time slices for each part to construct a final composition structure
     for (part_name, staves) in part_data.data {
@@ -2259,7 +2286,8 @@ impl MusicXmlConverter {
 
       // Handle creation of the section structure for this part
       let master_section = part.add_section("Top-Level Section");
-      let section_structure = Self::generate_section_structure(master_section, &section_details);
+      let section_structure =
+        Self::generate_section_structure(master_section, &section_details.get(&part_name).unwrap());
 
       // Iterate through all staves in the part
       for (staff_name, mut time_slices) in staves {
