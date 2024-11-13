@@ -513,6 +513,7 @@ impl MusicXmlConverter {
   fn find_max_num_divisions(part_elements: &Vec<musicxml::elements::PartElement>) -> usize {
     let mut cursor: usize = 0;
     for element in part_elements {
+      let mut latest_cursor_reached = cursor;
       if let musicxml::elements::PartElement::Measure(measure) = element {
         for measure_element in &measure.content {
           let cursor_change = match measure_element {
@@ -530,7 +531,9 @@ impl MusicXmlConverter {
             _ => 0,
           };
           cursor = cursor.saturating_add_signed(cursor_change);
+          latest_cursor_reached = latest_cursor_reached.max(cursor);
         }
+        cursor = latest_cursor_reached;
       }
     }
     cursor
