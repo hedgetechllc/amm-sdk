@@ -1,0 +1,11 @@
+@font-face {
+  font-family: 'smufl';
+  src: url('https://hedgetechllc.github.io/amm-sdk/fonts/BravuraText.woff2') format('woff2'),
+       url('https://hedgetechllc.github.io/amm-sdk/fonts/BravuraText.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+}
+
+.smufl {
+  font: 40px smufl, sans-serif;
+}
