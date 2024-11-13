@@ -13,7 +13,10 @@ setup:
 	cargo install wasm-pack
 
 docs:
-	cargo doc --workspace --no-deps --release --lib --exclude amm_internal --exclude amm_macros
+	RUSTDOCFLAGS="--extend-css amm_sdk/assets/docs.css" cargo doc --workspace --no-deps --release --lib --exclude amm_internal --exclude amm_macros
+	echo "<meta http-equiv=\"refresh\" content=\"0;url=amm_sdk/index.html\" />" > target/doc/index.html
+	cp -r amm_sdk/assets/* target/doc/amm_sdk/
+	mv target/doc/amm_sdk/fonts target/doc/
 
 lib:
 	cargo build --lib --release
