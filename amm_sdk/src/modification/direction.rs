@@ -3,40 +3,47 @@ use crate::temporal::Timeslice;
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize, ModOrder};
 
+/// Represents a type of contextual direction which changes the global
+/// state of the music being played starting at the point that the
+/// direction is encountered.
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, ModOrder, JsonDeserialize, JsonSerialize)]
 pub enum DirectionType {
-  AccordionRegistration {
-    high: bool,
-    middle: u8,
-    low: bool,
-  },
+  /// ![Accordion Registration High](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/accordion-high.png)
+  ///
+  /// ![Accordion Registration Middle](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/accordion-middle.png)
+  ///
+  /// ![Accordion Registration Low](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/accordion-low.png)
+  AccordionRegistration { high: bool, middle: u8, low: bool },
+  /// ![Breath Mark](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/breath-mark.png)
   #[default]
   BreathMark,
+  /// ![Caesura](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/caesura.png)
   Caesura,
-  ClefChange {
-    clef: Clef,
-  },
-  Dynamic {
-    dynamic: Dynamic,
-  },
-  KeyChange {
-    key: Key,
-  },
-  StringMute {
-    on: bool,
-  },
-  TimeSignatureChange {
-    time_signature: TimeSignature,
-  },
+  /// Represents a change in clef for the current staff.
+  ClefChange { clef: Clef },
+  /// Represents a change in dynamic level for the current staff.
+  Dynamic { dynamic: Dynamic },
+  /// Represents a change in key for the current staff.
+  KeyChange { key: Key },
+  /// ![String Mute](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/string-mute.png)
+  StringMute { on: bool },
+  /// Represents a change in time signature for the current staff.
+  TimeSignatureChange { time_signature: TimeSignature },
 }
 
+/// Represents a contextual direction which changes the global state of
+/// the music being played starting at the point that the direction is
+/// encountered.
 #[derive(Debug, Default, Eq, JsonDeserialize, JsonSerialize)]
 pub struct Direction {
+  /// The unique identifier for this direction.
   id: usize,
+  /// The type of direction.
   pub r#type: DirectionType,
 }
 
 impl Direction {
+  /// Creates a new direction based on the given type.
   #[must_use]
   pub fn new(r#type: DirectionType) -> Self {
     Self {
@@ -45,11 +52,13 @@ impl Direction {
     }
   }
 
+  /// Returns the unique identifier for this direction.
   #[must_use]
   pub fn get_id(&self) -> usize {
     self.id
   }
 
+  /// Converts the direction into a [Timeslice].
   #[must_use]
   pub fn to_timeslice(&self) -> Timeslice {
     let mut timeslice = Timeslice::new();

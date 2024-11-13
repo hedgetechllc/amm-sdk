@@ -3,110 +3,164 @@ use crate::context::{generate_id, Dynamic};
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize, ModOrder};
 
+/// Represents a technique used in handbell playing.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, ModOrder, JsonDeserialize, JsonSerialize)]
 pub enum HandbellTechnique {
+  /// <span class="smufl">&#xE81F;</span>
   Belltree,
+  /// <span class="smufl">&#xE81E;</span>
   Damp,
+  /// <span class="smufl">&#xE81B;</span>
   Echo,
+  /// <span class="smufl">&#xE81D;</span>
   Gyro,
+  /// <span class="smufl">&#xE812;</span>
   HandMartellato,
+  /// <span class="smufl">&#xE816;</span>
   MalletLift,
+  /// <span class="smufl">&#xE815;</span>
   MalletTable,
+  /// <span class="smufl">&#xE810;</span>
   Martellato,
+  /// <span class="smufl">&#xE811;</span>
   MartellatoLift,
+  /// <span class="smufl">&#xE813;</span>
   MutedMartellato,
+  /// <span class="smufl">&#xE817;</span>
   PluckLift,
+  /// <span class="smufl">&#xE81A;</span>
   Swing,
 }
 
+/// Represents a type of modification to a note.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, ModOrder, JsonDeserialize, JsonSerialize)]
 pub enum NoteModificationType {
+  /// ![Accent](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/accent.png)
   #[default]
   Accent,
+  /// ![Brass Bend](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/brass-bend.png)
   BrassBend,
+  /// ![Detached Legato](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/detached-legato.png)
   DetachedLegato,
+  /// ![Doit](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/doit.png)
   Doit,
+  /// ![Double Tongue](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/double-tongue.png)
   DoubleTongue,
+  /// ![Down Bow](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/down-bow.png)
   DownBow,
-  Dynamic {
-    dynamic: Dynamic,
-  },
+  /// Represents a dynamic change that only affects the current note.
+  Dynamic { dynamic: Dynamic },
+  /// ![Falloff](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/falloff.png)
   Falloff,
+  /// ![Fermata](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/fermata.png)
   Fermata,
+  /// ![Fingernails](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/fingernails.png)
   Fingernails,
+  /// ![Flip](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/flip.png)
   Flip,
-  Glissando {
-    from_current: bool,
-    going_up: bool,
-  },
+  /// ![Glissando Up](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/glissando.png)
+  Glissando { from_current: bool, going_up: bool },
+  /// ![Golpe](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/golpe.png)
   Golpe,
-  Grace {
-    acciaccatura: bool,
-  },
+  /// ![Grace Acciaccatura](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/grace-acciaccatura.png)
+  ///
+  /// ![Grace Appoggiatura](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/grace-appoggiatura.png)
+  Grace { acciaccatura: bool },
+  /// ![Half Muted](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/half-muted.png)
   HalfMuted,
-  Handbell {
-    technique: HandbellTechnique,
-  },
-  HarmonMute {
-    open: bool,
-    half: bool,
-  },
+  /// Represents a [HandbellTechnique] used in handbell playing.
+  Handbell { technique: HandbellTechnique },
+  /// Open: <span class="smufl">&#xE5EB;</span>
+  ///
+  /// Half: <span class="smufl">&#xE5E9;</span>
+  ///
+  /// Closed: <span class="smufl">&#xE5E8;</span>
+  HarmonMute { open: bool, half: bool },
+  /// ![Haydn](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/haydn.png)
   Haydn,
+  /// ![Heel](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/heel.png)
   Heel,
-  Hole {
-    open: bool,
-    half: bool,
-  },
+  /// Open: <span class="smufl">&#xE5F9;</span>
+  ///
+  /// Half: <span class="smufl">&#xE5F6;</span>
+  ///
+  /// Closed: <span class="smufl">&#xE5F4;</span>
+  Hole { open: bool, half: bool },
+  /// ![Marcato](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/accent.png)
   Marcato,
-  Mordent {
-    upper: bool,
-  },
+  /// ![Mordent Upper](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/inverted-mordent.png)
+  ///
+  /// ![Mordent Lower](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/mordent.png)
+  Mordent { upper: bool },
+  /// ![Open](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/open.png)
   Open,
+  /// ![Pizzicato](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/snap-pizzicato.png)
   Pizzicato,
+  /// ![Plop](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/plop.png)
   Plop,
-  Portamento {
-    from_current: bool,
-    going_up: bool,
-  },
+  /// ![Portamento Up](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/slide.png)
+  Portamento { from_current: bool, going_up: bool },
+  /// ![Schleifer](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/schleifer.png)
   Schleifer,
+  /// ![Scoop](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/scoop.png)
   Scoop,
+  /// ![Sforzando](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/sfz.png)
   Sforzando,
+  /// ![Shake](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/shake.png)
   Shake,
+  /// ![Smear](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/smear.png)
   Smear,
+  /// ![Soft Accent](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/soft-accent.png)
   SoftAccent,
+  /// ![Spiccato](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/spiccato.png)
   Spiccato,
+  /// ![Staccato](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/staccato.png)
   Staccato,
+  /// ![Staccatissimo](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/staccatissimo.png)
   Staccatissimo,
+  /// ![Stopped](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/stopped.png)
   Stopped,
+  /// ![Stress](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/stress.png)
   Stress,
+  /// ![Tap](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/tap.png)
   Tap,
+  /// ![Tenuto](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/tenuto.png)
   Tenuto,
+  /// ![Thumb Position](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/thumb-position.png)
   ThumbPosition,
+  /// ![Tie](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/tied.png)
   Tie,
+  /// ![Toe](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/toe.png)
   Toe,
-  Tremolo {
-    relative_speed: u8,
-  },
-  Trill {
-    upper: bool,
-  },
+  /// ![Tremolo](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/tremolo.png)
+  Tremolo { relative_speed: u8 },
+  /// ![Trill](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/trill-mark.png)
+  Trill { upper: bool },
+  /// ![Triple Tongue](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/triple-tongue.png)
   TripleTongue,
-  Turn {
-    upper: bool,
-    delayed: bool,
-    vertical: bool,
-  },
+  /// ![Turn Upper](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/turn.png)
+  ///
+  /// ![Turn Lower](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/inverted-turn.png)
+  ///
+  /// ![Vertical Turn Upper](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/vertical-turn.png)
+  Turn { upper: bool, delayed: bool, vertical: bool },
+  /// ![Unstress](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/unstress.png)
   Unstress,
+  /// ![Up Bow](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/up-bow.png)
   UpBow,
 }
 
+/// Represents a modification to a note.
 #[derive(Debug, Default, Eq, JsonDeserialize, JsonSerialize)]
 pub struct NoteModification {
+  /// The unique identifier for this modification.
   id: usize,
+  /// The type of note modification.
   pub r#type: NoteModificationType,
 }
 
 impl NoteModification {
+  /// Creates a new note modification based on the given type.
   #[must_use]
   pub fn new(r#type: NoteModificationType) -> Self {
     Self {
@@ -115,6 +169,15 @@ impl NoteModification {
     }
   }
 
+  /// Creates a new note modification based on the given
+  /// chord modification type.
+  ///
+  /// Many chord modifications have direct corresponding
+  /// note modifications, and this function provides a
+  /// convenient way to convert between the two.
+  ///
+  /// Returns `None` if the chord modification type does
+  /// not have a corresponding note modification type.
   #[must_use]
   pub fn from_chord_modification(r#type: &ChordModificationType) -> Option<Self> {
     match *r#type {
@@ -151,6 +214,7 @@ impl NoteModification {
     })
   }
 
+  /// Returns the unique identifier for this modification.
   #[must_use]
   pub fn get_id(&self) -> usize {
     self.id

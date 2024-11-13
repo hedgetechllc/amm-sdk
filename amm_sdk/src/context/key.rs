@@ -36,52 +36,96 @@ const FIFTHS_D_SHARP_MINOR: i8 = 6;
 const FIFTHS_E_MINOR: i8 = 1;
 const FIFTHS_E_FLAT_MINOR: i8 = -6;
 
+/// Represents the relative interval between notes in musical scale.
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum KeyMode {
+  /// Represents the following note intervals in semitones,
+  /// starting from the root note of the corresponding key:
+  ///
+  /// `[2, 2, 1, 2, 2, 2, 1]`
   #[default]
   Major,
+  /// Represents the following note intervals in semitones,
+  /// starting from the root note of the corresponding key:
+  ///
+  /// `[2, 1, 2, 2, 2, 1, 2]`
   Minor,
 }
 
+/// Represents the key signature of a musical piece, not taking
+/// into account its mode (i.e., major or minor).
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum KeySignature {
+  /// ![Key of A](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-a.png)
   A,
+  /// ![Key of A#](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-a-sharp.png)
   ASharp,
+  /// ![Key of A♭](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-a-flat.png)
   AFlat,
+  /// ![Key of B](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-b.png)
   B,
+  /// ![Key of B♭](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-b-flat.png)
   BFlat,
+  /// ![Key of C](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-c.png)
   #[default]
   C,
+  /// ![Key of C#](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-c-sharp.png)
   CSharp,
+  /// ![Key of C♭](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-c-flat.png)
   CFlat,
+  /// ![Key of D](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-d.png)
   D,
+  /// ![Key of D#](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-d-sharp.png)
   DSharp,
+  /// ![Key of D♭](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-d-flat.png)
   DFlat,
+  /// ![Key of E](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-e.png)
   E,
+  /// ![Key of E♭](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-e-flat.png)
   EFlat,
+  /// ![Key of F](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-f.png)
   F,
+  /// ![Key of F#](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-f-sharp.png)
   FSharp,
+  /// ![Key of G](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-g.png)
   G,
+  /// ![Key of G#](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-g-sharp.png)
   GSharp,
+  /// ![Key of G♭](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-g-flat.png)
   GFlat,
 }
 
+/// Represents the key of a musical piece, including both its
+/// mode (i.e., major or minor) and its signature.
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub struct Key {
+  /// The mode of the key (i.e., major or minor).
   pub mode: KeyMode,
+  /// The signature of the key (i.e., A, A♭, B, etc).
   pub signature: KeySignature,
 }
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 impl Key {
+  /// Creates a new key with the given signature and mode.
   #[must_use]
   pub fn new(signature: KeySignature, mode: KeyMode) -> Self {
     Self { mode, signature }
   }
 
+  /// Creates a new key from the given circle of fifths value and
+  /// optional mode.
+  ///
+  /// The circle of fifths represents the number of flats or sharps in
+  /// a traditional key signature. Negative numbers are used for flats
+  /// and positive numbers for sharps. For example, a key with two flats
+  /// would be represented by a `fifths` value of `-2`.
+  ///
+  /// If the `mode` parameter is `None`, the key will default
+  /// to [KeyMode::Major].
   #[must_use]
   pub fn from_fifths(fifths: i8, mode: Option<KeyMode>) -> Self {
     let mode = mode.unwrap_or(KeyMode::Major);
@@ -108,6 +152,12 @@ impl Key {
     Self { mode, signature }
   }
 
+  /// Returns the circle of fifths value for the key.
+  ///
+  /// The circle of fifths represents the number of flats or sharps in
+  /// a traditional key signature. Negative numbers are used for flats
+  /// and positive numbers for sharps. For example, a key with two flats
+  /// would be represented by a `fifths` value of `-2`.
   #[must_use]
   pub fn fifths(&self) -> i8 {
     match (self.signature, self.mode) {
@@ -144,6 +194,9 @@ impl Key {
     }
   }
 
+  /// Returns a new key with the same tonic as the current key,
+  /// but with the opposite mode (i.e., the parallel key of C-Major
+  /// would be C-Minor and vice versa).
   #[must_use]
   pub fn to_parallel(&self) -> Self {
     Self {
@@ -156,6 +209,9 @@ impl Key {
     }
   }
 
+  /// Returns a new key with the same accidentals as the current key,
+  /// but with the opposite mode (i.e., the relative key of C-Major
+  /// would be A-Minor and vice versa).
   #[must_use]
   pub fn to_relative(&self) -> Self {
     let new_mode = if self.mode == KeyMode::Major {
@@ -166,6 +222,11 @@ impl Key {
     Key::from_fifths(self.fifths(), Some(new_mode))
   }
 
+  /// Converts the current key into its parallel key.
+  ///
+  /// A parallel key is a key with the same tonic as the current key,
+  /// but with the opposite mode (i.e., the parallel key of C-Major
+  /// would be C-Minor and vice versa).
   pub fn make_parallel(&mut self) {
     self.mode = if self.mode == KeyMode::Major {
       KeyMode::Minor
@@ -174,6 +235,11 @@ impl Key {
     };
   }
 
+  /// Converts the current key into its relative key.
+  ///
+  /// A relative key is a key with the same accidentals as the current
+  /// key, but with the opposite mode (i.e., the relative key of C-Major
+  /// would be A-Minor and vice versa).
   pub fn make_relative(&mut self) {
     let new_mode = if self.mode == KeyMode::Major {
       KeyMode::Minor

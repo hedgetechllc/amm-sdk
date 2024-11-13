@@ -1606,7 +1606,7 @@ impl MusicXmlConverter {
 
     // Check for implicit repeats
     let add_implicit_repeat = Cell::new(false);
-    for slice in time_slices.iter() {
+    for slice in time_slices {
       for (repeat_start, _) in &slice.repeat {
         if *repeat_start {
           open_repeats.push(0);
@@ -1617,7 +1617,7 @@ impl MusicXmlConverter {
     }
 
     // Gather section details
-    for (time_slice_idx, time_slice) in time_slices.into_iter().enumerate().filter(|(_, slice)| {
+    for (time_slice_idx, time_slice) in time_slices.iter().enumerate().filter(|(_, slice)| {
       add_implicit_repeat.get()
         || slice.jump_to.is_some()
         || slice.section_start.is_some()
@@ -2290,7 +2290,7 @@ impl MusicXmlConverter {
       // Handle creation of the section structure for this part
       let master_section = part.add_section("Top-Level Section");
       let section_structure =
-        Self::generate_section_structure(master_section, &section_details.get(&part_name).unwrap());
+        Self::generate_section_structure(master_section, section_details.get(&part_name).unwrap());
 
       // Iterate through all staves in the part
       for (staff_name, mut time_slices) in staves {

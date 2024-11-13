@@ -3,52 +3,81 @@ use crate::context::{generate_id, Dynamic};
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize, ModOrder};
 
+/// Represents a type of modification to a chord.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, ModOrder, JsonDeserialize, JsonSerialize)]
 pub enum ChordModificationType {
+  /// ![Accent](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/accent.png)
   #[default]
   Accent,
+  /// ![Arpeggiate](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/arpeggiate.png)
   Arpeggiate,
+  /// ![Detached Legato](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/detached-legato.png)
   DetachedLegato,
+  /// ![Down Bow](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/down-bow.png)
   DownBow,
-  Dynamic {
-    dynamic: Dynamic,
-  },
+  /// Represents a dynamic change that only affects the current chord.
+  Dynamic { dynamic: Dynamic },
+  /// ![Fermata](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/fermata.png)
   Fermata,
+  /// ![Fingernails](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/fingernails.png)
   Fingernails,
+  /// ![Half Muted](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/half-muted.png)
   HalfMuted,
-  HarmonMute {
-    open: bool,
-    half: bool,
-  },
+  /// Open: <span class="smufl">&#xE5EB;</span>
+  ///
+  /// Half: <span class="smufl">&#xE5E9;</span>
+  ///
+  /// Closed: <span class="smufl">&#xE5E8;</span>
+  HarmonMute { open: bool, half: bool },
+  /// ![Heel](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/heel.png)
   Heel,
+  /// ![Marcato](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/accent.png)
   Marcato,
+  /// ![Non-Arpeggiate](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/non-arpeggiate.png)
   NonArpeggiate,
+  /// ![Open](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/open.png)
   Open,
+  /// ![Pizzicato](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/snap-pizzicato.png)
   Pizzicato,
+  /// ![Sforzando](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/sfz.png)
   Sforzando,
+  /// ![Smear](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/smear.png)
   Smear,
+  /// ![Soft Accent](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/soft-accent.png)
   SoftAccent,
+  /// ![Spiccato](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/spiccato.png)
   Spiccato,
+  /// ![Staccato](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/staccato.png)
   Staccato,
+  /// ![Staccatissimo](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/staccatissimo.png)
   Staccatissimo,
+  /// ![Stress](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/stress.png)
   Stress,
+  /// ![Tenuto](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/tenuto.png)
   Tenuto,
+  /// ![Tie](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/tied.png)
   Tie,
+  /// ![Toe](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/toe.png)
   Toe,
-  Tremolo {
-    relative_speed: u8,
-  },
+  /// ![Tremolo](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/tremolo.png)
+  Tremolo { relative_speed: u8 },
+  /// ![Unstress](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/unstress.png)
   Unstress,
+  /// ![Upbow](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/up-bow.png)
   UpBow,
 }
 
+/// Represents a modification to a chord.
 #[derive(Debug, Default, Eq, JsonDeserialize, JsonSerialize)]
 pub struct ChordModification {
+  /// The unique identifier for this modification.
   id: usize,
+  /// The type of chord modification.
   pub r#type: ChordModificationType,
 }
 
 impl ChordModification {
+  /// Creates a new chord modification based on the given type.
   #[must_use]
   pub fn new(r#type: ChordModificationType) -> Self {
     Self {
@@ -57,6 +86,15 @@ impl ChordModification {
     }
   }
 
+  /// Creates a new chord modification based on the given
+  /// note modification type.
+  ///
+  /// Many note modifications have direct corresponding
+  /// chord modifications, and this function provides a
+  /// convenient way to convert between the two.
+  ///
+  /// Returns `None` if the note modification type does
+  /// not have a corresponding chord modification type.
   #[must_use]
   pub fn from_note_modification(r#type: &NoteModificationType) -> Option<Self> {
     match *r#type {
@@ -92,6 +130,7 @@ impl ChordModification {
     })
   }
 
+  /// Returns the unique identifier for this modification.
   #[must_use]
   pub fn get_id(&self) -> usize {
     self.id

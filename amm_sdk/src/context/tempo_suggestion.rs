@@ -3,33 +3,56 @@ use amm_macros::{JsonDeserialize, JsonSerialize};
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
+/// Represents a text-based tempo marking in music notation.
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum TempoMarking {
+  /// Very, very slowly.
   Larghissimo,
+  /// Very slowly.
   Grave,
+  /// Broadly.
   Largo,
+  /// Slowly.
   Lento,
+  /// Rather broadly.
   Larghetto,
+  /// Slowly and stately.
   Adagio,
+  /// More slowly than andante.
   Adagietto,
+  /// At a walking pace.
   Andante,
+  /// At a brisk walking pace.
   Andantino,
+  /// Moderately, in the manner of a march.
   MarciaModerato,
+  /// Between andante and moderato.
   AndanteModerato,
+  /// Moderately.
   #[default]
   Moderato,
+  /// Moderately quickly.
   Allegretto,
+  /// Brightly and moderately quickly.
   AllegroModerato,
+  /// Quickly and brightly.
   Allegro,
+  /// Lively and fast.
   Vivace,
+  /// Very fast and lively.
   Vivacissimo,
+  /// Very fast.
   Allegrissimo,
+  /// Very lively and fast.
   AllegroVivace,
+  /// Very, very fast.
   Presto,
+  /// Extremely fast.
   Prestissimo,
 }
 
+/// Represents a text-based tempo suggestion in music notation.
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub struct TempoSuggestion {
@@ -38,11 +61,13 @@ pub struct TempoSuggestion {
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 impl TempoSuggestion {
+  /// Creates a new tempo suggestion with the given marking.
   #[must_use]
   pub fn new(marking: TempoMarking) -> Self {
     Self { marking }
   }
 
+  /// Returns a description of the tempo suggestion.
   #[must_use]
   pub fn description(&self) -> String {
     String::from(match self.marking {
@@ -70,6 +95,7 @@ impl TempoSuggestion {
     })
   }
 
+  /// Returns the minimum beats per minute for the tempo suggestion.
   #[must_use]
   pub fn bpm_min(&self) -> u16 {
     match self.marking {
@@ -95,6 +121,7 @@ impl TempoSuggestion {
     }
   }
 
+  /// Returns the maximum beats per minute for the tempo suggestion.
   #[must_use]
   pub fn bpm_max(&self) -> u16 {
     match self.marking {
@@ -115,6 +142,7 @@ impl TempoSuggestion {
     }
   }
 
+  /// Returns the average beats per minute for the tempo suggestion.
   #[must_use]
   pub fn value(&self) -> u16 {
     match self.marking {

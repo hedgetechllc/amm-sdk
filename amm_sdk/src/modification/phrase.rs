@@ -2,51 +2,73 @@ use crate::context::{generate_id, Dynamic};
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize, ModOrder};
 
+/// Represents a type of pedal used in piano playing.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, ModOrder, JsonDeserialize, JsonSerialize)]
 pub enum PedalType {
+  /// ![Sustain](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/pedal.png)
   #[default]
   Sustain,
+  /// Usually denoted as `sost.` in sheet music.
   Sostenuto,
+  /// Usually denoted as `una corda` in sheet music.
   Soft,
 }
 
+/// Represents a type of modification to a phrase.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, ModOrder, JsonDeserialize, JsonSerialize)]
 pub enum PhraseModificationType {
-  Crescendo {
-    final_dynamic: Option<Dynamic>,
-  },
-  Decrescendo {
-    final_dynamic: Option<Dynamic>,
-  },
+  /// ![Crescendo](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/crescendo.png)
+  ///
+  /// Represents a gradual increase in volume over a series of notes.
+  ///
+  /// The `final_dynamic` field is optional and represents the dynamic
+  /// level that the crescendo should reach by the end of the phrase.
+  Crescendo { final_dynamic: Option<Dynamic> },
+  /// ![Decrescendo](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/decrescendo.png)
+  ///
+  /// Represents a gradual decrease in volume over a series of notes.
+  ///
+  /// The `final_dynamic` field is optional and represents the dynamic
+  /// level that the decrescendo should reach by the end of the phrase.
+  Decrescendo { final_dynamic: Option<Dynamic> },
+  /// ![Glissando](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/glissando.png)
   Glissando,
-  Hairpin {
-    maximum_dynamic: Option<Dynamic>,
-  },
+  /// ![Hairpin](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/hairpin.png)
+  ///
+  /// Represents a gradual increase in volume followed by a gradual
+  /// decrease in volume over a series of notes.
+  ///
+  /// The `maximum_dynamic` field is optional and represents the dynamic
+  /// level that the hairpin should reach by the middle of the phrase.
+  Hairpin { maximum_dynamic: Option<Dynamic> },
+  /// ![Legato](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/slur.png)
   #[default]
   Legato,
-  OctaveShift {
-    num_octaves: i8,
-  },
-  Pedal {
-    pedal_type: PedalType,
-  },
+  /// ![Octave Shift Up](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/octave-shift.png)
+  OctaveShift { num_octaves: i8 },
+  /// Represents a change in the use of a pedal for the current phrase.
+  Pedal { pedal_type: PedalType },
+  /// ![Portamento](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/slide.png)
   Portamento,
-  Tremolo {
-    relative_speed: u8,
-  },
-  Tuplet {
-    num_beats: u8,
-    into_beats: u8,
-  },
+  /// ![Tremolo](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/tremolo.png)
+  Tremolo { relative_speed: u8 },
+  /// ![Triplet](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/tuplet.png)
+  ///
+  /// ![Quintuplet](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/quintuplet.png)
+  Tuplet { num_beats: u8, into_beats: u8 },
 }
 
+/// Represents a modification to a phrase.
 #[derive(Debug, Default, Eq, JsonDeserialize, JsonSerialize)]
 pub struct PhraseModification {
+  /// The unique identifier for this modification.
   id: usize,
+  /// The type of phrase modification.
   pub r#type: PhraseModificationType,
 }
 
 impl PhraseModification {
+  /// Creates a new phrase modification based on the given type.
   #[must_use]
   pub fn new(r#type: PhraseModificationType) -> Self {
     Self {
@@ -55,6 +77,7 @@ impl PhraseModification {
     }
   }
 
+  /// Returns the unique identifier for this modification.
   #[must_use]
   pub fn get_id(&self) -> usize {
     self.id
