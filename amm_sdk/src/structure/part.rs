@@ -91,6 +91,11 @@ impl Part {
     }
   }
 
+  pub fn claim(&mut self, item: PartContent) -> &mut Self {
+    self.content.push(item);
+    self
+  }
+
   pub fn claim_section(&mut self, section: Section) -> &mut Section {
     self.content.push(PartContent::Section(section));
     match self.content.last_mut() {

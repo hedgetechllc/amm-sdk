@@ -189,6 +189,11 @@ impl Section {
     modification_id
   }
 
+  pub fn claim(&mut self, item: SectionContent) -> &mut Self {
+    self.content.push(item);
+    self
+  }
+
   pub fn claim_staff(&mut self, staff: Staff) -> &mut Staff {
     self.content.retain(|item| match item {
       SectionContent::Staff(old_staff) => staff.get_name() != old_staff.get_name(),

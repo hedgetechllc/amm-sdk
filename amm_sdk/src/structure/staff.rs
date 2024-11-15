@@ -157,6 +157,11 @@ impl Staff {
     }
   }
 
+  pub fn claim(&mut self, item: StaffContent) -> &mut Self {
+    self.content.push(item);
+    self
+  }
+
   pub fn claim_note(&mut self, note: Note) -> &mut Note {
     self.content.push(StaffContent::Note(note));
     match self.content.last_mut() {
