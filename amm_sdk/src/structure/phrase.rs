@@ -71,7 +71,8 @@ impl Phrase {
   #[must_use]
   pub fn flatten(&self, fully: bool) -> Self {
     // Removes all multivoice layers (flattens multivoices into a single phrase)
-    // The "fully" parameter determines whether sub-phrases will also be flattened into a single phrase of notes and chords
+    // The "fully" parameter determines whether sub-phrases will also be flattened into a
+    // single phrase containing only notes, chords, and tuplets
     let mut flat_phrase = Self {
       id: generate_id(),
       content: Vec::new(),
@@ -79,7 +80,17 @@ impl Phrase {
     };
     if fully {
       self.iter().for_each(|item| match item {
-        PhraseContent::Phrase(phrase) => flat_phrase.content.append(&mut phrase.flatten(true).content),
+        PhraseContent::Phrase(phrase) => {
+          let mut flattened_phrase = phrase.flatten(true);
+          if flattened_phrase
+            .iter_modifications()
+            .any(|modification| matches!(modification.r#type, PhraseModificationType::Tuplet { .. }))
+          {
+            flat_phrase.content.push(PhraseContent::Phrase(flattened_phrase));
+          } else {
+            flat_phrase.content.append(&mut flattened_phrase.content);
+          }
+        }
         PhraseContent::MultiVoice(multivoice) => flat_phrase.content.append(&mut multivoice.flatten().content),
         _ => flat_phrase.content.push(item.clone()),
       });
@@ -137,6 +148,11 @@ impl Phrase {
     let modification_id = modification.get_id();
     self.modifications.replace(modification);
     modification_id
+  }
+
+  pub fn claim(&mut self, item: PhraseContent) -> &mut Self {
+    self.content.push(item);
+    self
   }
 
   pub fn claim_note(&mut self, note: Note) -> &mut Note {
