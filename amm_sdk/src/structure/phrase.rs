@@ -82,10 +82,7 @@ impl Phrase {
       self.iter().for_each(|item| match item {
         PhraseContent::Phrase(phrase) => {
           let mut flattened_phrase = phrase.flatten(true);
-          if flattened_phrase
-            .iter_modifications()
-            .any(|modification| matches!(modification.r#type, PhraseModificationType::Tuplet { .. }))
-          {
+          if flattened_phrase.is_tuplet() {
             flat_phrase.content.push(PhraseContent::Phrase(flattened_phrase));
           } else {
             flat_phrase.content.append(&mut flattened_phrase.content);
@@ -401,6 +398,22 @@ impl Phrase {
       }
     });
     self
+  }
+
+  #[must_use]
+  pub fn is_tuplet(&self) -> bool {
+    self
+      .iter_modifications()
+      .any(|modification| matches!(modification.r#type, PhraseModificationType::Tuplet { .. }))
+  }
+
+  #[must_use]
+  pub fn is_nested_tuplet(&self) -> bool {
+    self.is_tuplet()
+      && self.iter().any(|item| match item {
+        PhraseContent::Phrase(phrase) => phrase.is_tuplet(),
+        _ => false,
+      })
   }
 
   #[must_use]

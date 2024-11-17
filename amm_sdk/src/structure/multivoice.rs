@@ -3,9 +3,10 @@ use super::{
   phrase::{Phrase, PhraseContent, PhraseTimesliceIter},
 };
 use crate::context::{generate_id, Tempo};
-use crate::modification::{ChordModificationType, NoteModificationType, PhraseModification, PhraseModificationType};
+use crate::modification::PhraseModificationType;
 use crate::note::{Duration, DurationType, Note};
 use crate::temporal::Timeslice;
+use alloc::collections::VecDeque;
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize};
 
@@ -42,214 +43,191 @@ impl MultiVoice {
     }
   }
 
+  fn flatten_tuplets(timeslices: VecDeque<(f64, Vec<PhraseContent>)>, beat_base_note: Duration) -> Phrase {
+    let mut phrase = Phrase::new();
+    let (mut tuplet_end_time, mut tuplet_ratio) = (0.0, Some(3.0 / 2.0));
+    if let Some((_, slice_content)) = timeslices.front() {
+      // Pre-calculate required tuplet statistics
+      let tuplet_phrases = slice_content
+        .iter()
+        .filter_map(|content| match content {
+          PhraseContent::Phrase(phrase) => Some((phrase.get_beats(&beat_base_note, None), phrase)),
+          _ => None,
+        })
+        .collect::<Vec<_>>();
+      let (longest_duration, longest_tuplet) = unsafe {
+        *tuplet_phrases
+          .iter()
+          .max_by(|(beats1, _), (beats2, _)| beats1.partial_cmp(beats2).unwrap_unchecked())
+          .unwrap_unchecked()
+      };
+      let target_type = unsafe {
+        longest_tuplet
+          .iter_modifications()
+          .find(|modification| matches!(modification.r#type, PhraseModificationType::Tuplet { .. }))
+          .unwrap_unchecked()
+          .r#type
+      };
+      tuplet_ratio = Some(
+        if let PhraseModificationType::Tuplet { num_beats, into_beats } = target_type {
+          f64::from(into_beats) / f64::from(num_beats)
+        } else {
+          1.0
+        },
+      );
+      tuplet_end_time = longest_duration;
+
+      // Check for various tuplet situations
+      if slice_content.iter().any(|content| match content {
+        PhraseContent::Phrase(phrase) => phrase.is_nested_tuplet(),
+        _ => false,
+      }) {
+        // Nested tuplet present, simply return the longest tuplet phrase
+        return longest_tuplet.clone();
+      } else if tuplet_phrases.len() > 1 {
+        // Combine all phrases which are tuplets of the same type, duration, and number of notes
+        let target_num_notes = longest_tuplet.num_items();
+        phrase.add_modification(target_type);
+        let mut phrase_chords = Vec::new();
+        for (_, tuplet) in tuplet_phrases.into_iter().filter(|(tuplet_duration, tuplet)| {
+          (longest_duration - *tuplet_duration).abs() < 0.000_001
+            && target_num_notes == tuplet.num_items()
+            && tuplet
+              .iter_modifications()
+              .any(|modification| modification.r#type == target_type)
+        }) {
+          for (idx, item) in tuplet.into_iter().enumerate() {
+            let chord = if let Some(chord) = phrase_chords.get_mut(idx) {
+              chord
+            } else {
+              phrase.add_chord()
+            };
+            match item {
+              PhraseContent::Note(note) => {
+                chord.claim_note(note.clone());
+              }
+              PhraseContent::Chord(sub_chord) => {
+                sub_chord.iter_modifications().for_each(|modification| {
+                  chord.add_modification(modification.r#type);
+                });
+                for ChordContent::Note(note) in sub_chord {
+                  chord.claim_note(note.clone());
+                }
+              }
+              _ => unsafe { core::hint::unreachable_unchecked() },
+            }
+          }
+        }
+      } else {
+        // Only one tuplet phrase to contend with
+        phrase = longest_tuplet.clone();
+      }
+    }
+
+    // Fill in the list of valid times for each item in the tuplet
+    let mut curr_time = 0.0;
+    let mut valid_times_reversed = phrase
+      .iter()
+      .enumerate()
+      .map(|(idx, content)| match content {
+        PhraseContent::Chord(chord) => {
+          let start_time = curr_time;
+          curr_time += chord.get_beats(&beat_base_note, tuplet_ratio);
+          (idx, start_time, true)
+        }
+        PhraseContent::Note(note) => {
+          let start_time = curr_time;
+          curr_time += note.get_beats(&beat_base_note, tuplet_ratio);
+          (idx, start_time, false)
+        }
+        _ => (0, 0.0, false),
+      })
+      .collect::<Vec<(usize, f64, bool)>>();
+    valid_times_reversed.reverse();
+
+    // Deal with reminder of the timeslices
+    for (slice_time, slice_content) in timeslices {
+      if let Some((tuplet_item_idx, tuplet_start_time, is_chord)) = valid_times_reversed
+        .iter_mut()
+        .find(|(_, start_time, _)| slice_time >= *start_time)
+      {
+        // Ensure that the tuplet item to add to is a chord
+        if !*is_chord {
+          let mut chord = Chord::new();
+          if let Some(tuplet_content) = phrase.content.get_mut(*tuplet_item_idx) {
+            if let PhraseContent::Note(note) = tuplet_content {
+              chord.claim_note(note.clone());
+            }
+            let mut chord_content = PhraseContent::Chord(chord);
+            core::mem::swap(&mut chord_content, tuplet_content);
+            *is_chord = true;
+          }
+        }
+
+        // Get the chord to add the content to and its current duration
+        let Some(PhraseContent::Chord(tuplet_chord)) = phrase.content.get_mut(*tuplet_item_idx) else {
+          unsafe { core::hint::unreachable_unchecked() }
+        };
+        let current_tuplet_beats = tuplet_chord.get_beats(&beat_base_note, tuplet_ratio);
+        let current_tuplet_duration = unsafe {
+          tuplet_chord
+            .iter()
+            .next()
+            .map(|ChordContent::Note(note)| note.duration)
+            .unwrap_unchecked()
+        };
+
+        // Add the content to the current tuplet chord item
+        for content in slice_content {
+          match content {
+            PhraseContent::Chord(chord) => {
+              for ChordContent::Note(mut note) in chord {
+                while *tuplet_start_time + note.get_beats(&beat_base_note, tuplet_ratio) > tuplet_end_time {
+                  note.duration = note.duration.split(2);
+                }
+                if note.get_beats(&beat_base_note, tuplet_ratio) < current_tuplet_beats {
+                  note.duration = current_tuplet_duration;
+                }
+                tuplet_chord.claim_note(note);
+              }
+            }
+            PhraseContent::Note(mut note) => {
+              while *tuplet_start_time + note.get_beats(&beat_base_note, tuplet_ratio) > tuplet_end_time {
+                note.duration = note.duration.split(2);
+              }
+              if note.get_beats(&beat_base_note, tuplet_ratio) < current_tuplet_beats {
+                note.duration = current_tuplet_duration;
+              }
+              tuplet_chord.claim_note(note);
+            }
+            _ => (),
+          }
+        }
+      }
+    }
+    phrase
+  }
+
   #[must_use]
-  #[allow(clippy::too_many_lines)]
   pub fn flatten(&self) -> Phrase {
     // Note: Loses any modifications on contained phrases
-    // Flatten all multi-voice content into individual phrases containing only notes and chords
+    // Flatten all multi-voice content into individual phrases containing only notes, chords, and tuplets
     let beat_base_note = Duration::new(DurationType::TwoThousandFortyEighth, 0);
     let phrases: Vec<Phrase> = self
       .iter()
       .map(|MultiVoiceContent::Phrase(phrase)| phrase.flatten(true))
       .collect();
 
-    // Determine which phrases contain tuplets
-    let tuplet_phrases: Vec<(&Phrase, &PhraseModification, (u8, u8))> = phrases
-      .iter()
-      .filter_map(|phrase| {
-        phrase
-          .iter_modifications()
-          .find_map(|modification| match modification.r#type {
-            PhraseModificationType::Tuplet { num_beats, into_beats } => {
-              Some((phrase, modification, (num_beats, into_beats)))
-            }
-            _ => None,
-          })
-      })
-      .collect();
-
-    // Merge according to the tuplet content of all phrases
-    let to_combine = if tuplet_phrases.is_empty() {
-      // No tuplets, just use all phrases in their current form
-      phrases
-    } else if tuplet_phrases.len() == 1 {
-      // Single tuplet, check if all other phrases are single-note or single-chord phrases with durations equal to or less than the tuplet
-      let (tuplet_phrase, tuplet_modification) = (tuplet_phrases[0].0, tuplet_phrases[0].1);
-      let tuplet_duration = tuplet_phrase.get_beats(&beat_base_note, None);
-      let (num_beats, into_beats) = tuplet_phrases[0].2;
-      if phrases.iter().all(|phrase| {
-        (tuplet_phrase.get_id() == phrase.get_id())
-          || (phrase.content.len() == 1 && phrase.get_beats(&beat_base_note, None) <= tuplet_duration)
-      }) {
-        // Combine all phrases into a single tuplet phrase by converting single-note durations into their tuplet equivalents
-        phrases
-          .iter()
-          .map(|phrase| {
-            let mut updated_phrase = phrase.clone();
-            if phrase.get_id() != tuplet_phrase.get_id() {
-              let num_additional_notes = num_beats - into_beats;
-              updated_phrase.add_modification(tuplet_modification.r#type);
-              match &updated_phrase.content.pop() {
-                Some(PhraseContent::Note(note)) => {
-                  let updated_duration = note.duration.split(into_beats);
-                  let mut new_note = updated_phrase.add_note(note.pitch, note.duration, Some(note.accidental));
-                  new_note.add_modification(NoteModificationType::Tie);
-                  note.iter_modifications().for_each(|modification| {
-                    new_note.add_modification(modification.r#type);
-                  });
-                  for index in 0..num_additional_notes {
-                    new_note = updated_phrase.add_note(note.pitch, updated_duration, Some(note.accidental));
-                    if index + 1 < num_additional_notes {
-                      new_note.add_modification(NoteModificationType::Tie);
-                    }
-                  }
-                }
-                Some(PhraseContent::Chord(chord)) => {
-                  let updated_duration = chord
-                    .iter()
-                    .map(|item| match item {
-                      ChordContent::Note(note) => note.duration.split(into_beats),
-                    })
-                    .reduce(|min, duration| if min.value() < duration.value() { min } else { duration })
-                    .unwrap_or(Duration::new(DurationType::Eighth, 0));
-                  let chord_notes = chord
-                    .iter()
-                    .map(|item| match item {
-                      ChordContent::Note(note) => note,
-                    })
-                    .collect::<Vec<_>>();
-                  let mut new_chord = updated_phrase.add_chord();
-                  new_chord.add_modification(ChordModificationType::Tie);
-                  chord.iter_modifications().for_each(|modification| {
-                    new_chord.add_modification(modification.r#type);
-                  });
-                  for index in 0..num_additional_notes {
-                    new_chord = updated_phrase.add_chord();
-                    for note in &chord_notes {
-                      new_chord.add_note(note.pitch, updated_duration, Some(note.accidental));
-                    }
-                    if index + 1 < num_additional_notes {
-                      new_chord.add_modification(ChordModificationType::Tie);
-                    }
-                  }
-                }
-                _ => unsafe { core::hint::unreachable_unchecked() },
-              }
-            }
-            updated_phrase
-          })
-          .collect()
-      } else {
-        // Combine all phrases into a single phrase by converting the tuplet into a series of notes with the target composite duration
-        phrases
-          .iter()
-          .map(|phrase| {
-            // Expand tuplet by only taking the first note and holding it for the full tuplet duration
-            let mut updated_phrase = phrase.clone();
-            if phrase.get_id() == tuplet_phrase.get_id() {
-              let target_duration =
-                Duration::from_beats(&beat_base_note, updated_phrase.get_beats(&beat_base_note, None));
-              match updated_phrase.content.first_mut() {
-                Some(PhraseContent::Note(note)) => {
-                  note.duration = target_duration;
-                }
-                Some(PhraseContent::Chord(chord)) => {
-                  chord.iter_mut().for_each(|item| match item {
-                    ChordContent::Note(note) => {
-                      note.duration = target_duration;
-                    }
-                  });
-                }
-                _ => unsafe { core::hint::unreachable_unchecked() },
-              };
-              let mod_id = updated_phrase
-                .iter_modifications()
-                .find_map(|modification| {
-                  if matches!(modification.r#type, PhraseModificationType::Tuplet { .. }) {
-                    Some(modification.get_id())
-                  } else {
-                    None
-                  }
-                })
-                .unwrap_or_default();
-              updated_phrase.remove_modification(mod_id);
-              updated_phrase.content.drain(1..);
-            }
-            updated_phrase
-          })
-          .collect()
-      }
-    } else {
-      // Multiple tuplets, check if all other phrases are tuplets with the same number of notes and target beat durations
-      let (target_num_beats, target_into_beats) = tuplet_phrases[0].2;
-      let target_duration = tuplet_phrases[0].0.get_beats(&beat_base_note, None);
-      if tuplet_phrases.len() == phrases.len()
-        && phrases.iter().all(|phrase| {
-          (phrase.get_beats(&beat_base_note, None) - target_duration).abs() < f64::EPSILON
-            && match phrase
-              .iter_modifications()
-              .find_map(|modification| match modification.r#type {
-                PhraseModificationType::Tuplet { num_beats, into_beats } => Some((num_beats, into_beats)),
-                _ => None,
-              }) {
-              Some((num_beats, into_beats)) => num_beats == target_num_beats && into_beats == target_into_beats,
-              None => false,
-            }
-        })
-      {
-        phrases
-      } else {
-        // Combine all phrases into a single phrase by converting each tuplet into a series of notes with the target composite duration
-        phrases
-          .iter()
-          .map(|phrase| {
-            let mut updated_phrase = phrase.clone();
-            phrase.iter_modifications().for_each(|modification| {
-              if let PhraseModificationType::Tuplet { .. } = modification.r#type {
-                // Expand tuplet by only taking the first note and holding it for the full tuplet duration
-                let target_duration =
-                  Duration::from_beats(&beat_base_note, updated_phrase.get_beats(&beat_base_note, None));
-                match updated_phrase.content.first_mut() {
-                  Some(PhraseContent::Note(note)) => {
-                    note.duration = target_duration;
-                  }
-                  Some(PhraseContent::Chord(chord)) => {
-                    chord.iter_mut().for_each(|item| match item {
-                      ChordContent::Note(note) => {
-                        note.duration = target_duration;
-                      }
-                    });
-                  }
-                  _ => unsafe { core::hint::unreachable_unchecked() },
-                };
-                updated_phrase.remove_modification(modification.get_id());
-                updated_phrase.content.drain(1..);
-              }
-            });
-            updated_phrase
-          })
-          .collect()
-      }
-    };
-
-    // Create an ordered list of timeslices containing all notes and chords across all voices
-    let mut phrase = unsafe { to_combine.first().unwrap_unchecked().clone() };
+    // Place all resulting phrase content into temporally ordered timeslices
     let mut timeslices: Vec<(f64, Vec<PhraseContent>)> = Vec::new();
-    for phrase in to_combine {
+    for phrase in phrases {
       let (mut index, mut curr_time) = (0, 0.0);
-      let tuplet_ratio = phrase
-        .iter_modifications()
-        .find_map(|modification| match modification.r#type {
-          PhraseModificationType::Tuplet { num_beats, into_beats } => {
-            Some(f64::from(into_beats) / f64::from(num_beats))
-          }
-          _ => None,
-        });
       for item in phrase {
         let slice_duration = match &item {
-          PhraseContent::Note(note) => note.get_beats(&beat_base_note, tuplet_ratio),
-          PhraseContent::Chord(chord) => chord.get_beats(&beat_base_note, tuplet_ratio),
-          _ => unsafe { core::hint::unreachable_unchecked() },
+          PhraseContent::Note(note) => note.get_beats(&beat_base_note, None),
+          PhraseContent::Chord(chord) => chord.get_beats(&beat_base_note, None),
+          PhraseContent::Phrase(phrase) => phrase.get_beats(&beat_base_note, None),
+          PhraseContent::MultiVoice(_) => unsafe { core::hint::unreachable_unchecked() },
         };
         if let Some(slice_details) = timeslices.get_mut(index) {
           let (mut slice_time, mut existing_slice) = (slice_details.0, &mut slice_details.1);
@@ -278,67 +256,55 @@ impl MultiVoice {
       }
     }
 
-    // Create a new single phrase containing all notes and chords
-    phrase.content.clear();
-    for (idx, (start_time, content)) in timeslices.iter().enumerate() {
-      if content.len() > 1 {
-        let target_beats = if idx + 1 < timeslices.len() {
-          timeslices[idx + 1].0 - start_time
+    // Combine the content of each timeslice into a new phrase, taking special care of tuplets
+    let mut phrase = Phrase::new();
+    let (mut tuplet_slices, mut tuplet_end) = (VecDeque::new(), 0.0);
+    for (slice_time, mut slice_content) in timeslices {
+      if !tuplet_slices.is_empty() {
+        if slice_time < tuplet_end {
+          tuplet_slices.push_back((slice_time, slice_content));
+          continue;
+        }
+        phrase.content.push(PhraseContent::Phrase(Self::flatten_tuplets(
+          tuplet_slices,
+          beat_base_note,
+        )));
+        tuplet_slices = VecDeque::new();
+      }
+      if slice_content.len() > 1 {
+        if let Some(tuplet) = slice_content.iter().find_map(|item| match item {
+          PhraseContent::Phrase(phrase) => Some(phrase),
+          _ => None,
+        }) {
+          tuplet_end = slice_time + tuplet.get_beats(&beat_base_note, None);
+          tuplet_slices.push_back((slice_time, slice_content));
         } else {
-          content
-            .iter()
-            .map(|item| match item {
-              PhraseContent::Note(note) => note.get_beats(&beat_base_note, None),
-              PhraseContent::Chord(chord) => chord.get_beats(&beat_base_note, None),
-              _ => unsafe { core::hint::unreachable_unchecked() },
-            })
-            .reduce(f64::min)
-            .unwrap_or_default()
-        };
-        let target_duration = Duration::from_beats(&beat_base_note, target_beats);
-        let combined = phrase.add_chord();
-        content.iter().for_each(|item| match item {
-          PhraseContent::Note(note) => {
-            let duration = if note.duration.value() < target_duration.value() {
-              target_duration
-            } else {
-              note.duration
-            };
-            let new_note = combined.add_note(note.pitch, duration, Some(note.accidental));
-            note.iter_modifications().for_each(|modification| {
-              new_note.add_modification(modification.r#type);
-            });
-          }
-          PhraseContent::Chord(chord) => {
-            chord.iter_modifications().for_each(|modification| {
-              combined.add_modification(modification.r#type);
-            });
-            chord.iter().for_each(|item| match item {
-              ChordContent::Note(note) => {
-                let duration = if note.duration.value() < target_duration.value() {
-                  target_duration
-                } else {
-                  note.duration
-                };
-                let new_note = combined.add_note(note.pitch, duration, Some(note.accidental));
+          let combined = phrase.add_chord();
+          for content in slice_content {
+            match content {
+              PhraseContent::Note(note) => {
+                let new_note = combined.add_note(note.pitch, note.duration, Some(note.accidental));
                 note.iter_modifications().for_each(|modification| {
                   new_note.add_modification(modification.r#type);
                 });
               }
-            });
+              PhraseContent::Chord(chord) => {
+                chord.iter_modifications().for_each(|modification| {
+                  combined.add_modification(modification.r#type);
+                });
+                for ChordContent::Note(note) in chord {
+                  let new_note = combined.add_note(note.pitch, note.duration, Some(note.accidental));
+                  note.iter_modifications().for_each(|modification| {
+                    new_note.add_modification(modification.r#type);
+                  });
+                }
+              }
+              _ => unsafe { core::hint::unreachable_unchecked() },
+            }
           }
-          _ => unsafe { core::hint::unreachable_unchecked() },
-        });
-      } else if let Some(content) = content.first() {
-        match content {
-          PhraseContent::Note(note) => {
-            phrase.claim_note(note.clone());
-          }
-          PhraseContent::Chord(chord) => {
-            phrase.claim_chord(chord.clone());
-          }
-          _ => unsafe { core::hint::unreachable_unchecked() },
         }
+      } else if let Some(content) = slice_content.pop() {
+        phrase.content.push(content);
       }
     }
     phrase
@@ -355,6 +321,11 @@ impl MultiVoice {
       Some(MultiVoiceContent::Phrase(phrase)) => phrase,
       None => unsafe { core::hint::unreachable_unchecked() },
     }
+  }
+
+  pub fn claim(&mut self, item: MultiVoiceContent) -> &mut Self {
+    self.content.push(item);
+    self
   }
 
   pub fn claim_phrase(&mut self, phrase: Phrase) -> &mut Phrase {
@@ -595,6 +566,7 @@ impl core::fmt::Display for MultiVoice {
 #[cfg(test)]
 mod test {
   use super::*;
+  use crate::modification::NoteModificationType;
   use crate::note::{Accidental, Pitch, PitchName};
 
   #[test]
