@@ -4,7 +4,7 @@ resolver = "2"
 
 [workspace.package]
 edition = "2021"
-version = "0.3.10"
+version = "0.4.0"
 authors = ["Will Hedgecock <will.hedgecock@gmail.com>"]
 license = "MIT"
 documentation = "https://docs.rs/amm_sdk/latest/"
@@ -16,8 +16,8 @@ categories = ["api-bindings", "parsing", "data-structures", "encoding", "multime
 publish = true
 
 [workspace.dependencies]
-amm_internal = { path = "amm_internal", version = "0.3.10" }
-amm_macros = { path = "amm_macros", version = "0.3.10" }
+amm_internal = { path = "amm_internal", version = "0.4.0" }
+amm_macros = { path = "amm_macros", version = "0.4.0" }
 
 [profile.release]
 codegen-units = 1
