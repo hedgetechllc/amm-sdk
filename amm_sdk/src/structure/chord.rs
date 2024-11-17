@@ -53,6 +53,10 @@ impl Chord {
   }
 
   pub fn claim(&mut self, item: ChordContent) -> &mut Self {
+    let ChordContent::Note(note) = &item;
+    self.content.retain(|ChordContent::Note(old_note)| {
+      note.pitch != old_note.pitch || note.duration != old_note.duration || note.accidental != old_note.accidental
+    });
     self.content.push(item);
     self
   }
