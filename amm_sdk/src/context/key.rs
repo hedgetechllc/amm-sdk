@@ -125,7 +125,7 @@ impl Key {
   /// would be represented by a `fifths` value of `-2`.
   ///
   /// If the `mode` parameter is `None`, the key will default
-  /// to [KeyMode::Major].
+  /// to [`KeyMode::Major`].
   #[must_use]
   pub fn from_fifths(fifths: i8, mode: Option<KeyMode>) -> Self {
     let mode = mode.unwrap_or(KeyMode::Major);

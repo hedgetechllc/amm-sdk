@@ -68,7 +68,7 @@ pub enum NoteModificationType {
   Grace { acciaccatura: bool },
   /// ![Half Muted](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/half-muted.png)
   HalfMuted,
-  /// Represents a [HandbellTechnique] used in handbell playing.
+  /// Represents a [`HandbellTechnique`] used in handbell playing.
   Handbell { technique: HandbellTechnique },
   /// Open: <span class="smufl">&#xE5EB;</span>
   ///

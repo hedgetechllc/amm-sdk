@@ -47,9 +47,9 @@ impl TimeSignature {
   /// Creates a new time signature with the given *implicit* type.
   ///
   /// **Note:** This method should only be used for implicit time
-  /// signatures like [TimeSignatureType::CommonTime] and
-  /// [TimeSignatureType::CutTime]. If you need to create an explicit
-  /// time signature, use [TimeSignature::new_explicit] instead.
+  /// signatures like [`TimeSignatureType::CommonTime`] and
+  /// [`TimeSignatureType::CutTime`]. If you need to create an explicit
+  /// time signature, use [`TimeSignature::new_explicit`] instead.
   #[must_use]
   pub fn new(signature: TimeSignatureType) -> Self {
     Self {

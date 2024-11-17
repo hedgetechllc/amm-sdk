@@ -10,9 +10,9 @@ pub enum Dynamic {
   /// For example, `Forte(3)` represents a dynamic marking of `fff`.
   Forte(u8),
   #[default]
-  /// ![MezzoForte](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/mezzo-forte.png)
+  /// ![Mezzo Forte](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/mezzo-forte.png)
   MezzoForte,
-  /// ![MezzoPiano](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/mezzo-piano.png)
+  /// ![Mezzo Piano](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/mezzo-piano.png)
   MezzoPiano,
   /// ![Piano](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/piano.png)
   ///

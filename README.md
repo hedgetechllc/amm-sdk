@@ -6,7 +6,6 @@ Under heavy development - Updates forthcoming
 
 ## Under Development
 
-* Create WASM build
 * Finish `iter_timeslices()` to work with playback
   * Make `get_slices_for_playback()`: Create implicit slices for things like glissandos and mordents
     * Determines that fastest possible timeslice and use that as the time quantization level
@@ -14,6 +13,7 @@ Under heavy development - Updates forthcoming
 * Implement `get_pcm_samples()` on `Timeslice` to create audio buffer for note + mods to use in direct playback
 * Finish MIDI Reader Implementation
 * Make fully `no_std` compatible
+* Create WASM build
 
 * Add a test containing Glissandos and/or multi-note tremolos and/or implicit + explicit tempo changes
 * Finish MusicXML Reader Implementation
