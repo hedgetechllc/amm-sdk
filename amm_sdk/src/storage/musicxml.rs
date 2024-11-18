@@ -1032,7 +1032,7 @@ impl MusicXmlConverter {
   #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
   fn parse_note_element(
     note: &musicxml::elements::Note,
-    accidental_context: &mut BTreeMap<Pitch, Accidental>,
+    accidental_context: &mut BTreeMap<Pitch, Vec<(usize, Accidental)>>,
     time_slices: &mut BTreeMap<String, Vec<TimeSliceContainer>>,
     divisions_per_quarter_note: usize,
     previous_cursor: usize,
@@ -1179,10 +1179,21 @@ impl MusicXmlConverter {
         musicxml::datatypes::AccidentalValue::FlatFlat => Accidental::DoubleFlat,
         _ => Accidental::Natural,
       };
-      accidental_context.insert(pitch, accidental);
+      accidental_context
+        .entry(pitch)
+        .or_default()
+        .push((if chord { previous_cursor } else { cursor }, accidental));
       Some(accidental)
+    } else if let Some(accidental_list) = accidental_context.get(&pitch) {
+      accidental_list.iter().find_map(|(accidental_time, accidental)| {
+        if *accidental_time <= if chord { previous_cursor } else { cursor } {
+          Some(*accidental)
+        } else {
+          None
+        }
+      })
     } else {
-      accidental_context.get(&pitch).copied()
+      None
     };
     let tuplet_details =
       note
