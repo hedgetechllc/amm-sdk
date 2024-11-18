@@ -1,6 +1,5 @@
 mod chord;
 mod multivoice;
-mod note;
 mod part;
 mod phrase;
 mod section;
