@@ -1,3 +1,5 @@
+//! This module contains all musical note-related structs and enums.
+
 mod accidental;
 mod duration;
 mod note;

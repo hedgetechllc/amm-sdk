@@ -1,3 +1,6 @@
+//! This module contains the various modifications that can be applied
+//! to the musical elements in a score.
+
 mod chord;
 mod direction;
 mod note;

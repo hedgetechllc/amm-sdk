@@ -20,41 +20,68 @@ const FIVE_HUNDRED_TWELFTH_VALUE: f64 = 0.001_953_125;
 const ONE_THOUSAND_TWENTY_FOURTH_VALUE: f64 = 0.000_976_562_5;
 const TWO_THOUSAND_FOURTH_EIGHTH_VALUE: f64 = 0.000_488_281_25;
 
+/// Represents the type of duration of a note.
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum DurationType {
+  /// ![Maxima Duration](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/note-type-maxima.png)
   Maxima,
+  /// ![Long Duration](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/note-type-long.png)
   Long,
+  /// ![Breve Duration](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/note-type-breve.png)
   Breve,
+  /// ![Whole Duration](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/note-type-whole.png)
   Whole,
+  /// ![Half Duration](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/note-type-half.png)
   Half,
+  /// ![Quarter Duration](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/note-type-quarter.png)
   #[default]
   Quarter,
+  /// ![8th Duration](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/note-type-eighth.png)
   Eighth,
+  /// ![16th Duration](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/note-type-16th.png)
   Sixteenth,
+  /// ![32nd Duration](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/note-type-32nd.png)
   ThirtySecond,
+  /// ![64th Duration](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/note-type-64th.png)
   SixtyFourth,
+  /// ![128th Duration](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/note-type-128th.png)
   OneHundredTwentyEighth,
+  /// ![256th Duration](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/note-type-256th.png)
   TwoHundredFiftySixth,
+  /// ![512th Duration](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/note-type-512th.png)
   FiveHundredTwelfth,
+  /// ![1024th Duration](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/note-type-1024th.png)
   OneThousandTwentyFourth,
+  /// ![2048th Duration](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/note-type-2048th.png)
   TwoThousandFortyEighth,
 }
 
+/// Represents the duration of a note as a combination of note type and dots.
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub struct Duration {
+  /// The type of duration of the note.
   pub value: DurationType,
+  /// The number of dots after the note.
+  ///
+  /// Each dot increases the duration of a note by half of its original value, compounded.
+  ///
+  /// For example, a quarter note with one dot is equivalent in length to a quarter note
+  /// and an eighth note. A quarter note with two dots is equivalent to a quarter
+  /// note, an eighth note, and a sixteenth note.
   pub dots: u8,
 }
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 impl Duration {
+  /// Creates a new [`Duration`] with the given note type and number of dots.
   #[must_use]
   pub fn new(value: DurationType, dots: u8) -> Self {
     Self { value, dots }
   }
 
+  /// Returns the number of dots required to represent the remainder of a note's value.
   #[must_use]
   fn dots_from_remainder(base_value: f64, full_value: f64) -> u8 {
     let (mut current_value, mut dots) = (base_value, 0);
@@ -65,6 +92,9 @@ impl Duration {
     dots
   }
 
+  /// Creates a new [`Duration`] from the given beat base value and number of beats.
+  ///
+  /// The `beat_base_value` defines the type of note that represents a single beat.
   #[must_use]
   pub fn from_beats(beat_base_value: &Duration, beats: f64) -> Self {
     let value = beats * beat_base_value.value();
@@ -110,11 +140,14 @@ impl Duration {
     }
   }
 
+  /// Creates a new [`Duration`] from the given tempo and note duration in seconds.
   #[must_use]
   pub fn from_duration(tempo: &Tempo, duration: f64) -> Self {
     Duration::from_beats(&tempo.base_note, duration * f64::from(tempo.beats_per_minute) / 60.0)
   }
 
+  /// Returns the minimum number and type of notes that can be used to
+  /// represent the specified number of beats.
   #[must_use]
   #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
   pub(crate) fn get_minimum_divisible_notes(beats: f64) -> (DurationType, u32) {
@@ -142,6 +175,7 @@ impl Duration {
     }
   }
 
+  /// Returns the value of the duration as its fractional representation.
   #[must_use]
   pub fn value(&self) -> f64 {
     let base_duration = match self.value {
@@ -166,17 +200,23 @@ impl Duration {
       .sum()
   }
 
+  /// Returns the number of beats that the duration represents.
+  ///
+  /// The `base_beat_value` parameter defines the type of note that represents a single beat.
   #[must_use]
   pub fn beats(&self, base_beat_value: f64) -> f64 {
     self.value() / base_beat_value
   }
 
+  /// Splits the duration into `into_notes` number of notes.
+  ///
+  /// **Note:** The `into_notes` parameter **must** be a power of 2.
   #[must_use]
-  pub fn split(&self, mut times: u8) -> Self {
+  pub fn split(&self, mut into_notes: u8) -> Self {
     // Note: `times` must be a power of 2
     let mut duration = self.value;
-    while times > 1 {
-      times /= 2;
+    while into_notes > 1 {
+      into_notes /= 2;
       duration = match duration {
         DurationType::Maxima => DurationType::Long,
         DurationType::Long => DurationType::Breve,
@@ -200,6 +240,7 @@ impl Duration {
   }
 }
 
+/// Converts the number of dots in the duration into a textual representation.
 #[must_use]
 fn dots_to_text(dots: u8) -> String {
   match dots {

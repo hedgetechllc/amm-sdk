@@ -58,7 +58,7 @@ impl Direction {
     self.id
   }
 
-  /// Converts the direction into a [Timeslice].
+  /// Converts the direction into a [`Timeslice`].
   #[must_use]
   pub fn to_timeslice(&self) -> Timeslice {
     let mut timeslice = Timeslice::new();

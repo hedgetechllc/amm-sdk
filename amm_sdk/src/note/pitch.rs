@@ -3,6 +3,7 @@ use amm_macros::{JsonDeserialize, JsonSerialize};
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
+/// Represents the letter name corresponding to a pitch.
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum PitchName {
@@ -17,20 +18,29 @@ pub enum PitchName {
   G,
 }
 
+/// Represents a musical pitch, which is a combination of a pitch name and octave.
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub struct Pitch {
+  /// The letter name of the pitch.
   pub name: PitchName,
+  /// The octave number of the pitch, where each octave contains 12 semitones.
   pub octave: u8,
 }
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 impl Pitch {
+  /// Creates a new pitch with the given name and octave.
+  ///
+  /// **Note:** This method should only be used for musical pitches like
+  /// [`PitchName::A`] or [`PitchName::B`]. If you need to create an unvoiced
+  /// pitch (a rest), use [`Pitch::new_rest`] instead.
   #[must_use]
   pub fn new(name: PitchName, octave: u8) -> Self {
     Self { name, octave }
   }
 
+  /// Creates a new unvoiced pitch which represents silence.
   #[must_use]
   pub fn new_rest() -> Self {
     Self {
@@ -39,11 +49,13 @@ impl Pitch {
     }
   }
 
+  /// Returns whether the pitch is a rest (i.e., unvoiced).
   #[must_use]
   pub fn is_rest(&self) -> bool {
     self.name == PitchName::Rest
   }
 
+  /// Returns the pitch's value as a tuple of `(pitch_index, num_semitones_from_A4)`.
   #[must_use]
   #[allow(clippy::cast_possible_wrap)]
   pub(crate) fn value(self) -> (usize, i8) {
