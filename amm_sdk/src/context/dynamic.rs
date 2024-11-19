@@ -4,19 +4,31 @@ use amm_macros::{JsonDeserialize, JsonSerialize};
 /// Represents a dynamic marking in music notation.
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum Dynamic {
-  /// ![Forte](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/forte.png)
+  /// ![Forte](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/f.png)
   ///
-  /// The magnitude of the dynamic marking is specified by the `u8` value.
+  /// A `forte` dynamic marking indicates that corresponding music should be played
+  /// relatively loudly.
+  /// 
+  /// The magnitude of the notated forte is specified by the `u8` value.
   /// For example, `Forte(3)` represents a dynamic marking of `fff`.
   Forte(u8),
   #[default]
-  /// ![Mezzo Forte](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/mezzo-forte.png)
+  /// ![Mezzo Forte](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/mf.png)
+  /// 
+  /// A `mezzo-forte` dynamic marking indicates that corresponding music should be played
+  /// only slightly louder than average.
   MezzoForte,
-  /// ![Mezzo Piano](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/mezzo-piano.png)
+  /// ![Mezzo Piano](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/mp.png)
+  /// 
+  /// A `mezzo-piano` dynamic marking indicates that corresponding music should be played
+  /// only slightly softer than average.
   MezzoPiano,
-  /// ![Piano](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/piano.png)
+  /// ![Piano](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/p.png)
   ///
-  /// The magnitude of the dynamic marking is specified by the `u8` value.
+  /// A `piano` dynamic marking indicates that corresponding music should be played
+  /// relatively softly.
+  /// 
+  /// The magnitude of the notated piano is specified by the `u8` value.
   /// For example, `Piano(3)` represents a dynamic marking of `ppp`.
   Piano(u8),
 }

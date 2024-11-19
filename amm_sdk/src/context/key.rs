@@ -36,7 +36,7 @@ const FIFTHS_D_SHARP_MINOR: i8 = 6;
 const FIFTHS_E_MINOR: i8 = 1;
 const FIFTHS_E_FLAT_MINOR: i8 = -6;
 
-/// Represents the relative interval between notes in musical scale.
+/// Represents the relative intervals between notes in a musical scale.
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum KeyMode {
@@ -54,57 +54,57 @@ pub enum KeyMode {
 }
 
 /// Represents the key signature of a musical piece, not taking
-/// into account its mode (i.e., major or minor).
+/// into account its mode (i.e., major, minor, etc.).
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum KeySignature {
-  /// ![Key of A](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-a.png)
+  /// The key of A is defined by a scale with a root note (tonic) of A.
   A,
-  /// ![Key of A#](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-a-sharp.png)
+  /// The key of A# is defined by a scale with a root note (tonic) of A#.
   ASharp,
-  /// ![Key of A♭](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-a-flat.png)
+  /// The key of A♭ is defined by a scale with a root note (tonic) of A♭.
   AFlat,
-  /// ![Key of B](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-b.png)
+  /// The key of B is defined by a scale with a root note (tonic) of B.
   B,
-  /// ![Key of B♭](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-b-flat.png)
+  /// The key of B♭ is defined by a scale with a root note (tonic) of B♭.
   BFlat,
-  /// ![Key of C](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-c.png)
+  /// The key of C is defined by a scale with a root note (tonic) of C.
   #[default]
   C,
-  /// ![Key of C#](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-c-sharp.png)
+  /// The key of C# is defined by a scale with a root note (tonic) of C#.
   CSharp,
-  /// ![Key of C♭](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-c-flat.png)
+  /// The key of C♭ is defined by a scale with a root note (tonic) of C♭.
   CFlat,
-  /// ![Key of D](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-d.png)
+  /// The key of D is defined by a scale with a root note (tonic) of D.
   D,
-  /// ![Key of D#](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-d-sharp.png)
+  /// The key of D# is defined by a scale with a root note (tonic) of D#.
   DSharp,
-  /// ![Key of D♭](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-d-flat.png)
+  /// The key of D♭ is defined by a scale with a root note (tonic) of D♭.
   DFlat,
-  /// ![Key of E](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-e.png)
+  /// The key of E is defined by a scale with a root note (tonic) of E.
   E,
-  /// ![Key of E♭](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-e-flat.png)
+  /// The key of E♭ is defined by a scale with a root note (tonic) of E♭.
   EFlat,
-  /// ![Key of F](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-f.png)
+  /// The key of F is defined by a scale with a root note (tonic) of F.
   F,
-  /// ![Key of F#](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-f-sharp.png)
+  /// The key of F# is defined by a scale with a root note (tonic) of F#.
   FSharp,
-  /// ![Key of G](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-g.png)
+  /// The key of G is defined by a scale with a root note (tonic) of G.
   G,
-  /// ![Key of G#](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-g-sharp.png)
+  /// The key of G# is defined by a scale with a root note (tonic) of G#.
   GSharp,
-  /// ![Key of G♭](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/key-g-flat.png)
+  /// The key of G♭ is defined by a scale with a root note (tonic) of G♭.
   GFlat,
 }
 
 /// Represents the key of a musical piece, including both its
-/// mode (i.e., major or minor) and its signature.
+/// mode (i.e., major, minor, etc.) and its signature (defining root note).
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub struct Key {
-  /// The mode of the key (i.e., major or minor).
+  /// The mode of the key (i.e., major, minor, etc.).
   pub mode: KeyMode,
-  /// The signature of the key (i.e., A, A♭, B, etc).
+  /// The defining root note of the key (i.e., A, A♭, B, etc).
   pub signature: KeySignature,
 }
 
@@ -194,7 +194,7 @@ impl Key {
     }
   }
 
-  /// Returns a new key with the same tonic as the current key,
+  /// Returns a new key with the same tonic (root note) as the current key,
   /// but with the opposite mode (i.e., the parallel key of C-Major
   /// would be C-Minor and vice versa).
   #[must_use]
@@ -224,8 +224,8 @@ impl Key {
 
   /// Converts the current key into its parallel key.
   ///
-  /// A parallel key is a key with the same tonic as the current key,
-  /// but with the opposite mode (i.e., the parallel key of C-Major
+  /// A parallel key is a key with the same tonic (root note) as the current
+  /// key, but with the opposite mode (i.e., the parallel key of C-Major
   /// would be C-Minor and vice versa).
   pub fn make_parallel(&mut self) {
     self.mode = if self.mode == KeyMode::Major {

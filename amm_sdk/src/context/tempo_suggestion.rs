@@ -67,7 +67,7 @@ impl TempoSuggestion {
     Self { marking }
   }
 
-  /// Returns a description of the tempo suggestion.
+  /// Returns a textual description of the tempo suggestion.
   #[must_use]
   pub fn description(&self) -> String {
     String::from(match self.marking {
@@ -95,7 +95,8 @@ impl TempoSuggestion {
     })
   }
 
-  /// Returns the minimum beats per minute for the tempo suggestion.
+  /// Returns the minimum beats per minute that the tempo suggestion is
+  /// likely to represent.
   #[must_use]
   pub fn bpm_min(&self) -> u16 {
     match self.marking {
@@ -121,7 +122,8 @@ impl TempoSuggestion {
     }
   }
 
-  /// Returns the maximum beats per minute for the tempo suggestion.
+  /// Returns the maximum beats per minute that the tempo suggestion is
+  /// likely to represent.
   #[must_use]
   pub fn bpm_max(&self) -> u16 {
     match self.marking {
@@ -142,7 +144,8 @@ impl TempoSuggestion {
     }
   }
 
-  /// Returns the average beats per minute for the tempo suggestion.
+  /// Returns the average beats per minute that the tempo suggestion is
+  /// likely to represent.
   #[must_use]
   pub fn value(&self) -> u16 {
     match self.marking {

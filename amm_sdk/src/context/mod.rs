@@ -1,3 +1,6 @@
+//! This module contains all of the data types used to represent
+//! the contextual content and information in a music score.
+
 mod clef;
 mod dynamic;
 mod id;

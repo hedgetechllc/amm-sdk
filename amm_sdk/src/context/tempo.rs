@@ -8,7 +8,7 @@ use wasm_bindgen::prelude::*;
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub struct Tempo {
-  /// The base note which represents a "beat" in the tempo.
+  /// The base note which represents a single "beat" in the tempo.
   pub base_note: Duration,
   /// The number of beats per minute.
   pub beats_per_minute: u16,

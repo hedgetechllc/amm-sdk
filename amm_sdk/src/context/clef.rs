@@ -9,12 +9,18 @@ use wasm_bindgen::prelude::*;
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum ClefSymbol {
-  /// ![G Clef](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/g-clef.png)
+  /// ![G Clef](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/clef-G.png)
+  /// 
+  /// The middle curl of the G clef wraps around the staff line used to notate a pitch of G4.
   #[default]
   GClef,
-  /// ![C Clef](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/c-clef.png)
+  /// ![C Clef](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/clef-C.png)
+  /// 
+  /// The middle of the C clef indicates the staff line used to notate a pitch of C4 (middle C).
   CClef,
-  /// ![F Clef](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/f-clef.png)
+  /// ![F Clef](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/clef-F.png)
+  /// 
+  /// The two dots of the F clef surround the staff line used to notate a pitch of F3.
   FClef,
 }
 

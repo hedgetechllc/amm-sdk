@@ -7,19 +7,20 @@ use wasm_bindgen::prelude::*;
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
 pub enum TimeSignatureType {
-  /// ![Common Time](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/common-time.png)
+  /// ![Common Time](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/time-symbol-common.png)
   ///
-  /// Represents an explicit time signature of 4/4.
+  /// Equivalent to a [`TimeSignatureType::Explicit`] time signature of 4/4.
   #[default]
   CommonTime,
-  /// ![Cut Time](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/cut-time.png)
+  /// ![Cut Time](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/time-symbol-cut.png)
   ///
-  /// Represents an explicit time signature of 2/2.
+  /// Equivalent to a [`TimeSignatureType::Explicit`] time signature of 2/2.
   CutTime,
-  /// ![Explicit Time](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/explicit-time.png)
+  /// ![Explicit Time](https://hedgetechllc.github.io/amm-sdk/amm_sdk/images/time-symbol-normal.png)
   ///
-  /// Represents the number of beats in each measure and the
-  /// note value which represents a beat.
+  /// Represents the number of beats in each measure (numerator) and the
+  /// note value which represents a beat (denominator). For example, `3/4`
+  /// represents 3 beats per measure, with a quarter note receiving one beat.
   Explicit,
   /// Represents an explicit lack of time signature,
   /// also called "senza misura".
@@ -67,10 +68,10 @@ impl TimeSignature {
     }
   }
 
-  /// Creates a new time signature with the given *explicit* type.
+  /// Creates a new time signature with the given *explicit* value.
   ///
   /// The `numerator` indicates the number of beats in each measure,
-  /// and the `denominator` designates the note value which represents
+  /// and the `denominator` designates the note value that represents
   /// a beat in the measure (e.g., `4` = quarter note, `8` = eighth note,
   /// etc.).
   #[must_use]
