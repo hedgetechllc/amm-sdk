@@ -1,3 +1,6 @@
+//! This module provides the necessary tools to load and store
+//! compositions in different formats.
+
 use crate::Composition;
 
 use alloc::string::String;
@@ -18,6 +21,7 @@ pub(crate) trait Store {
   fn save(path: &str, composition: &Composition) -> Result<usize, String>;
 }
 
+/// Represents the various storage formats supported by the SDK.
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
 pub enum Storage {
   #[default]
@@ -27,7 +31,7 @@ pub enum Storage {
 }
 
 impl Storage {
-  /// TODO
+  /// Loads a composition from a file at the specified `path`.
   ///
   /// # Errors
   /// TODO
