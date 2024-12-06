@@ -249,6 +249,10 @@ impl Key {
     *self = Key::from_fifths(self.fifths(), Some(new_mode));
   }
 
+  /// Returns the accidentals for each note in the key.
+  ///
+  /// The first element in the array represents a rest note, while the
+  /// remaining elements represent the notes A through G in order.
   #[must_use]
   pub(crate) fn accidentals(self) -> [Accidental; 8] {
     let fifths = self.fifths();

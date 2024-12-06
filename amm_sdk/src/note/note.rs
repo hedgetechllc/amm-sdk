@@ -1,4 +1,4 @@
-use super::{Accidental, Duration, Pitch};
+use super::{Accidental, Duration, Pitch, PitchName};
 use crate::context::{generate_id, Key, Tempo};
 use crate::modification::{NoteModification, NoteModificationType};
 use crate::temporal::Timeslice;
@@ -35,6 +35,64 @@ impl Note {
       duration,
       accidental: accidental.unwrap_or_default(),
       modifications: BTreeSet::new(),
+    }
+  }
+
+  /// Creates a new note from the given MIDI number, duration, and optional key signature.
+  #[must_use]
+  pub fn from_midi(mut midi_number: u8, duration: Duration, key: Option<Key>) -> Self {
+    if midi_number == 255 {
+      Self::new(Pitch::new_rest(), duration, None)
+    } else {
+      let fifths = key.unwrap_or_default().fifths();
+      let (pitch_name, accidental) = match midi_number % 12 {
+        0 if fifths > -6 && fifths < 2 => (PitchName::C, Accidental::None),
+        0 if fifths >= 7 => {
+          midi_number -= 12;
+          (PitchName::B, Accidental::None)
+        }
+        0 => (PitchName::C, Accidental::Natural),
+        1 if fifths > -4 && fifths <= 0 => (PitchName::D, Accidental::Flat),
+        1 if fifths <= -4 => (PitchName::D, Accidental::None),
+        1 if fifths < 2 => (PitchName::C, Accidental::Sharp),
+        1 => (PitchName::C, Accidental::None),
+        2 if fifths > -4 && fifths < 4 => (PitchName::D, Accidental::None),
+        2 => (PitchName::D, Accidental::Natural),
+        3 if fifths > -2 && fifths <= 0 => (PitchName::E, Accidental::Flat),
+        3 if fifths <= -2 => (PitchName::E, Accidental::None),
+        3 if fifths < 4 => (PitchName::D, Accidental::Sharp),
+        3 => (PitchName::D, Accidental::None),
+        4 if fifths > -2 && fifths < 6 => (PitchName::E, Accidental::None),
+        4 if fifths <= -7 => (PitchName::F, Accidental::None),
+        4 => (PitchName::E, Accidental::Natural),
+        5 if fifths > -7 && fifths < 1 => (PitchName::F, Accidental::None),
+        5 if fifths >= 6 => (PitchName::E, Accidental::None),
+        5 => (PitchName::F, Accidental::Natural),
+        6 if fifths > -5 && fifths < 0 => (PitchName::G, Accidental::Flat),
+        6 if fifths <= -5 => (PitchName::G, Accidental::None),
+        6 if fifths < 1 => (PitchName::F, Accidental::Sharp),
+        6 => (PitchName::F, Accidental::None),
+        7 if fifths > -5 && fifths < 3 => (PitchName::G, Accidental::None),
+        7 => (PitchName::G, Accidental::Natural),
+        8 if fifths > -3 && fifths <= 0 => (PitchName::A, Accidental::Flat),
+        8 if fifths <= -3 => (PitchName::A, Accidental::None),
+        8 if fifths < 3 => (PitchName::G, Accidental::Sharp),
+        8 => (PitchName::G, Accidental::None),
+        9 if fifths > -3 && fifths < 5 => (PitchName::A, Accidental::None),
+        9 => (PitchName::A, Accidental::Natural),
+        10 if fifths == 0 => (PitchName::B, Accidental::Flat),
+        10 if fifths < 0 => (PitchName::B, Accidental::None),
+        10 if fifths < 5 => (PitchName::A, Accidental::Sharp),
+        10 => (PitchName::A, Accidental::None),
+        11 if fifths > -1 && fifths < 7 => (PitchName::B, Accidental::None),
+        11 if fifths <= -6 => {
+          midi_number += 12;
+          (PitchName::C, Accidental::None)
+        }
+        11 => (PitchName::B, Accidental::Natural),
+        _ => (PitchName::Rest, Accidental::None),
+      };
+      Self::new(Pitch::new(pitch_name, midi_number / 12 - 1), duration, Some(accidental))
     }
   }
 
@@ -209,5 +267,43 @@ impl core::fmt::Display for Note {
         format!(" ({mods})")
       },
     )
+  }
+}
+
+#[cfg(test)]
+mod test {
+  use super::*;
+  use crate::context::{Key, KeyMode, KeySignature};
+
+  #[test]
+  fn test_note_from_midi() {
+    let key_options = [
+      Key::new(KeySignature::C, KeyMode::Major),
+      Key::new(KeySignature::CFlat, KeyMode::Major),
+      Key::new(KeySignature::CSharp, KeyMode::Major),
+      Key::new(KeySignature::D, KeyMode::Major),
+      Key::new(KeySignature::DFlat, KeyMode::Major),
+      Key::new(KeySignature::DSharp, KeyMode::Major),
+      Key::new(KeySignature::E, KeyMode::Major),
+      Key::new(KeySignature::EFlat, KeyMode::Major),
+      Key::new(KeySignature::F, KeyMode::Major),
+      Key::new(KeySignature::FSharp, KeyMode::Major),
+      Key::new(KeySignature::G, KeyMode::Major),
+      Key::new(KeySignature::GFlat, KeyMode::Major),
+      Key::new(KeySignature::GSharp, KeyMode::Major),
+      Key::new(KeySignature::A, KeyMode::Major),
+      Key::new(KeySignature::AFlat, KeyMode::Major),
+      Key::new(KeySignature::ASharp, KeyMode::Major),
+      Key::new(KeySignature::B, KeyMode::Major),
+      Key::new(KeySignature::BFlat, KeyMode::Major),
+    ];
+    for key in key_options {
+      for midi_number in 84..96 {
+        let note = Note::from_midi(midi_number, Duration::default(), Some(key)).semitone_distance(key.accidentals());
+        let expected_note =
+          Note::from_midi(midi_number, Duration::default(), None).semitone_distance(Key::default().accidentals());
+        assert_eq!(note, expected_note);
+      }
+    }
   }
 }
