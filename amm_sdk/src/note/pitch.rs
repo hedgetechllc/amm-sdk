@@ -18,6 +18,24 @@ pub enum PitchName {
   G,
 }
 
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+impl PitchName {
+  /// Returns the index of the pitch name within the `PitchName` enum.
+  #[must_use]
+  pub(crate) fn index(self) -> usize {
+    match self {
+      PitchName::Rest => 0,
+      PitchName::A => 1,
+      PitchName::B => 2,
+      PitchName::C => 3,
+      PitchName::D => 4,
+      PitchName::E => 5,
+      PitchName::F => 6,
+      PitchName::G => 7,
+    }
+  }
+}
+
 /// Represents a musical pitch, which is a combination of a pitch name and octave.
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]

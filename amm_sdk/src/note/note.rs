@@ -41,55 +41,55 @@ impl Note {
   /// Creates a new note from the given MIDI number, duration, and optional key signature.
   #[must_use]
   pub fn from_midi(mut midi_number: u8, duration: Duration, key: Option<Key>) -> Self {
-    if midi_number == 255 {
+    if midi_number == 0 || midi_number == 255 {
       Self::new(Pitch::new_rest(), duration, None)
     } else {
-      let fifths = key.unwrap_or_default().fifths();
+      let key = key.unwrap_or_default();
       let (pitch_name, accidental) = match midi_number % 12 {
-        0 if fifths > -6 && fifths < 2 => (PitchName::C, Accidental::None),
-        0 if fifths >= 7 => {
+        0 if key.is_sharp_key() && key.contains(PitchName::B) => {
           midi_number -= 12;
           (PitchName::B, Accidental::None)
         }
-        0 => (PitchName::C, Accidental::Natural),
-        1 if fifths > -4 && fifths <= 0 => (PitchName::D, Accidental::Flat),
-        1 if fifths <= -4 => (PitchName::D, Accidental::None),
-        1 if fifths < 2 => (PitchName::C, Accidental::Sharp),
-        1 => (PitchName::C, Accidental::None),
-        2 if fifths > -4 && fifths < 4 => (PitchName::D, Accidental::None),
-        2 => (PitchName::D, Accidental::Natural),
-        3 if fifths > -2 && fifths <= 0 => (PitchName::E, Accidental::Flat),
-        3 if fifths <= -2 => (PitchName::E, Accidental::None),
-        3 if fifths < 4 => (PitchName::D, Accidental::Sharp),
-        3 => (PitchName::D, Accidental::None),
-        4 if fifths > -2 && fifths < 6 => (PitchName::E, Accidental::None),
-        4 if fifths <= -7 => (PitchName::F, Accidental::None),
-        4 => (PitchName::E, Accidental::Natural),
-        5 if fifths > -7 && fifths < 1 => (PitchName::F, Accidental::None),
-        5 if fifths >= 6 => (PitchName::E, Accidental::None),
-        5 => (PitchName::F, Accidental::Natural),
-        6 if fifths > -5 && fifths < 0 => (PitchName::G, Accidental::Flat),
-        6 if fifths <= -5 => (PitchName::G, Accidental::None),
-        6 if fifths < 1 => (PitchName::F, Accidental::Sharp),
-        6 => (PitchName::F, Accidental::None),
-        7 if fifths > -5 && fifths < 3 => (PitchName::G, Accidental::None),
-        7 => (PitchName::G, Accidental::Natural),
-        8 if fifths > -3 && fifths <= 0 => (PitchName::A, Accidental::Flat),
-        8 if fifths <= -3 => (PitchName::A, Accidental::None),
-        8 if fifths < 3 => (PitchName::G, Accidental::Sharp),
-        8 => (PitchName::G, Accidental::None),
-        9 if fifths > -3 && fifths < 5 => (PitchName::A, Accidental::None),
-        9 => (PitchName::A, Accidental::Natural),
-        10 if fifths == 0 => (PitchName::B, Accidental::Flat),
-        10 if fifths < 0 => (PitchName::B, Accidental::None),
-        10 if fifths < 5 => (PitchName::A, Accidental::Sharp),
-        10 => (PitchName::A, Accidental::None),
-        11 if fifths > -1 && fifths < 7 => (PitchName::B, Accidental::None),
-        11 if fifths <= -6 => {
+        0 if key.contains(PitchName::C) => (PitchName::C, Accidental::Natural),
+        0 => (PitchName::C, Accidental::None),
+        1 if key.is_sharp_key() && key.contains(PitchName::C) => (PitchName::C, Accidental::None),
+        1 if key.is_flat_key() && key.contains(PitchName::D) => (PitchName::D, Accidental::None),
+        1 if key.is_sharp_key() => (PitchName::C, Accidental::Sharp),
+        1 => (PitchName::D, Accidental::Flat),
+        2 if key.contains(PitchName::D) => (PitchName::D, Accidental::Natural),
+        2 => (PitchName::D, Accidental::None),
+        3 if key.is_sharp_key() && key.contains(PitchName::D) => (PitchName::D, Accidental::None),
+        3 if key.is_flat_key() && key.contains(PitchName::E) => (PitchName::E, Accidental::None),
+        3 if key.is_sharp_key() => (PitchName::D, Accidental::Sharp),
+        3 => (PitchName::E, Accidental::Flat),
+        4 if key.is_flat_key() && key.contains(PitchName::F) => (PitchName::F, Accidental::None),
+        4 if key.contains(PitchName::E) => (PitchName::E, Accidental::Natural),
+        4 => (PitchName::E, Accidental::None),
+        5 if key.is_sharp_key() && key.contains(PitchName::E) => (PitchName::E, Accidental::None),
+        5 if key.contains(PitchName::F) => (PitchName::F, Accidental::Natural),
+        5 => (PitchName::F, Accidental::None),
+        6 if key.is_sharp_key() && key.contains(PitchName::F) => (PitchName::F, Accidental::None),
+        6 if key.is_flat_key() && key.contains(PitchName::G) => (PitchName::G, Accidental::None),
+        6 if key.is_sharp_key() => (PitchName::F, Accidental::Sharp),
+        6 => (PitchName::G, Accidental::Flat),
+        7 if key.contains(PitchName::G) => (PitchName::G, Accidental::Natural),
+        7 => (PitchName::G, Accidental::None),
+        8 if key.is_sharp_key() && key.contains(PitchName::G) => (PitchName::G, Accidental::None),
+        8 if key.is_flat_key() && key.contains(PitchName::A) => (PitchName::A, Accidental::None),
+        8 if key.is_sharp_key() => (PitchName::G, Accidental::Sharp),
+        8 => (PitchName::A, Accidental::Flat),
+        9 if key.contains(PitchName::A) => (PitchName::A, Accidental::Natural),
+        9 => (PitchName::A, Accidental::None),
+        10 if key.is_sharp_key() && key.contains(PitchName::A) => (PitchName::A, Accidental::None),
+        10 if key.is_flat_key() && key.contains(PitchName::B) => (PitchName::B, Accidental::None),
+        10 if key.is_sharp_key() => (PitchName::A, Accidental::Sharp),
+        10 => (PitchName::B, Accidental::Flat),
+        11 if key.is_flat_key() && key.contains(PitchName::C) => {
           midi_number += 12;
           (PitchName::C, Accidental::None)
         }
-        11 => (PitchName::B, Accidental::Natural),
+        11 if key.contains(PitchName::B) => (PitchName::B, Accidental::Natural),
+        11 => (PitchName::B, Accidental::None),
         _ => (PitchName::Rest, Accidental::None),
       };
       Self::new(Pitch::new(pitch_name, midi_number / 12 - 1), duration, Some(accidental))

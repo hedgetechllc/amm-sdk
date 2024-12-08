@@ -262,18 +262,17 @@ pub struct MidiConverter;
 impl MidiConverter {
   fn load_from_midi(data: &[u8]) -> Result<Composition, String> {
     // Parse the MIDI representation
-    let _midi = Smf::parse(data).map_err(|err| err.to_string())?;
-    let track_count = _midi.tracks.len();
-    let ticks_per_beat = get_ticks_per_beat(&_midi.header);
-    let control_track = parse_control_track(&_midi.tracks[0]);
+    let midi = Smf::parse(data).map_err(|err| err.to_string())?;
+    let ticks_per_beat = get_ticks_per_beat(&midi.header);
+    let control_track = parse_control_track(&midi.tracks[0]);
 
-    // Generate the initial composition structure and fill in known metadata
+    // Generate the composition structure and fill in known data
     let mut composition = Composition::new("Default", None, None, None);
-    let part = composition.add_part("todo_part_name");
-    let section = part.add_section("Default");
-    for i in 1..track_count {
-      let staff = section.add_staff(&format!("{}", i));
-      load_staff_content(staff, control_track.clone(), &_midi.tracks[i], ticks_per_beat);
+    let part = composition.add_part("MIDI Track");
+    let section = part.add_section("Top-Level Section");
+    for i in 1..midi.tracks.len() {
+      let staff = section.add_staff(&format!("Section {i}"));
+      load_staff_content(staff, control_track.clone(), &midi.tracks[i], ticks_per_beat);
     }
 
     // Return the fully constructed composition

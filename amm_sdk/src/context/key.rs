@@ -1,4 +1,4 @@
-use crate::note::Accidental;
+use crate::note::{Accidental, PitchName};
 use amm_internal::amm_prelude::*;
 use amm_macros::{JsonDeserialize, JsonSerialize};
 #[cfg(target_arch = "wasm32")]
@@ -192,6 +192,25 @@ impl Key {
       (KeySignature::GFlat, KeyMode::Major) => FIFTHS_G_FLAT_MAJOR,
       _ => FIFTHS_C_MAJOR,
     }
+  }
+
+  /// Returns whether the key contains an accidental on the given pitch.
+  #[must_use]
+  pub fn contains(&self, pitch: PitchName) -> bool {
+    let key_accidentals = self.accidentals();
+    key_accidentals[pitch.index()] != Accidental::None
+  }
+
+  /// Returns whether the key contains one or more flat accidentals.
+  #[must_use]
+  pub fn is_flat_key(&self) -> bool {
+    self.fifths() < 0
+  }
+
+  /// Returns whether the key contains one or more sharp accidentals.
+  #[must_use]
+  pub fn is_sharp_key(&self) -> bool {
+    self.fifths() > 0
   }
 
   /// Returns a new key with the same tonic (root note) as the current key,
