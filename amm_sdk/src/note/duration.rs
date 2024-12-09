@@ -57,6 +57,30 @@ pub enum DurationType {
   TwoThousandFortyEighth,
 }
 
+impl DurationType {
+  /// Returns the value of the duration type as its fractional representation.
+  #[must_use]
+  pub const fn value(&self) -> f64 {
+    match self {
+      DurationType::Maxima => MAXIMA_VALUE,
+      DurationType::Long => LONG_VALUE,
+      DurationType::Breve => BREVE_VALUE,
+      DurationType::Whole => WHOLE_VALUE,
+      DurationType::Half => HALF_VALUE,
+      DurationType::Quarter => QUARTER_VALUE,
+      DurationType::Eighth => EIGHTH_VALUE,
+      DurationType::Sixteenth => SIXTEENTH_VALUE,
+      DurationType::ThirtySecond => THIRTY_SECOND_VALUE,
+      DurationType::SixtyFourth => SIXTY_FOURTH_VALUE,
+      DurationType::OneHundredTwentyEighth => ONE_HUNDRED_TWENTY_EIGHTH_VALUE,
+      DurationType::TwoHundredFiftySixth => TWO_HUNDRED_FIFTY_SIXTH_VALUE,
+      DurationType::FiveHundredTwelfth => FIVE_HUNDRED_TWELFTH_VALUE,
+      DurationType::OneThousandTwentyFourth => ONE_THOUSAND_TWENTY_FOURTH_VALUE,
+      DurationType::TwoThousandFortyEighth => TWO_THOUSAND_FOURTH_EIGHTH_VALUE,
+    }
+  }
+}
+
 /// Represents the duration of a note as a combination of note type and dots.
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, JsonDeserialize, JsonSerialize)]
@@ -77,7 +101,7 @@ pub struct Duration {
 impl Duration {
   /// Creates a new [`Duration`] with the given note type and number of dots.
   #[must_use]
-  pub fn new(value: DurationType, dots: u8) -> Self {
+  pub const fn new(value: DurationType, dots: u8) -> Self {
     Self { value, dots }
   }
 
@@ -140,6 +164,38 @@ impl Duration {
     }
   }
 
+  /// Creates a new set of tied [`Duration`] values from the given beat base value
+  /// and number of beats.
+  ///
+  /// The `beat_base_value` defines the type of note that represents a single beat.
+  #[must_use]
+  pub fn from_beats_tied(beat_base_value: &Duration, beats: f64) -> Vec<Self> {
+    let mut tied_durations = Vec::new();
+    let mut beats_remaining = beats * beat_base_value.value();
+    while beats_remaining >= TWO_THOUSAND_FOURTH_EIGHTH_VALUE {
+      let duration = match beats_remaining {
+        v if v >= MAXIMA_VALUE => Duration::new(DurationType::Maxima, 0),
+        v if v >= LONG_VALUE => Duration::new(DurationType::Long, 0),
+        v if v >= BREVE_VALUE => Duration::new(DurationType::Breve, 0),
+        v if v >= WHOLE_VALUE => Duration::new(DurationType::Whole, 0),
+        v if v >= HALF_VALUE => Duration::new(DurationType::Half, 0),
+        v if v >= QUARTER_VALUE => Duration::new(DurationType::Quarter, 0),
+        v if v >= EIGHTH_VALUE => Duration::new(DurationType::Eighth, 0),
+        v if v >= SIXTEENTH_VALUE => Duration::new(DurationType::Sixteenth, 0),
+        v if v >= THIRTY_SECOND_VALUE => Duration::new(DurationType::ThirtySecond, 0),
+        v if v >= SIXTY_FOURTH_VALUE => Duration::new(DurationType::SixtyFourth, 0),
+        v if v >= ONE_HUNDRED_TWENTY_EIGHTH_VALUE => Duration::new(DurationType::OneHundredTwentyEighth, 0),
+        v if v >= TWO_HUNDRED_FIFTY_SIXTH_VALUE => Duration::new(DurationType::TwoHundredFiftySixth, 0),
+        v if v >= FIVE_HUNDRED_TWELFTH_VALUE => Duration::new(DurationType::FiveHundredTwelfth, 0),
+        v if v >= ONE_THOUSAND_TWENTY_FOURTH_VALUE => Duration::new(DurationType::OneThousandTwentyFourth, 0),
+        _ => Duration::new(DurationType::TwoThousandFortyEighth, 0),
+      };
+      beats_remaining -= duration.value();
+      tied_durations.push(duration);
+    }
+    tied_durations
+  }
+
   /// Creates a new [`Duration`] from the given tempo and note duration in seconds.
   #[must_use]
   pub fn from_duration(tempo: &Tempo, duration: f64) -> Self {
@@ -178,23 +234,7 @@ impl Duration {
   /// Returns the value of the duration as its fractional representation.
   #[must_use]
   pub fn value(&self) -> f64 {
-    let base_duration = match self.value {
-      DurationType::Maxima => MAXIMA_VALUE,
-      DurationType::Long => LONG_VALUE,
-      DurationType::Breve => BREVE_VALUE,
-      DurationType::Whole => WHOLE_VALUE,
-      DurationType::Half => HALF_VALUE,
-      DurationType::Quarter => QUARTER_VALUE,
-      DurationType::Eighth => EIGHTH_VALUE,
-      DurationType::Sixteenth => SIXTEENTH_VALUE,
-      DurationType::ThirtySecond => THIRTY_SECOND_VALUE,
-      DurationType::SixtyFourth => SIXTY_FOURTH_VALUE,
-      DurationType::OneHundredTwentyEighth => ONE_HUNDRED_TWENTY_EIGHTH_VALUE,
-      DurationType::TwoHundredFiftySixth => TWO_HUNDRED_FIFTY_SIXTH_VALUE,
-      DurationType::FiveHundredTwelfth => FIVE_HUNDRED_TWELFTH_VALUE,
-      DurationType::OneThousandTwentyFourth => ONE_THOUSAND_TWENTY_FOURTH_VALUE,
-      DurationType::TwoThousandFortyEighth => TWO_THOUSAND_FOURTH_EIGHTH_VALUE,
-    };
+    let base_duration = self.value.value();
     (0..=self.dots)
       .map(|i| base_duration / f64::powi(2.0, i32::from(i)))
       .sum()
