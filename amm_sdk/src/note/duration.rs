@@ -170,7 +170,7 @@ impl Duration {
   /// The `beat_base_value` defines the type of note that represents a single beat.
   #[must_use]
   pub fn from_beats_tied(beat_base_value: &Duration, beats: f64) -> Vec<Self> {
-    let mut tied_durations = Vec::new();
+    let mut tied_durations: Vec<Duration> = Vec::new();
     let mut beats_remaining = beats * beat_base_value.value();
     while beats_remaining >= TWO_THOUSAND_FOURTH_EIGHTH_VALUE {
       let duration = match beats_remaining {
@@ -191,7 +191,15 @@ impl Duration {
         _ => Duration::new(DurationType::TwoThousandFortyEighth, 0),
       };
       beats_remaining -= duration.value();
-      tied_durations.push(duration);
+      if let Some(last_duration) = tied_durations.last_mut() {
+        if (0.5 * last_duration.value() - duration.value()).abs() < f64::EPSILON {
+          last_duration.dots += 1;
+        } else {
+          tied_durations.push(duration);
+        }
+      } else {
+        tied_durations.push(duration);
+      }
     }
     tied_durations
   }
