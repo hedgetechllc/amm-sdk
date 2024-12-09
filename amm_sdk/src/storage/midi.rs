@@ -1,12 +1,12 @@
 use super::Load;
-use crate::context::{Key, KeyMode, TimeSignature};
+use crate::context::{Key, KeyMode, Tempo, TimeSignature};
 use crate::modification::{Direction, DirectionType};
 use crate::note::{Duration, DurationType, Note};
 use crate::structure::{Staff, StaffContent};
 use crate::Composition;
-use alloc::string::String;
+use alloc::{collections::VecDeque, string::String};
+use core::str;
 use midly::{MetaMessage, Smf, Track};
-use std::collections::VecDeque;
 use std::fs;
 
 type TimeStamp = u32;
@@ -17,10 +17,9 @@ enum NoteWrapper {
 }
 
 impl Note {
-  fn from_raw_note_data(key: u8, beat_length: f64, beat_base_value: Duration) -> NoteWrapper {
-    let mut note = Note::from_midi(key, beat_base_value, None);
+  fn from_raw_note_data(midi_number: u8, beat_length: f64, beat_base_value: Duration, key: Key) -> NoteWrapper {
+    let mut note = Note::from_midi(midi_number, beat_base_value, Some(key));
     let durations = Duration::from_beats_tied(&beat_base_value, beat_length);
-
     if durations.is_empty() {
       NoteWrapper::PlainNote(StaffContent::Note(note))
     } else if durations.len() == 1 {
@@ -37,7 +36,17 @@ impl Note {
   }
 }
 
+#[derive(Clone, Debug)]
+enum MetaContent {
+  StaffContent(StaffContent),
+  TempoChange(Tempo),
+  NewSection(String),
+  KeyChange(Key),
+}
+
 struct MetaHandler {
+  copyright: Option<String>,
+  initial_tempo: Option<Tempo>,
   initial_time_signature: Option<TimeSignature>,
   initial_key: Option<Key>,
 }
@@ -45,21 +54,22 @@ struct MetaHandler {
 impl MetaHandler {
   fn new() -> Self {
     Self {
+      copyright: None,
+      initial_tempo: None,
       initial_time_signature: None,
       initial_key: None,
     }
   }
 
-  fn get_staff_content(&mut self, message: midly::MetaMessage) -> Option<StaffContent> {
+  fn handle(&mut self, message: midly::MetaMessage) -> Option<MetaContent> {
     match message {
-      MetaMessage::KeySignature(fifths, flag) => {
-        let mode = if flag { KeyMode::Major } else { KeyMode::Minor };
+      MetaMessage::KeySignature(fifths, minor) => {
+        let mode = if minor { KeyMode::Minor } else { KeyMode::Major };
         let key = Key::from_fifths(fifths, Some(mode));
-        let direction_type = DirectionType::KeyChange { key };
         if self.initial_key.is_none() {
           self.initial_key = Some(key);
         }
-        Some(StaffContent::Direction(Direction::new(direction_type)))
+        Some(MetaContent::KeyChange(key))
       }
       MetaMessage::TimeSignature(numerator, beat_type_int, _, _) => {
         let denominator = 2u8.pow(u32::from(beat_type_int));
@@ -68,7 +78,24 @@ impl MetaHandler {
         if self.initial_time_signature.is_none() {
           self.initial_time_signature = Some(time_signature);
         }
-        Some(StaffContent::Direction(Direction::new(direction_type)))
+        Some(MetaContent::StaffContent(StaffContent::Direction(Direction::new(
+          direction_type,
+        ))))
+      }
+      MetaMessage::Copyright(copyright) => {
+        if let Ok(copyright) = String::from_utf8(copyright.to_vec()) {
+          self.copyright = Some(copyright);
+        }
+        None
+      }
+      MetaMessage::Marker(marker) => String::from_utf8(marker.to_vec()).ok().map(MetaContent::NewSection),
+      MetaMessage::Tempo(us_per_quarter_note) => {
+        let bpm = u16::try_from(60_000_000 / us_per_quarter_note.as_int()).unwrap_or(120);
+        let tempo = Tempo::new(Duration::new(DurationType::Quarter, 0), bpm);
+        if self.initial_tempo.is_none() {
+          self.initial_tempo = Some(tempo);
+        }
+        Some(MetaContent::TempoChange(tempo))
       }
       _ => None,
     }
@@ -96,7 +123,7 @@ impl NoteHandler {
     }
   }
 
-  fn handle(&mut self, event: midly::MidiMessage, cur_time: u32) -> Option<NoteWrapper> {
+  fn handle(&mut self, event: midly::MidiMessage, cur_time: u32, current_key: Key) -> Option<NoteWrapper> {
     match event {
       midly::MidiMessage::NoteOn { key: _, vel } => {
         self.last_note_on_offset = cur_time;
@@ -105,7 +132,12 @@ impl NoteHandler {
           && f64::from(self.last_note_on_offset - self.last_note_off_offset) >= self.rest_epsilon
         {
           let beat_length = f64::from(self.last_note_on_offset - self.last_note_off_offset) / self.ticks_per_beat;
-          Some(Note::from_raw_note_data(255, beat_length, self.base_beat_type))
+          Some(Note::from_raw_note_data(
+            255,
+            beat_length,
+            self.base_beat_type,
+            current_key,
+          ))
         } else {
           None
         }
@@ -113,7 +145,12 @@ impl NoteHandler {
       midly::MidiMessage::NoteOff { key, vel: _ } => {
         self.last_note_off_offset = cur_time;
         let beat_length = f64::from(self.last_note_off_offset - self.last_note_on_offset) / self.ticks_per_beat;
-        Some(Note::from_raw_note_data(key.as_int(), beat_length, self.base_beat_type))
+        Some(Note::from_raw_note_data(
+          key.as_int(),
+          beat_length,
+          self.base_beat_type,
+          current_key,
+        ))
       }
       _ => None,
     }
@@ -130,59 +167,147 @@ impl MidiConverter {
     }
   }
 
-  fn parse_control_track(control_track: &Track) -> VecDeque<(StaffContent, TimeStamp)> {
+  fn get_starting_key(tracks: &[Track]) -> Key {
+    for track in tracks {
+      for event in track {
+        if let midly::TrackEventKind::Meta(MetaMessage::KeySignature(fifths, minor)) = event.kind {
+          let mode = if minor { KeyMode::Minor } else { KeyMode::Major };
+          return Key::from_fifths(fifths, Some(mode));
+        }
+      }
+    }
+    Key::default()
+  }
+
+  fn get_track_name(track_index: usize, track: &Track) -> String {
+    // TODO: Try to infer part name from instrument number first (if available)
+    let mut track_name = String::new();
+    for event in track {
+      if let midly::TrackEventKind::Meta(message) = event.kind {
+        if let MetaMessage::TrackName(name) = message {
+          if let Ok(name) = String::from_utf8(name.to_vec()) {
+            if track_name.is_empty() && !name.is_empty() {
+              track_name = name;
+            }
+          }
+        } else if let MetaMessage::InstrumentName(name) = message {
+          if let Ok(mut name) = String::from_utf8(name.to_vec()) {
+            if !name.is_empty() {
+              name.get_mut(0..1).map(|c| {
+                c.make_ascii_uppercase();
+                &*c
+              });
+              track_name = name;
+              break;
+            }
+          }
+        }
+      }
+    }
+    if track_name.is_empty() {
+      String::from("MIDI Track ") + &track_index.to_string()
+    } else {
+      track_name
+    }
+  }
+
+  fn parse_control_track(composition: &mut Composition, control_track: &Track) -> VecDeque<(MetaContent, TimeStamp)> {
+    // Parse the control track for all metadata and context changes
     let mut cur_time = 0;
     let mut meta_handler = MetaHandler::new();
     let mut content = VecDeque::new();
     for event in control_track {
       cur_time += event.delta.as_int();
       if let midly::TrackEventKind::Meta(message) = event.kind {
-        if let Some(staff_content) = meta_handler.get_staff_content(message) {
-          content.push_back((staff_content, cur_time));
+        if let Some(meta_content) = meta_handler.handle(message) {
+          content.push_back((meta_content, cur_time));
         }
       }
     }
+
+    // Fill in any top-level metadata for the composition
+    if let Some(tempo) = meta_handler.initial_tempo {
+      composition.set_tempo(tempo);
+    }
+    if let Some(starting_time_signature) = meta_handler.initial_time_signature {
+      composition.set_starting_time_signature(starting_time_signature);
+    }
+    if let Some(copyright) = meta_handler.copyright {
+      composition.set_copyright(&copyright);
+    }
+
+    // Return all time-based contextual content
     content
+  }
+
+  fn handle_meta_content(staff: &mut Staff, current_key: &mut Key, meta_content: MetaContent) {
+    match meta_content {
+      MetaContent::StaffContent(content) => {
+        staff.claim(content);
+      }
+      MetaContent::TempoChange(_tempo) => {
+        {}; // TODO: Implement tempo change (use new section)
+      }
+      MetaContent::NewSection(_name) => {
+        {}; // TODO: Implement new section
+      }
+      MetaContent::KeyChange(key) => {
+        *current_key = key;
+        staff.add_direction(DirectionType::KeyChange { key });
+      }
+    }
   }
 
   fn load_staff_content(
     staff: &mut Staff,
-    mut control_track: VecDeque<(StaffContent, TimeStamp)>,
+    mut context_changes: VecDeque<(MetaContent, TimeStamp)>,
     track: &Track,
     ticks_per_beat: u16,
     base_beat_type: Duration,
+    mut current_key: Key,
   ) {
+    // Iterate through all track events
     let mut cur_time = 0;
     let mut meta_handler = MetaHandler::new();
     let mut note_handler = NoteHandler::new(base_beat_type, ticks_per_beat);
-
     for event in track {
+      // Check if any musical context changes are needed at the current timestamp
       cur_time += event.delta.as_int();
-      if let Some((_, time)) = control_track.front() {
-        if *time >= cur_time {
-          if let Some((content, _)) = control_track.pop_front() {
-            staff.claim(content);
+      if let Some(final_change_idx) = context_changes
+        .iter()
+        .position(|(_, change_time)| cur_time < *change_time)
+      {
+        for _ in 0..final_change_idx {
+          if let Some((meta_content, _)) = context_changes.pop_front() {
+            Self::handle_meta_content(staff, &mut current_key, meta_content);
           }
+        }
+      } else {
+        while let Some((meta_content, _)) = context_changes.pop_front() {
+          Self::handle_meta_content(staff, &mut current_key, meta_content);
         }
       }
 
+      // Handle the next musical event in the track
       match event.kind {
         midly::TrackEventKind::Meta(message) => {
-          if let Some(staff_content) = meta_handler.get_staff_content(message) {
-            staff.claim(staff_content);
+          if let Some(meta_content) = meta_handler.handle(message) {
+            Self::handle_meta_content(staff, &mut current_key, meta_content);
           }
         }
-        midly::TrackEventKind::Midi { channel: _, message } => match note_handler.handle(message, cur_time) {
-          Some(NoteWrapper::PlainNote(content)) => {
-            staff.claim(content);
-          }
-          Some(NoteWrapper::TiedNote(contents)) => {
-            for content in contents {
+        midly::TrackEventKind::Midi { channel: _, message } => {
+          match note_handler.handle(message, cur_time, current_key) {
+            Some(NoteWrapper::PlainNote(content)) => {
               staff.claim(content);
             }
+            Some(NoteWrapper::TiedNote(contents)) => {
+              for content in contents {
+                staff.claim(content);
+              }
+            }
+            None => {}
           }
-          None => {}
-        },
+        }
         _ => {}
       }
     }
@@ -191,22 +316,27 @@ impl MidiConverter {
   fn load_from_midi(data: &[u8]) -> Result<Composition, String> {
     // Parse the MIDI representation
     let midi = Smf::parse(data).map_err(|err| err.to_string())?;
+    let starting_key = Self::get_starting_key(&midi.tracks);
     let ticks_per_beat = Self::get_ticks_per_beat(midi.header);
-    let control_track = Self::parse_control_track(&midi.tracks[0]);
     let base_beat_type = Duration::new(DurationType::Quarter, 0);
 
-    // Generate the composition structure and fill in musical data
-    let mut composition = Composition::new("Default", None, None, None);
-    let part = composition.add_part("MIDI Track");
-    let section = part.add_section("Top-Level Section");
-    for i in 1..midi.tracks.len() {
-      let staff = section.add_staff(&format!("Section {i}"));
+    // Generate the composition structure and parse the control track for metadata
+    let mut composition = Composition::new("Untitled", None, Some(starting_key), None);
+    let control_track = Self::parse_control_track(&mut composition, &midi.tracks[0]);
+
+    // Parse the MIDI tracks and fill in all musical data
+    for idx in 1..midi.tracks.len() {
+      let part = composition.add_part(&Self::get_track_name(idx, &midi.tracks[idx]));
+      // TODO: If part name already exists, retrieve existing part and add to it
+      let section = part.add_section("Top-Level Section");
+      let staff = section.add_staff("1");
       Self::load_staff_content(
         staff,
         control_track.clone(),
-        &midi.tracks[i],
+        &midi.tracks[idx],
         ticks_per_beat,
         base_beat_type,
+        starting_key,
       );
     }
 
@@ -233,8 +363,14 @@ mod test {
 
   #[test]
   fn test_midi_parser() {
-    let composition = Storage::MIDI.load("tests/test_midi_files/test-2.mid");
+    let composition = Storage::MIDI.load("tests/test_midi_files/test-1.mid");
     assert!(composition.is_ok());
+    /*if let Ok(composition) = composition {
+      println!("{composition}");
+      for part in composition {
+        println!("{part}");
+      }
+    }*/
   }
 
   #[test]
@@ -273,3 +409,7 @@ mod test {
     assert_eq!(tied[0].dots, 1);
   }
 }
+
+// TODO: Implement chords
+// TODO: Implement tuplets
+// TODO: Attempt to implement dynamics
