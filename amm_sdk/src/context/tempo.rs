@@ -18,7 +18,7 @@ pub struct Tempo {
 impl Tempo {
   /// Creates a new tempo with the given base note and beats per minute.
   #[must_use]
-  pub fn new(base_note: Duration, beats_per_minute: u16) -> Self {
+  pub const fn new(base_note: Duration, beats_per_minute: u16) -> Self {
     Self {
       base_note,
       beats_per_minute,

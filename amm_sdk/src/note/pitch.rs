@@ -22,7 +22,7 @@ pub enum PitchName {
 impl PitchName {
   /// Returns the index of the pitch name within the `PitchName` enum.
   #[must_use]
-  pub(crate) fn index(self) -> usize {
+  pub(crate) const fn index(self) -> usize {
     match self {
       PitchName::Rest => 0,
       PitchName::A => 1,
@@ -54,13 +54,13 @@ impl Pitch {
   /// [`PitchName::A`] or [`PitchName::B`]. If you need to create an unvoiced
   /// pitch (a rest), use [`Pitch::new_rest`] instead.
   #[must_use]
-  pub fn new(name: PitchName, octave: u8) -> Self {
+  pub const fn new(name: PitchName, octave: u8) -> Self {
     Self { name, octave }
   }
 
   /// Creates a new unvoiced pitch which represents silence.
   #[must_use]
-  pub fn new_rest() -> Self {
+  pub const fn new_rest() -> Self {
     Self {
       name: PitchName::Rest,
       octave: 0,
@@ -76,7 +76,7 @@ impl Pitch {
   /// Returns the pitch's value as a tuple of `(pitch_index, num_semitones_from_A4)`.
   #[must_use]
   #[allow(clippy::cast_possible_wrap)]
-  pub(crate) fn value(self) -> (usize, i8) {
+  pub(crate) const fn value(self) -> (usize, i8) {
     match self.name {
       PitchName::Rest => (0, 0),
       PitchName::A => (1, (12 * self.octave) as i8 - 48),

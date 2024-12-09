@@ -52,7 +52,7 @@ impl TimeSignature {
   /// [`TimeSignatureType::CutTime`]. If you need to create an explicit
   /// time signature, use [`TimeSignature::new_explicit`] instead.
   #[must_use]
-  pub fn new(signature: TimeSignatureType) -> Self {
+  pub const fn new(signature: TimeSignatureType) -> Self {
     Self {
       signature,
       numerator: match signature {
@@ -75,7 +75,7 @@ impl TimeSignature {
   /// a beat in the measure (e.g., `4` = quarter note, `8` = eighth note,
   /// etc.).
   #[must_use]
-  pub fn new_explicit(numerator: u8, denominator: u8) -> Self {
+  pub const fn new_explicit(numerator: u8, denominator: u8) -> Self {
     Self {
       signature: TimeSignatureType::Explicit,
       numerator,

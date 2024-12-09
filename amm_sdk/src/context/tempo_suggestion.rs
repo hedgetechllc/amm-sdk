@@ -63,14 +63,14 @@ pub struct TempoSuggestion {
 impl TempoSuggestion {
   /// Creates a new tempo suggestion with the given marking.
   #[must_use]
-  pub fn new(marking: TempoMarking) -> Self {
+  pub const fn new(marking: TempoMarking) -> Self {
     Self { marking }
   }
 
   /// Returns a textual description of the tempo suggestion.
   #[must_use]
-  pub fn description(&self) -> String {
-    String::from(match self.marking {
+  pub const fn description(&self) -> &str {
+    match self.marking {
       TempoMarking::Larghissimo => "very, very slowly",
       TempoMarking::Grave => "very slowly",
       TempoMarking::Largo => "broadly",
@@ -92,13 +92,13 @@ impl TempoSuggestion {
       TempoMarking::AllegroVivace => "very lively and fast",
       TempoMarking::Presto => "very, very fast",
       TempoMarking::Prestissimo => "extremely fast",
-    })
+    }
   }
 
   /// Returns the minimum beats per minute that the tempo suggestion is
   /// likely to represent.
   #[must_use]
-  pub fn bpm_min(&self) -> u16 {
+  pub const fn bpm_min(&self) -> u16 {
     match self.marking {
       TempoMarking::Larghissimo => 10,
       TempoMarking::Grave => 25,
@@ -125,7 +125,7 @@ impl TempoSuggestion {
   /// Returns the maximum beats per minute that the tempo suggestion is
   /// likely to represent.
   #[must_use]
-  pub fn bpm_max(&self) -> u16 {
+  pub const fn bpm_max(&self) -> u16 {
     match self.marking {
       TempoMarking::Larghissimo => 24,
       TempoMarking::Grave => 45,
@@ -147,7 +147,7 @@ impl TempoSuggestion {
   /// Returns the average beats per minute that the tempo suggestion is
   /// likely to represent.
   #[must_use]
-  pub fn value(&self) -> u16 {
+  pub const fn value(&self) -> u16 {
     match self.marking {
       TempoMarking::Larghissimo => 22,
       TempoMarking::Grave => 35,

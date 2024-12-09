@@ -44,7 +44,7 @@ pub enum Accidental {
 impl Accidental {
   /// Returns the number of semitones that this accidental raises or lowers a pitch.
   #[must_use]
-  pub fn value(&self) -> i8 {
+  pub const fn value(&self) -> i8 {
     match self {
       Self::Sharp => 1,
       Self::Flat => -1,

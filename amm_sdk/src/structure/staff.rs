@@ -101,7 +101,7 @@ impl Staff {
   }
 
   #[must_use]
-  pub fn get_id(&self) -> usize {
+  pub const fn get_id(&self) -> usize {
     self.id
   }
 

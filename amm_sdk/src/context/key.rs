@@ -112,7 +112,7 @@ pub struct Key {
 impl Key {
   /// Creates a new key with the given signature and mode.
   #[must_use]
-  pub fn new(signature: KeySignature, mode: KeyMode) -> Self {
+  pub const fn new(signature: KeySignature, mode: KeyMode) -> Self {
     Self { mode, signature }
   }
 
@@ -159,7 +159,7 @@ impl Key {
   /// and positive numbers for sharps. For example, a key with two flats
   /// would be represented by a `fifths` value of `-2`.
   #[must_use]
-  pub fn fifths(&self) -> i8 {
+  pub const fn fifths(&self) -> i8 {
     match (self.signature, self.mode) {
       (KeySignature::A, KeyMode::Major) => FIFTHS_A_MAJOR,
       (KeySignature::A, KeyMode::Minor) => FIFTHS_A_MINOR,
@@ -203,13 +203,13 @@ impl Key {
 
   /// Returns whether the key contains one or more flat accidentals.
   #[must_use]
-  pub fn is_flat_key(&self) -> bool {
+  pub const fn is_flat_key(&self) -> bool {
     self.fifths() < 0
   }
 
   /// Returns whether the key contains one or more sharp accidentals.
   #[must_use]
-  pub fn is_sharp_key(&self) -> bool {
+  pub const fn is_sharp_key(&self) -> bool {
     self.fifths() > 0
   }
 
@@ -273,7 +273,7 @@ impl Key {
   /// The first element in the array represents a rest note, while the
   /// remaining elements represent the notes A through G in order.
   #[must_use]
-  pub(crate) fn accidentals(self) -> [Accidental; 8] {
+  pub(crate) const fn accidentals(self) -> [Accidental; 8] {
     let fifths = self.fifths();
     [
       Accidental::None,

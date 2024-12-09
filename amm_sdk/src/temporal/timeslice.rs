@@ -47,7 +47,7 @@ pub struct TimesliceContent {
 
 impl TimesliceContent {
   #[must_use]
-  pub fn new(note: Note) -> Self {
+  pub const fn new(note: Note) -> Self {
     Self {
       note,
       phrase_details: Vec::new(),
@@ -125,7 +125,7 @@ pub struct Timeslice {
 
 impl Timeslice {
   #[must_use]
-  pub fn new() -> Self {
+  pub const fn new() -> Self {
     Self {
       arpeggiated: false,
       content: Vec::new(),
@@ -235,7 +235,7 @@ pub struct PartTimeslice {
 
 impl PartTimeslice {
   #[must_use]
-  pub fn new() -> Self {
+  pub const fn new() -> Self {
     Self {
       timeslices: BTreeMap::new(),
     }
