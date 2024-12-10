@@ -2,7 +2,7 @@ use super::Load;
 use crate::context::{Key, KeyMode, Tempo, TimeSignature};
 use crate::modification::{Direction, DirectionType};
 use crate::note::{Duration, DurationType, Note};
-use crate::structure::{Staff, StaffContent};
+use crate::structure::{PartContent, Staff, StaffContent};
 use crate::Composition;
 use alloc::{collections::VecDeque, string::String};
 use core::str;
@@ -10,6 +10,291 @@ use midly::{MetaMessage, Smf, Track};
 use std::fs;
 
 type TimeStamp = u32;
+
+const DRUM_CHANNEL: u8 = 10;
+
+#[allow(dead_code)]
+#[repr(u8)]
+#[derive(Clone, Copy, Debug)]
+enum MidiInstrument {
+  GrandPiano = 0,
+  BrightPiano = 1,
+  ElectricPiano = 2,
+  HonkyTonkPiano = 3,
+  ElectricPiano1 = 4,
+  ElectricPiano2 = 5,
+  Harpsichord = 6,
+  Clavinet = 7,
+  Celesta = 8,
+  Glockenspiel = 9,
+  MusicBox = 10,
+  Vibraphone = 11,
+  Marimba = 12,
+  Xylophone = 13,
+  TubularBells = 14,
+  Dulcimer = 15,
+  DrawbarOrgan = 16,
+  PercussiveOrgan = 17,
+  RockOrgan = 18,
+  ChurchOrgan = 19,
+  ReedOrgan = 20,
+  Accordion = 21,
+  Harmonica = 22,
+  TangoAccordion = 23,
+  NylonGuitar = 24,
+  SteelGuitar = 25,
+  JazzGuitar = 26,
+  CleanGuitar = 27,
+  MutedGuitar = 28,
+  OverdrivenGuitar = 29,
+  DistortionGuitar = 30,
+  GuitarHarmonics = 31,
+  AcousticBass = 32,
+  FingeredBass = 33,
+  ElectricBass = 34,
+  FretlessBass = 35,
+  SlapBass1 = 36,
+  SlapBass2 = 37,
+  SynthBass1 = 38,
+  SynthBass2 = 39,
+  Violin = 40,
+  Viola = 41,
+  Cello = 42,
+  Contrabass = 43,
+  TremoloStrings = 44,
+  PizzicatoStrings = 45,
+  Harp = 46,
+  Timpani = 47,
+  StringEnsemble1 = 48,
+  StringEnsemble2 = 49,
+  SynthStrings1 = 50,
+  SynthStrings2 = 51,
+  ChoirAahs = 52,
+  ChoirOohs = 53,
+  SynthVoice = 54,
+  OrchestraHit = 55,
+  Trumpet = 56,
+  Trombone = 57,
+  Tuba = 58,
+  MutedTrumpet = 59,
+  FrenchHorn = 60,
+  BrassSection = 61,
+  SynthBrass1 = 62,
+  SynthBrass2 = 63,
+  SopranoSax = 64,
+  AltoSax = 65,
+  TenorSax = 66,
+  BaritoneSax = 67,
+  Oboe = 68,
+  EnglishHorn = 69,
+  Bassoon = 70,
+  Clarinet = 71,
+  Piccolo = 72,
+  Flute = 73,
+  Recorder = 74,
+  PanFlute = 75,
+  BlownBottle = 76,
+  Shakuhachi = 77,
+  Whistle = 78,
+  Ocarina = 79,
+  SquareLead = 80,
+  SawtoothLead = 81,
+  CalliopeLead = 82,
+  ChiffLead = 83,
+  CharangLead = 84,
+  VoiceLead = 85,
+  FifthsLead = 86,
+  BassLead = 87,
+  NewAgePad = 88,
+  WarmPad = 89,
+  PolysynthPad = 90,
+  ChoirPad = 91,
+  BowedPad = 92,
+  MetallicPad = 93,
+  HaloPad = 94,
+  SweepPad = 95,
+  Rain = 96,
+  Soundtrack = 97,
+  Crystals = 98,
+  Atmosphere = 99,
+  Brightness = 100,
+  Goblins = 101,
+  Echoes = 102,
+  SciFi = 103,
+  Sitar = 104,
+  Banjo = 105,
+  Shamisen = 106,
+  Koto = 107,
+  Kalimba = 108,
+  Bagpipe = 109,
+  Fiddle = 110,
+  Shanai = 111,
+  TinkleBell = 112,
+  Agogo = 113,
+  SteelDrums = 114,
+  Woodblock = 115,
+  TaikoDrum = 116,
+  MelodicTom = 117,
+  SynthDrum = 118,
+  ReverseCymbal = 119,
+  GuitarFretNoise = 120,
+  BreathNoise = 121,
+  Seashore = 122,
+  BirdTweet = 123,
+  TelephoneRing = 124,
+  Helicopter = 125,
+  Applause = 126,
+  Gunshot = 127,
+}
+
+impl MidiInstrument {
+  const fn from_midi_number(midi_number: u8) -> Self {
+    if midi_number > 127 {
+      Self::GrandPiano
+    } else {
+      unsafe { core::mem::transmute(midi_number) }
+    }
+  }
+}
+
+impl core::fmt::Display for MidiInstrument {
+  fn fmt(&self, f: &mut alloc::fmt::Formatter) -> alloc::fmt::Result {
+    write!(
+      f,
+      "{}",
+      match self {
+        Self::GrandPiano => "Grand Piano",
+        Self::BrightPiano => "Bright Piano",
+        Self::ElectricPiano => "Electric Piano",
+        Self::HonkyTonkPiano => "Honky-Tonk Piano",
+        Self::ElectricPiano1 => "Electric Piano 1",
+        Self::ElectricPiano2 => "Electric Piano 2",
+        Self::Harpsichord => "Harpsichord",
+        Self::Clavinet => "Clavinet",
+        Self::Celesta => "Celesta",
+        Self::Glockenspiel => "Glockenspiel",
+        Self::MusicBox => "Music Box",
+        Self::Vibraphone => "Vibraphone",
+        Self::Marimba => "Marimba",
+        Self::Xylophone => "Xylophone",
+        Self::TubularBells => "Tubular Bells",
+        Self::Dulcimer => "Dulcimer",
+        Self::DrawbarOrgan => "Drawbar Organ",
+        Self::PercussiveOrgan => "Percussive Organ",
+        Self::RockOrgan => "Rock Organ",
+        Self::ChurchOrgan => "Church Organ",
+        Self::ReedOrgan => "Reed Organ",
+        Self::Accordion => "Accordion",
+        Self::Harmonica => "Harmonica",
+        Self::TangoAccordion => "Tango Accordion",
+        Self::NylonGuitar => "Nylon Guitar",
+        Self::SteelGuitar => "Steel Guitar",
+        Self::JazzGuitar => "Jazz Guitar",
+        Self::CleanGuitar => "Clean Guitar",
+        Self::MutedGuitar => "Muted Guitar",
+        Self::OverdrivenGuitar => "Overdriven Guitar",
+        Self::DistortionGuitar => "Distortion Guitar",
+        Self::GuitarHarmonics => "Guitar Harmonics",
+        Self::AcousticBass => "Acoustic Bass",
+        Self::FingeredBass => "Fingered Bass",
+        Self::ElectricBass => "Electric Bass",
+        Self::FretlessBass => "Fretless Bass",
+        Self::SlapBass1 => "Slap Bass 1",
+        Self::SlapBass2 => "Slap Bass 2",
+        Self::SynthBass1 => "Synth Bass 1",
+        Self::SynthBass2 => "Synth Bass 2",
+        Self::Violin => "Violin",
+        Self::Viola => "Viola",
+        Self::Cello => "Cello",
+        Self::Contrabass => "Contrabass",
+        Self::TremoloStrings => "Tremolo Strings",
+        Self::PizzicatoStrings => "Pizzicato Strings",
+        Self::Harp => "Harp",
+        Self::Timpani => "Timpani",
+        Self::StringEnsemble1 => "String Ensemble 1",
+        Self::StringEnsemble2 => "String Ensemble 2",
+        Self::SynthStrings1 => "Synth Strings 1",
+        Self::SynthStrings2 => "Synth Strings 2",
+        Self::ChoirAahs => "Choir Aahs",
+        Self::ChoirOohs => "Choir Oohs",
+        Self::SynthVoice => "Synth Voice",
+        Self::OrchestraHit => "Orchestra Hit",
+        Self::Trumpet => "Trumpet",
+        Self::Trombone => "Trombone",
+        Self::Tuba => "Tuba",
+        Self::MutedTrumpet => "Muted Trumpet",
+        Self::FrenchHorn => "French Horn",
+        Self::BrassSection => "Brass Section",
+        Self::SynthBrass1 => "Synth Brass 1",
+        Self::SynthBrass2 => "Synth Brass 2",
+        Self::SopranoSax => "Soprano Sax",
+        Self::AltoSax => "Alto Sax",
+        Self::TenorSax => "Tenor Sax",
+        Self::BaritoneSax => "Baritone Sax",
+        Self::Oboe => "Oboe",
+        Self::EnglishHorn => "English Horn",
+        Self::Bassoon => "Bassoon",
+        Self::Clarinet => "Clarinet",
+        Self::Piccolo => "Piccolo",
+        Self::Flute => "Flute",
+        Self::Recorder => "Recorder",
+        Self::PanFlute => "Pan Flute",
+        Self::BlownBottle => "Blown Bottle",
+        Self::Shakuhachi => "Shakuhachi",
+        Self::Whistle => "Whistle",
+        Self::Ocarina => "Ocarina",
+        Self::SquareLead => "Square Lead",
+        Self::SawtoothLead => "Sawtooth Lead",
+        Self::CalliopeLead => "Calliope Lead",
+        Self::ChiffLead => "Chiff Lead",
+        Self::CharangLead => "Charang Lead",
+        Self::VoiceLead => "Voice Lead",
+        Self::FifthsLead => "Fifths Lead",
+        Self::BassLead => "Bass Lead",
+        Self::NewAgePad => "New Age Pad",
+        Self::WarmPad => "Warm Pad",
+        Self::PolysynthPad => "Polysynth Pad",
+        Self::ChoirPad => "Choir Pad",
+        Self::BowedPad => "Bowed Pad",
+        Self::MetallicPad => "Metallic Pad",
+        Self::HaloPad => "Halo Pad",
+        Self::SweepPad => "Sweep Pad",
+        Self::Rain => "Rain",
+        Self::Soundtrack => "Soundtrack",
+        Self::Crystals => "Crystals",
+        Self::Atmosphere => "Atmosphere",
+        Self::Brightness => "Brightness",
+        Self::Goblins => "Goblins",
+        Self::Echoes => "Echoes",
+        Self::SciFi => "Sci-Fi",
+        Self::Sitar => "Sitar",
+        Self::Banjo => "Banjo",
+        Self::Shamisen => "Shamisen",
+        Self::Koto => "Koto",
+        Self::Kalimba => "Kalimba",
+        Self::Bagpipe => "Bagpipe",
+        Self::Fiddle => "Fiddle",
+        Self::Shanai => "Shanai",
+        Self::TinkleBell => "Tinkle Bell",
+        Self::Agogo => "Agogo",
+        Self::SteelDrums => "Steel Drums",
+        Self::Woodblock => "Woodblock",
+        Self::TaikoDrum => "Taiko Drum",
+        Self::MelodicTom => "Melodic Tom",
+        Self::SynthDrum => "Synth Drum",
+        Self::ReverseCymbal => "Reverse Cymbal",
+        Self::GuitarFretNoise => "Guitar Fret Noise",
+        Self::BreathNoise => "Breath Noise",
+        Self::Seashore => "Seashore",
+        Self::BirdTweet => "Bird Tweet",
+        Self::TelephoneRing => "Telephone Ring",
+        Self::Helicopter => "Helicopter",
+        Self::Applause => "Applause",
+        Self::Gunshot => "Gunshot",
+      }
+    )
+  }
+}
 
 enum NoteWrapper {
   PlainNote(StaffContent),
@@ -36,7 +321,7 @@ impl Note {
   }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 enum MetaContent {
   StaffContent(StaffContent),
   TempoChange(Tempo),
@@ -179,36 +464,19 @@ impl MidiConverter {
     Key::default()
   }
 
-  fn get_track_name(track_index: usize, track: &Track) -> String {
-    // TODO: Try to infer part name from instrument number first (if available)
-    let mut track_name = String::new();
+  fn get_track_name(track: &Track) -> String {
+    let mut track_name = MidiInstrument::GrandPiano.to_string();
     for event in track {
-      if let midly::TrackEventKind::Meta(message) = event.kind {
-        if let MetaMessage::TrackName(name) = message {
-          if let Ok(name) = String::from_utf8(name.to_vec()) {
-            if track_name.is_empty() && !name.is_empty() {
-              track_name = name;
-            }
-          }
-        } else if let MetaMessage::InstrumentName(name) = message {
-          if let Ok(mut name) = String::from_utf8(name.to_vec()) {
-            if !name.is_empty() {
-              name.get_mut(0..1).map(|c| {
-                c.make_ascii_uppercase();
-                &*c
-              });
-              track_name = name;
-              break;
-            }
+      if let midly::TrackEventKind::Midi { channel, message } = event.kind {
+        if channel != DRUM_CHANNEL {
+          if let midly::MidiMessage::ProgramChange { program } = message {
+            track_name = MidiInstrument::from_midi_number(program.as_int()).to_string();
+            break;
           }
         }
       }
     }
-    if track_name.is_empty() {
-      String::from("MIDI Track ") + &track_index.to_string()
-    } else {
-      track_name
-    }
+    track_name
   }
 
   fn parse_control_track(composition: &mut Composition, control_track: &Track) -> VecDeque<(MetaContent, TimeStamp)> {
