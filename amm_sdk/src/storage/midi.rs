@@ -594,10 +594,15 @@ impl MidiConverter {
 
     // Parse the MIDI tracks and fill in all musical data
     for idx in 1..midi.tracks.len() {
-      let part = composition.add_part(&Self::get_track_name(idx, &midi.tracks[idx]));
-      // TODO: If part name already exists, retrieve existing part and add to it
-      let section = part.add_section("Top-Level Section");
-      let staff = section.add_staff("1");
+      let part_name = Self::get_track_name(&midi.tracks[idx]);
+      let top_section = if let Some(part) = composition.get_part_mut_by_name(&part_name) {
+        let PartContent::Section(top_level_section) = unsafe { part.iter_mut().next().unwrap_unchecked() };
+        top_level_section
+      } else {
+        let part = composition.add_part(&Self::get_track_name(&midi.tracks[idx]));
+        part.add_section("Top-Level Section")
+      };
+      let staff = top_section.add_staff((top_section.num_items() + 1).to_string().as_str());
       Self::load_staff_content(
         staff,
         control_track.clone(),
