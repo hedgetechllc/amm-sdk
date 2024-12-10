@@ -5,7 +5,6 @@ use crate::note::{Duration, DurationType, Note};
 use crate::structure::{PartContent, Staff, StaffContent};
 use crate::Composition;
 use alloc::{collections::VecDeque, string::String};
-use core::str;
 use midly::{MetaMessage, Smf, Track};
 use std::fs;
 
