@@ -151,7 +151,7 @@ impl MidiInstrument {
     if midi_number > 127 {
       Self::GrandPiano
     } else {
-      unsafe { core::mem::transmute(midi_number) }
+      unsafe { core::mem::transmute::<u8, MidiInstrument>(midi_number) }
     }
   }
 }
