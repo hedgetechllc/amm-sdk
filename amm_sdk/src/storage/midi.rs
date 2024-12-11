@@ -1,6 +1,6 @@
 use super::Load;
 use crate::context::{Key, KeyMode, Tempo, TimeSignature};
-use crate::modification::{Direction, DirectionType};
+use crate::modification::{Direction, DirectionType, NoteModificationType};
 use crate::note::{Duration, DurationType, Note};
 use crate::structure::{PartContent, Staff, StaffContent};
 use crate::Composition;
@@ -10,7 +10,7 @@ use std::fs;
 
 type TimeStamp = u32;
 
-const DRUM_CHANNEL: u8 = 10;
+const MIDI_DRUM_CHANNEL: u8 = 10;
 
 #[allow(dead_code)]
 #[repr(u8)]
@@ -295,28 +295,18 @@ impl core::fmt::Display for MidiInstrument {
   }
 }
 
-enum NoteWrapper {
-  PlainNote(StaffContent),
-  TiedNote(Vec<StaffContent>),
-}
-
 impl Note {
-  fn from_raw_note_data(midi_number: u8, beat_length: f64, beat_base_value: Duration, key: Key) -> NoteWrapper {
+  fn from_raw_note_data(midi_number: u8, beat_length: f64, beat_base_value: Duration, key: Key) -> Vec<Note> {
+    let mut staff_content = Vec::new();
     let mut note = Note::from_midi(midi_number, beat_base_value, Some(key));
-    let durations = Duration::from_beats_tied(&beat_base_value, beat_length);
-    if durations.is_empty() {
-      NoteWrapper::PlainNote(StaffContent::Note(note))
-    } else if durations.len() == 1 {
-      note.duration = durations[0];
-      NoteWrapper::PlainNote(StaffContent::Note(note))
-    } else {
-      let mut staff_content = Vec::new();
-      for duration in durations {
-        note.duration = duration;
-        staff_content.push(StaffContent::Note(note.clone()));
-      }
-      NoteWrapper::TiedNote(staff_content)
+    for duration in Duration::from_beats_tied(&beat_base_value, beat_length) {
+      note.duration = duration;
+      staff_content.push(note.clone());
     }
+    for idx in 0..(staff_content.len() - 1) {
+      staff_content[idx].add_modification(NoteModificationType::Tie);
+    }
+    staff_content
   }
 }
 
@@ -407,7 +397,7 @@ impl NoteHandler {
     }
   }
 
-  fn handle(&mut self, event: midly::MidiMessage, cur_time: u32, current_key: Key) -> Option<NoteWrapper> {
+  fn handle(&mut self, event: midly::MidiMessage, cur_time: u32, current_key: Key) -> Option<Vec<Note>> {
     match event {
       midly::MidiMessage::NoteOn { key: _, vel } => {
         self.last_note_on_offset = cur_time;
@@ -464,18 +454,16 @@ impl MidiConverter {
   }
 
   fn get_track_name(track: &Track) -> String {
-    let mut track_name = MidiInstrument::GrandPiano.to_string();
     for event in track {
       if let midly::TrackEventKind::Midi { channel, message } = event.kind {
-        if channel != DRUM_CHANNEL {
+        if channel != MIDI_DRUM_CHANNEL {
           if let midly::MidiMessage::ProgramChange { program } = message {
-            track_name = MidiInstrument::from_midi_number(program.as_int()).to_string();
-            break;
+            return MidiInstrument::from_midi_number(program.as_int()).to_string();
           }
         }
       }
     }
-    track_name
+    MidiInstrument::GrandPiano.to_string()
   }
 
   fn parse_control_track(composition: &mut Composition, control_track: &Track) -> VecDeque<(MetaContent, TimeStamp)> {
@@ -563,16 +551,10 @@ impl MidiConverter {
           }
         }
         midly::TrackEventKind::Midi { channel: _, message } => {
-          match note_handler.handle(message, cur_time, current_key) {
-            Some(NoteWrapper::PlainNote(content)) => {
-              staff.claim(content);
+          if let Some(notes) = note_handler.handle(message, cur_time, current_key) {
+            for note in notes {
+              staff.claim(StaffContent::Note(note));
             }
-            Some(NoteWrapper::TiedNote(contents)) => {
-              for content in contents {
-                staff.claim(content);
-              }
-            }
-            None => {}
           }
         }
         _ => {}
