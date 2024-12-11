@@ -462,6 +462,11 @@ impl Phrase {
       modifications: &self.modifications,
     }
   }
+
+  #[must_use]
+  pub fn drain(&mut self) -> alloc::vec::Drain<'_, PhraseContent> {
+    self.content.drain(..)
+  }
 }
 
 impl IntoIterator for Phrase {

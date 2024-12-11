@@ -144,6 +144,11 @@ impl Chord {
   }
 
   #[must_use]
+  pub fn drain(&mut self) -> alloc::vec::Drain<'_, ChordContent> {
+    self.content.drain(..)
+  }
+
+  #[must_use]
   pub fn to_timeslice(&self) -> Timeslice {
     let mut timeslice = Timeslice::new();
     timeslice.arpeggiated = self

@@ -541,6 +541,11 @@ impl Section {
       processing_staves: false,
     }
   }
+
+  #[must_use]
+  pub fn drain(&mut self) -> alloc::vec::Drain<'_, SectionContent> {
+    self.content.drain(..)
+  }
 }
 
 impl IntoIterator for Section {

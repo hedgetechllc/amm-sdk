@@ -277,6 +277,11 @@ impl Part {
       .iter()
       .flat_map(|PartContent::Section(section)| section.iter_timeslices())
   }
+
+  #[must_use]
+  pub fn drain(&mut self) -> alloc::vec::Drain<'_, PartContent> {
+    self.content.drain(..)
+  }
 }
 
 impl IntoIterator for Part {

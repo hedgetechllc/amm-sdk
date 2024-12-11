@@ -686,3 +686,4 @@ mod test {
 // TODO: Implement tuplets
 // TODO: Attempt to implement dynamics
 // TODO: Attempt to implement mordents, trills, and other ornaments based on timing data
+// IDEA: Pre-create timeslices for min note lengths (associate each slice with MIDI tick start time), round note start time to nearest timeslice start time and add note to slice (but how handle tuplets?, maybe add a flag if suspected tuplet because note falls in 1/3 or 2/3 or expected timeslice time and then check for consecutive flags?)

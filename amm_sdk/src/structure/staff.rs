@@ -446,6 +446,11 @@ impl Staff {
       child_multivoice: None,
     }
   }
+
+  #[must_use]
+  pub fn drain(&mut self) -> alloc::vec::Drain<'_, StaffContent> {
+    self.content.drain(..)
+  }
 }
 
 impl IntoIterator for Staff {

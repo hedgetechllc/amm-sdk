@@ -468,6 +468,11 @@ impl MultiVoice {
         .collect(),
     }
   }
+
+  #[must_use]
+  pub fn drain(&mut self) -> alloc::vec::Drain<'_, MultiVoiceContent> {
+    self.content.drain(..)
+  }
 }
 
 impl IntoIterator for MultiVoice {
